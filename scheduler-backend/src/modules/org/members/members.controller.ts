@@ -1,0 +1,18 @@
+import { Controller, Post, Delete, Body, Param } from '@nestjs/common';
+import { MembersService } from './members.service';
+import { AddMemberDto } from './dto/add-member.dto';
+
+@Controller('teams/:teamId/members')
+export class MembersController {
+  constructor(private readonly membersService: MembersService) {}
+
+  @Post()
+  add(@Param('teamId') teamId: string, @Body() dto: AddMemberDto) {
+    return this.membersService.addMember(teamId, dto);
+  }
+
+  @Delete(':userId')
+  remove(@Param('teamId') teamId: string, @Param('userId') userId: string) {
+    return this.membersService.removeMember(teamId, userId);
+  }
+}
