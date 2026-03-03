@@ -8,6 +8,7 @@ import Rotations from "../pages/Rotations";
 import Holidays from "../pages/Holidays";
 import Schedule from "../pages/Schedule";
 import Members from "../pages/Members";
+import Login from "../pages/Login";
 
 function AppRoutes() {
   return (
@@ -19,6 +20,7 @@ function AppRoutes() {
       <Route path="/rotations" element={<Rotations />} />
       <Route path="/holidays" element={<Holidays />} />
       <Route path="/schedule" element={<Schedule />} />
+      <Route path="/login" element={<Login />} />
     </Routes>
   );
 }
