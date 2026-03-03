@@ -31,10 +31,6 @@ function Sidebar() {
         📅 Schedules
       </NavLink>
 
-      <NavLink to="/leave" className="nav-link">
-        🏖️ Leave Requests
-      </NavLink>
-
       <NavLink to="/holidays" className="nav-link">
         🎉 Holidays
       </NavLink>
