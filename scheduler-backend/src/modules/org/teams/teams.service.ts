@@ -18,6 +18,22 @@ export class TeamsService {
     });
   }
 
+findOne(id: string) {
+  return this.prisma.teams.findUnique({
+    where: { id },
+    include: {
+      team_members: {
+        include: {
+          users: true,        
+          role_types: true,   
+        },
+      },
+    },
+  });
+}
+
+
+
   update(id: string, data) {
     return this.prisma.teams.update({
       where: { id },

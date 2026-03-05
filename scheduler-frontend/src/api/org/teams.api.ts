@@ -17,7 +17,9 @@ export const TeamsAPI = {
   update(id: string, data: UpdateTeamDto): Promise<Team> {
     return http.patch(`/teams/${id}`, data).then(res => res.data);
   },
-
+  getOne(id: string): Promise<Team> {
+    return http.get(`/teams/${id}`).then(res => res.data);
+  },
   delete(id: string): Promise<Team> {
     return http.delete(`/teams/${id}`).then(res => res.data);
   },

@@ -12,6 +12,11 @@ export class GroupsController {
     return this.groupsService.create(dto);
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.groupsService.findOne(id);
+  }
+  
   @Get()
   findAll() {
     return this.groupsService.findAll();

@@ -120,8 +120,17 @@ export interface TeamMember {
   role_type_id: string;
   is_active: boolean;
   created_at: Timestamp;
-}
 
+  users?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+
+  role_types?: {
+    name: string;
+  };
+}
 /**
  * Request body for adding a member to a team.
  */

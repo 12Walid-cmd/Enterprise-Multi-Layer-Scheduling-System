@@ -1,0 +1,57 @@
+body {
+  background-color: #f5f7fa;
+}
+
+.sidebar {
+  width: 240px;
+  height: 100vh;
+  background: white;
+  border-right: 1px solid #e1e8ed;
+}
+
+.sidebar .nav-link {
+  padding: 14px 20px;
+  color: #5f6368;
+  font-weight: 500;
+}
+
+.sidebar .nav-link.active {
+  background-color: #e8f0fe;
+  color: #1a73e8 !important;
+  border-right: 3px solid #1a73e8;
+}
+
+.dashboard-card {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e1e8ed;
+  padding: 24px;
+}
+
+.stat-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #5f6368;
+  margin-bottom: 8px;
+}
+
+.stat-number {
+  font-size: 36px;
+  font-weight: 600;
+  color: #1a73e8;
+}
+
+.quick-action-box {
+  border: 1px solid #e1e8ed;
+  border-radius: 6px;
+  padding: 20px;
+  text-align: center;
+  background: white;
+  transition: 0.2s;
+}
+
+.quick-action-box:hover {
+  border-color: #1a73e8;
+  background: #f8fbff;
+  transform: translateY(-3px);
+}

@@ -10,11 +10,19 @@ export class GroupsService {
   }
 
   findAll() {
-    return this.prisma.groups.findMany({
-      include: {
-        teams: true,
-      },
-    });
+  return this.prisma.groups.findMany({
+    where: { is_active: true },
+    include: {
+      teams: true,
+    },
+  });
+  }
+
+  findOne(id: string) {
+  return this.prisma.groups.findUnique({
+    where: { id },
+    include: { teams: true },
+  });
   }
 
   update(id: string, data) {

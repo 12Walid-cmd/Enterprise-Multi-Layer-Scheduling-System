@@ -1,28 +1,26 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import CssBaseline from "@mui/material/CssBaseline";
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { RouterProvider } from "react-router-dom";
+import { router } from "./router";
 
-import "./index.css";
-import App from "./App.tsx";
+import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
 
 const theme = createTheme({
   palette: {
     mode: "light",
-    primary: {
-      main: "#1976d2",
-    },
+    primary: { main: "#6366f1" }, 
+    background: { default: "#f7f8fa" },
+  },
+  typography: {
+    fontFamily: "Inter, Roboto, sans-serif",
   },
 });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <BrowserRouter>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <App />
-      </ThemeProvider>
-    </BrowserRouter>
-  </StrictMode>
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <RouterProvider router={router} />
+    </ThemeProvider>
+  </React.StrictMode>
 );
