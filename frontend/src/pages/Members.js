@@ -14,14 +14,38 @@ function Members() {
   const [workingMode, setWorkingMode] = useState("All");
   const [status, setStatus] = useState("All");
   const [location, setLocation] = useState("All");
+
   const [members, setMembers] = useState([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const limit = 10;
 
-  // Fetch employees from backend
+  const [countries, setCountries] = useState([]);
+  const [provinces, setProvinces] = useState([]);
+  const [cities, setCities] = useState([]);
+
+  const [showModal, setShowModal] = useState(false); 
+
+  const [editMode, setEditMode] = useState(false);
+  const [selectedMemberId, setSelectedMemberId] = useState(null);
+
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    working_mode: "",
+    city: "",
+    province: "",
+    country: "",
+    is_active: true
+  });
+
+  // ================================
+  // Fetch Members
+  // ================================
   const fetchMembers = useCallback(async () => {
     try {
+
       const res = await api.get("/members", {
         params: {
           page,
@@ -53,8 +77,155 @@ function Members() {
   // Pagination calculations
   const totalPages = Math.ceil(total / limit);
 
-  const getInitials = (first, last) =>
-    first?.[0] + last?.[0];
+  // ================================
+  // Load Countries
+  // ================================
+  useEffect(() => {
+    fetchCountries();
+  }, []);
+
+  const fetchCountries = async () => {
+    const res = await api.get("/location/countries");
+    setCountries(res.data);
+  };
+
+  // ================================
+  // Country Change
+  // ================================
+  const handleCountryChange = async (e) => {
+
+    const countryId = e.target.value;
+
+    setFormData(prev => ({
+      ...prev,
+      country: countryId,
+      province: "",
+      city: ""
+    }));
+
+    const res = await api.get(`/location/provinces/${countryId}`);
+
+    setProvinces(res.data);
+    setCities([]);
+
+  };
+
+  // ================================
+  // Province Change
+  // ================================
+  const handleProvinceChange = async (e) => {
+
+    const provinceId = e.target.value;
+
+    setFormData(prev => ({
+      ...prev,
+      province: provinceId,
+      city: ""
+    }));
+
+    const res = await api.get(`/location/cities/${provinceId}`);
+
+    setCities(res.data);
+
+  };
+
+  // ================================
+  // City Change
+  // ================================
+  const handleCityChange = (e) => {
+
+    const cityId = e.target.value;
+
+    setFormData(prev => ({
+      ...prev,
+      city: cityId
+    }));
+
+  };
+
+  // ================================
+  // Normal Inputs
+  // ================================
+  const handleChange = (e) => {
+
+    const { name, value, type, checked } = e.target;
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+
+  };
+
+  // ================================
+  // Submit Member
+  // ================================
+  const handleSubmit = async () => {
+
+    try {
+
+      if (editMode) {
+
+      await api.put(`/members/${selectedMemberId}`, formData);
+
+    } else {
+
+      await api.post("/members", formData);
+
+    }
+
+      setShowModal(false);
+      setEditMode(false);
+      fetchMembers();
+
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create member");
+    }
+
+  };
+
+  // ================================
+  // Delete Member
+  // ================================
+  const handleDelete = async (id) => {
+
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this member?"
+    );
+
+    if (!confirmDelete) return;
+    try {
+      await api.delete(`/members/${id}`);
+      fetchMembers();
+    } catch (error) {
+      console.error(error);
+    }
+
+  };
+
+  // ================================
+  // Edit Member
+  // ================================
+  const handleEdit = (member) => {
+
+    setEditMode(true);
+    setSelectedMemberId(member.id);
+
+    setFormData({
+      first_name: member.first_name,
+      last_name: member.last_name,
+      email: member.email,
+      working_mode: member.working_mode,
+      city: member.city_id,
+      is_active: member.is_active
+    });
+
+    setShowModal(true);
+
+  };
+
+  const getInitials = (first, last) => first?.[0] + last?.[0];
 
   const workingBadge = (mode) => {
     if (mode === "LOCAL") return "badge badge-local";
@@ -64,34 +235,11 @@ function Members() {
   };
 
   const statusBadge = (active) =>
-    active
-      ? "badge badge-active"
-      : "badge badge-inactive";
-
-  const [showModal, setShowModal] = useState(false);
-
-  const [formData, setFormData] = useState({
-    first_name: "",
-    last_name: "",
-    email: "",
-    working_mode: "LOCAL",
-    city: "",
-    province: "",
-    country: "",
-    is_active: true
-  });
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
-    }));
-  };
+    active ? "badge badge-active" : "badge badge-inactive";
 
   return (
     <div>
+
       {/* Header */}
       <div className="page-header">
         <div className="page-title-section">
@@ -108,10 +256,12 @@ function Members() {
           <span className="btn-icon">＋</span>
           Add Member
         </button>
+
       </div>
 
       {/* Stats Row */}
       <div className="stats-row">
+
         <div className="stat-card">
           <div className="stat-label">Total Members</div>
           <div className="stat-value">{stats.totalEmployees}</div>
@@ -131,10 +281,12 @@ function Members() {
           <div className="stat-label">Remote Workers</div>
           <div className="stat-value">{stats.remote}</div>
         </div>
+
       </div>
 
       {/* Filters */}
       <div className="filters">
+
         <div>
           <div className="filter-label">Search</div>
           <input
@@ -154,39 +306,44 @@ function Members() {
             onChange={(e) => setWorkingMode(e.target.value)}
           >
             <option value="All">All Modes</option>
-            <option value="LOCAL">LOCAL</option>
-            <option value="REMOTE">REMOTE</option>
-            <option value="HYBRID">HYBRID</option>
+            <option value="LOCAL">Local</option>
+            <option value="REMOTE">Remote</option>
+            <option value="HYBRID">Hybrid</option>
           </select>
         </div>
 
         <div>
           <div className="filter-label">Location</div>
-          <select className="filter-select">
+          <select className="filter-select"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            <option>All Locations</option>
-            <option>Calgary</option>
-            <option>Vancouver</option>
-            <option>Toronto</option>
+          >
+            <option value="All">All Locations</option>
+            <option value="Calgary">Calgary</option>
+            <option value="Vancouver">Vancouver</option>
+            <option value="Toronto">Toronto</option>
           </select>
         </div>
 
         <div>
           <div className="filter-label">Status</div>
-          <select className="filter-select">
+          <select className="filter-select"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            <option>All Status</option>
-            <option>Active</option>
-            <option>Inactive</option>
+          >
+            <option value="All">All Status</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
           </select>
         </div>
+
       </div>
 
       {/* Employee Table */}
       <div className="employee-section">
+
         <table className="employee-table">
+
           <thead>
             <tr>
               <th>Employee</th>
@@ -194,12 +351,16 @@ function Members() {
               <th>Location</th>
               <th>Status</th>
               <th>Teams</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
           <tbody>
+
             {members.map(member => (
+
               <tr key={member.id} className="employee-row">
+
                 <td>
                   <div className="employee-cell">
                     <div className="employee-avatar">
@@ -235,12 +396,33 @@ function Members() {
                 <td>
                   {member.team_count} teams
                 </td>
+
+                <td>
+
+                  <button
+                    className="btn-edit"
+                    onClick={() => handleEdit(member)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="btn-delete"
+                    onClick={() => handleDelete(member.id)}
+                  >
+                    Delete
+                  </button>
+
+                </td>
+
               </tr>
+
             ))}
+
           </tbody>
+          
         </table>
 
-          <div className="pagination-container">
+        <div className="pagination-container">
             <div className="pagination-info">
               Showing {(page - 1) * limit + 1} -{" "}
               {Math.min(page * limit, total)} of {total} employees
@@ -315,21 +497,29 @@ function Members() {
                 Next
               </button>
             </div>
-          </div>
+        </div>
+      
+      </div>
 
-          {showModal && (
+      {/* ============================= */}
+      {/* ADD MEMBER MODAL */}
+      {/* ============================= */}
+      {showModal && (
             <div className="modal-overlay">
+              
               <div className="modal-container">
-
                 {/* Header */}
                 <div className="modal-header">
+
                   <h2>Add New Member</h2>
+                  
                   <button
                     className="modal-close"
                     onClick={() => setShowModal(false)}
                   >
                     ×
                   </button>
+
                 </div>
 
                 {/* Body */}
@@ -337,6 +527,7 @@ function Members() {
 
                   {/* First + Last Name */}
                   <div className="form-row">
+
                     <div className="form-group">
                       <label>First Name <span className="required">*</span></label>
                       <input
@@ -390,43 +581,64 @@ function Members() {
                     </select>
                   </div>
 
+                  {/* Country */}
+                  <div className="form-group">
+
+                    <label>Country</label>
+                    <select
+                      value={formData.country}
+                      onChange={handleCountryChange}
+                    >
+
+                      <option value="">Select Country</option>
+
+                      {countries.map(country => (
+                        <option key={country.id} value={country.id}>
+                          {country.name}
+                        </option>
+                      ))}
+
+                    </select>
+                  </div>
+
                   {/* City + Province */}
                   <div className="form-row">
                     <div className="form-group">
-                      <label>City</label>
-                      <input
-                        type="text"
-                        name="city"
-                        placeholder="e.g., Calgary"
-                        value={formData.city}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="form-group">
                       <label>Province/State</label>
-                      <input
-                        type="text"
-                        name="province"
-                        placeholder="e.g., Alberta"
+                      <select
                         value={formData.province}
-                        onChange={handleChange}
-                      />
+                        onChange={handleProvinceChange}
+                      >
+                        <option value="">Select Province</option>
+
+                        {provinces.map(province => (
+                          <option key={province.id} value={province.id}>
+                            {province.name}
+                          </option>
+                        ))}
+
+                      </select>
+                    </div>
+                    
+                    <div className="form-group">
+                      <label>City</label>
+                      <select
+                        value={formData.city}
+                        onChange={handleCityChange}
+                      >
+                        <option value="">Select City</option>
+
+                        {cities.map(city => (
+                          <option key={city.id} value={city.id}>
+                            {city.name}
+                          </option>
+                        ))}
+
+                      </select>
                     </div>
                   </div>
 
-                  {/* Country */}
-                  <div className="form-group">
-                    <label>Country</label>
-                    <input
-                      type="text"
-                      name="country"
-                      placeholder="e.g., Canada"
-                      value={formData.country}
-                      onChange={handleChange}
-                    />
-                  </div>
-
+                  
                   {/* Checkbox */}
                   <div className="checkbox-wrapper">
                     <input
@@ -449,16 +661,19 @@ function Members() {
                     Cancel
                   </button>
 
-                  <button className="btn-primary">
-                    Add Employee
+                  <button
+                    className="btn-primary"
+                    onClick={handleSubmit}
+                  >
+                    {editMode ? "Update Member" : "Add Member"}
                   </button>
                 </div>
 
               </div>
-            </div>
-          )}
 
-      </div>
+            </div>
+      )}
+
     </div>
   );
 }

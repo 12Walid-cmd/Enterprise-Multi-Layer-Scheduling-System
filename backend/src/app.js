@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(logger);
 
 // API Routes
-app.use('/api/v1', routes);
+app.use('/api', routes);
 
 // Root Test
 app.get('/', (req, res) => {

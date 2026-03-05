@@ -1,6 +1,10 @@
 const pool = require("../../config/db");
 
-exports.getEmployees = async (req, res) => {
+
+// ===============================
+// GET MEMBERS
+// ===============================
+exports.getMembers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
@@ -26,7 +30,7 @@ exports.getEmployees = async (req, res) => {
 
     if (status && status !== "All") {
       filters.push(`u.is_active = $${index}`);
-      values.push(status === "Active");
+      values.push(status === "true");
       index++;
     }
 
@@ -44,19 +48,24 @@ exports.getEmployees = async (req, res) => {
 
     const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
-    // Total count with filters
+    // ===============================
+    // TOTAL COUNT
+    // ===============================
     const totalQuery = `
       SELECT COUNT(DISTINCT u.id)
       FROM ems.users u
       LEFT JOIN ems.cities c ON u.city_id = c.id
       LEFT JOIN ems.provinces p ON c.province_id = p.id
       LEFT JOIN ems.countries co ON p.country_id = co.id
+      LEFT JOIN ems.team_members tm ON u.id = tm.user_id
       ${whereClause}
     `;
     const totalResult = await pool.query(totalQuery, values);
     const total = parseInt(totalResult.rows[0].count);
 
-    // Employees with team count
+    // ===============================
+    // MEMBERS DATA
+    // ===============================
     const employeesQuery = `
       SELECT 
         u.id,
@@ -114,4 +123,150 @@ exports.getEmployees = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Server Error" });
   }
+}; 
+
+// ===============================
+// CREATE NEW MEMBER
+// ===============================
+exports.createMember = async (req, res) => {
+  try {
+
+    const {
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      is_active
+    } = req.body;
+
+    // Insert user
+    const insertQuery = `
+      INSERT INTO ems.users
+      (
+        first_name,
+        last_name,
+        email,
+        working_mode,
+        city_id,
+        is_active
+      )
+      VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING *
+    `;
+
+    const result = await pool.query(insertQuery, [
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      is_active
+    ]);
+
+    res.status(201).json({
+      message: "Member created successfully",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    if (error.code === "23505") {
+      return res.status(400).json({
+        message: "Email already exists"
+      });
+    }
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+  }
+}; 
+
+// ===============================
+// UPDATE MEMBER
+// ===============================
+exports.updateMember = async (req, res) => {
+  try {
+
+    const { id } = req.params;
+
+    const {
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      is_active
+    } = req.body;
+
+    const updateQuery = `
+      UPDATE ems.users
+      SET
+        first_name = $1,
+        last_name = $2,
+        email = $3,
+        working_mode = $4,
+        city_id = $5,
+        is_active = $6
+      WHERE id = $7
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, [
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      is_active,
+      id
+    ]);
+
+    res.json({
+      message: "Member updated successfully",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+};
+
+// ===============================
+// DELETE MEMBER
+// ===============================
+exports.deleteMember = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    await pool.query(`
+      DELETE FROM ems.users
+      WHERE id = $1
+    `, [id]);
+
+    res.json({
+      message: "Member deleted successfully"
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+
 };
