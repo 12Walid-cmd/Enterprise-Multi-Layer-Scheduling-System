@@ -12,31 +12,31 @@ function Sidebar() {
     >
 
       <NavLink to="/" className="nav-link">
-        🏠 Dashboard
+        Dashboard
       </NavLink>
 
       <NavLink to="/members" className="nav-link">
-        👤 Members
+        Members
       </NavLink>
 
       <NavLink to="/teams" className="nav-link">
-        👥 Teams
+        Teams
       </NavLink>
 
       <NavLink to="/rotations" className="nav-link">
-        🔄 Rotations
+        Rotations
       </NavLink>
 
       <NavLink to="/schedule" className="nav-link">
-        📅 Schedules
+        Schedules
       </NavLink>
 
       <NavLink to="/holidays" className="nav-link">
-        🎉 Holidays
+        Holidays
       </NavLink>
 
       <NavLink to="/settings" className="nav-link">
-        ⚙️ Settings
+        Settings
       </NavLink>
     </div>
   );

@@ -65,7 +65,7 @@ function Login() {
         {/* Right Side */}
         <div className="info-panel">
           <h3 className="fw-bold mb-3">
-            Streamline Your Workforce Scheduling
+            Optimize Team Scheduling
           </h3>
 
           <div className="feature-item">

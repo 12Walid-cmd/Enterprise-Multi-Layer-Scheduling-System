@@ -30,7 +30,7 @@ function Rotations() {
   ];
 
   return (
-    <div>
+    <div className="rotations-page">
       {/* Page Header */}
       <div className="page-header">
         <div className="page-title-section">
@@ -157,12 +157,8 @@ function Rotations() {
             </div>
 
             <div className="rotation-actions">
-              <button className="action-btn">
-                View Details
-              </button>
-              <button className="action-btn">
-                Manage Members
-              </button>
+              <button className="action-btn">View Details</button>
+              <button className="action-btn">Manage Members</button>
             </div>
           </div>
         ))}
@@ -174,14 +170,9 @@ function Rotations() {
           className="modal-overlay"
           onClick={() => setShowModal(false)}
         >
-          <div
-            className="modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">
-                Create New Rotation
-              </h2>
+              <h2 className="modal-title">Create New Rotation</h2>
               <button
                 className="close-button"
                 onClick={() => setShowModal(false)}
@@ -192,9 +183,7 @@ function Rotations() {
 
             <div className="modal-body">
               <div className="form-group">
-                <label className="form-label">
-                  Rotation Name *
-                </label>
+                <label className="form-label">Rotation Name *</label>
                 <input
                   type="text"
                   className="form-input"
@@ -203,9 +192,7 @@ function Rotations() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">
-                  Rotation Type *
-                </label>
+                <label className="form-label">Rotation Type *</label>
                 <select className="form-select">
                   <option>Select rotation type...</option>
                   <option>On-Call</option>
@@ -222,9 +209,7 @@ function Rotations() {
               >
                 Cancel
               </button>
-              <button className="primary-button">
-                Create Rotation
-              </button>
+              <button className="primary-button">Create Rotation</button>
             </div>
           </div>
         </div>
