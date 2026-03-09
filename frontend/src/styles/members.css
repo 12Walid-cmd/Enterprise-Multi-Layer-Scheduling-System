@@ -356,13 +356,12 @@ input:focus, select:focus {
 
 .page-title {
   font-size: 28px;
-  font-weight: 600;
+  font-weight: 700 !important;
   margin-bottom: 6px;
 }
 
 .page-subtitle {
-  font-size: 14px;
-  color: #5f6368;
+  color: #000000 !important;
 }
 
 /* Add Employee Button */
@@ -408,4 +407,13 @@ input:focus, select:focus {
   border:none;
   border-radius:4px;
   cursor:pointer;
+}
+
+.badge-job {
+  background: #eef2ff;
+  color: #4f46e5;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
 }

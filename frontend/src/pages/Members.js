@@ -347,7 +347,7 @@ function Members() {
           <thead>
             <tr>
               <th>Employee</th>
-              <th>Working Mode</th>
+              <th>Job Title</th>
               <th>Location</th>
               <th>Status</th>
               <th>Teams</th>
@@ -378,8 +378,8 @@ function Members() {
                 </td>
 
                 <td>
-                  <span className={workingBadge(member.working_mode)}>
-                    {member.working_mode}
+                  <span className="badge badge-job">
+                    {member.job_title || "—"}
                   </span>
                 </td>
 
