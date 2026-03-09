@@ -58,6 +58,7 @@ exports.getMembers = async (req, res) => {
       LEFT JOIN ems.provinces p ON c.province_id = p.id
       LEFT JOIN ems.countries co ON p.country_id = co.id
       LEFT JOIN ems.team_members tm ON u.id = tm.user_id
+      LEFT JOIN ems.role_types rt ON tm.role_type_id = rt.id
       ${whereClause}
     `;
     const totalResult = await pool.query(totalQuery, values);
@@ -73,7 +74,7 @@ exports.getMembers = async (req, res) => {
         u.last_name,
         u.email,
         u.is_active,
-        u.working_mode,
+        STRING_AGG(DISTINCT rt.name, ', ') AS job_title, 
 
         c.name AS city,
         p.name AS province,
@@ -82,10 +83,11 @@ exports.getMembers = async (req, res) => {
         COUNT(DISTINCT tm.team_id) AS team_count
 
       FROM ems.users u
+      LEFT JOIN ems.team_members tm ON u.id = tm.user_id
+      LEFT JOIN ems.role_types rt ON tm.role_type_id = rt.id
       LEFT JOIN ems.cities c ON u.city_id = c.id
       LEFT JOIN ems.provinces p ON c.province_id = p.id
       LEFT JOIN ems.countries co ON p.country_id = co.id
-      LEFT JOIN ems.team_members tm ON u.id = tm.user_id
       ${whereClause}
       GROUP BY u.id, c.name, p.name, co.name
       ORDER BY u.created_at DESC

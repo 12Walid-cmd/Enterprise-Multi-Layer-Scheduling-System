@@ -10,7 +10,7 @@ body {
   background: linear-gradient(135deg, #8c0c26 0%, #ed425c 25%, #840a22 50%);
   min-height: 100vh;
   padding: 32px;
-  border-radius: 0;
+  
 }
 
 /* Sidebar Styles */
