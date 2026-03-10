@@ -5,5 +5,6 @@ const controller = require('./teams.controller');
 router.post('/', controller.createTeam);
 router.get('/', controller.getTeams);
 router.post('/:teamId/members', controller.addTeamMember);
+router.get('/:id/members', controller.getTeamMembers);
 
 module.exports = router;
