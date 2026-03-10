@@ -1,15 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { AddMemberDto } from './dto/add-member.dto';
 
 @Injectable()
 export class MembersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  addMember(teamId: string, data) {
+  addMember(teamId: string, dto: AddMemberDto) {
     return this.prisma.team_members.create({
       data: {
         team_id: teamId,
-        ...data,
+        user_id: dto.userId,
+        team_role_id: dto.teamRoleId,
       },
     });
   }

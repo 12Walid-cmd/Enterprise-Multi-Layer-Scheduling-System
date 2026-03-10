@@ -2,7 +2,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
   provider = "postgresql"
   schemas  = ["ems"]
@@ -181,21 +180,10 @@ model notifications {
   related_entity_id   String?   @db.Uuid
   is_read             Boolean?  @default(false)
   created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime? @default(now()) @updatedAt
   users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([user_id], map: "idx_notifications_user_id")
-  @@schema("ems")
-}
-
-model role_types {
-  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code         String         @unique @db.VarChar(64)
-  name         String         @db.VarChar(128)
-  description  String?
-  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
-  team_members team_members[]
-  user_roles   user_roles[]
-
   @@schema("ems")
 }
 
@@ -206,6 +194,7 @@ model rotation_members {
   rotation_order Int
   is_active      Boolean?  @default(true)
   created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @updatedAt
   rotations      rotations @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -221,6 +210,7 @@ model rotation_scopes {
   group_id    String?   @db.Uuid
   team_id     String?   @db.Uuid
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt
   groups      groups?   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   rotations   rotations @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   teams       teams?    @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -239,6 +229,7 @@ model rotation_tier_members {
   rotation_order Int
   is_active      Boolean?       @default(true)
   created_at     DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?      @default(now()) @updatedAt
   rotation_tiers rotation_tiers @relation(fields: [tier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   users          users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -318,6 +309,7 @@ model staffing_rules {
   rule_config Json
   is_active   Boolean?  @default(true)
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt
   rotations   rotations @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([rotation_id], map: "idx_staffing_rules_rotation_id")
@@ -325,20 +317,31 @@ model staffing_rules {
 }
 
 model team_members {
-  id           String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id      String      @db.Uuid
-  team_id      String      @db.Uuid
-  role_type_id String?     @db.Uuid
-  is_active    Boolean?    @default(true)
-  created_at   DateTime?   @default(now()) @db.Timestamptz(6)
-  role_types   role_types? @relation(fields: [role_type_id], references: [id], onUpdate: NoAction)
-  teams        teams       @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users        users       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String           @db.Uuid
+  team_id      String           @db.Uuid
+  team_role_id String?          @db.Uuid
+  is_active    Boolean?         @default(true)
+  created_at   DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?        @default(now()) @updatedAt
+  users        users            @relation(fields: [user_id], references: [id])
+  teams        teams            @relation(fields: [team_id], references: [id])
+  team_roles   team_role_types? @relation(fields: [team_role_id], references: [id])
 
   @@unique([user_id, team_id])
-  @@index([role_type_id], map: "idx_team_members_role_type_id")
-  @@index([team_id], map: "idx_team_members_team_id")
-  @@index([user_id], map: "idx_team_members_user_id")
+  @@schema("ems")
+}
+
+model global_role_types {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String    @unique @db.VarChar(64)
+  name        String    @db.VarChar(128)
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt
+
+  user_roles user_roles[]
+
   @@schema("ems")
 }
 
@@ -351,6 +354,7 @@ model teams {
   timezone        String?           @db.VarChar(64)
   is_active       Boolean?          @default(true)
   created_at      DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?         @default(now()) @updatedAt
   rotation_scopes rotation_scopes[]
   rotations       rotations[]
   team_members    team_members[]
@@ -364,17 +368,30 @@ model teams {
   @@schema("ems")
 }
 
-model user_roles {
-  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id      String     @db.Uuid
-  role_type_id String     @db.Uuid
-  created_at   DateTime?  @default(now()) @db.Timestamptz(6)
-  role_types   role_types @relation(fields: [role_type_id], references: [id], onUpdate: NoAction)
-  users        users      @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@unique([user_id, role_type_id])
-  @@index([role_type_id], map: "idx_user_roles_role_type_id")
-  @@index([user_id], map: "idx_user_roles_user_id")
+
+model user_roles {
+  id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String            @db.Uuid
+  global_role_id String            @db.Uuid
+  created_at     DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?         @default(now()) @updatedAt
+  users          users             @relation(fields: [user_id], references: [id])
+  global_roles   global_role_types @relation(fields: [global_role_id], references: [id])
+
+  @@unique([user_id, global_role_id])
+  @@schema("ems")
+}
+
+model team_role_types {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code         String         @unique @db.VarChar(64)
+  name         String         @db.VarChar(128)
+  description  String?
+  created_at   DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?      @default(now()) @updatedAt
+  team_members team_members[]
+
   @@schema("ems")
 }
 
@@ -383,8 +400,11 @@ model users {
   first_name                             String                  @db.VarChar(100)
   last_name                              String                  @db.VarChar(100)
   email                                  String                  @unique @db.VarChar(255)
-  is_active                              Boolean?                @default(true)
+  is_active                              Boolean                 @default(true)
   created_at                             DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at                             DateTime?               @default(now()) @updatedAt
+  phone                                  String                  @db.VarChar(50)
+  timezone                               String                  @db.VarChar(100)
   working_mode                           working_mode_enum       @default(LOCAL)
   city                                   String?                 @db.VarChar(100)
   province                               String?                 @db.VarChar(100)

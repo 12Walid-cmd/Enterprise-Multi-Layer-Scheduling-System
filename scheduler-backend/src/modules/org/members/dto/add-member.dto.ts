@@ -1,4 +1,9 @@
+import { IsString } from "class-validator";
+
 export class AddMemberDto {
-  user_id: string;
-  role_type_id?: string;
+  @IsString()
+  userId: string;
+
+  @IsString()
+  teamRoleId: string;
 }

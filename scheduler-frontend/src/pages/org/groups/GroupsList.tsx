@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Group } from "../../../types/org";
-import { GroupsAPI } from "../../../api/org/groups.api";
+import { GroupsAPI } from "../../../api";
 import { useNavigate } from "react-router-dom";
 
 

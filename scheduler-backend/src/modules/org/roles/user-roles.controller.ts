@@ -1,26 +1,26 @@
 import { Controller, Post, Delete, Get, Body, Param } from '@nestjs/common';
 import { UserRolesService } from './user-roles.service';
-import { AssignUserRoleDto } from './dto/assign-user-role.dto';
+import { AssignUserGlobalRoleDto } from './dto/assign-user-global-role.dto';
 
 @Controller('roles/users')
 export class UserRolesController {
-  constructor(private readonly userRolesService: UserRolesService) {}
+  constructor(private readonly service: UserRolesService) {}
 
   @Post()
-  assign(@Body() dto: AssignUserRoleDto) {
-    return this.userRolesService.assign(dto);
+  assign(@Body() dto: AssignUserGlobalRoleDto) {
+    return this.service.assign(dto);
   }
 
-  @Delete(':userId/:roleTypeId')
+  @Delete(':userId/:globalRoleId')
   remove(
     @Param('userId') userId: string,
-    @Param('roleTypeId') roleTypeId: string,
+    @Param('globalRoleId') globalRoleId: string,
   ) {
-    return this.userRolesService.remove(userId, roleTypeId);
+    return this.service.remove(userId, globalRoleId);
   }
 
   @Get(':userId')
   findByUser(@Param('userId') userId: string) {
-    return this.userRolesService.findByUser(userId);
+    return this.service.findByUser(userId);
   }
 }

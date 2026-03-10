@@ -24,8 +24,8 @@ findOne(id: string) {
     include: {
       team_members: {
         include: {
-          users: true,        
-          role_types: true,   
+          users: true,
+          team_roles: true, 
         },
       },
     },

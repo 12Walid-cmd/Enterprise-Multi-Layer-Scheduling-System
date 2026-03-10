@@ -1,20 +1,32 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma/prisma.module';
 
+// Groups
 import { GroupsController } from './groups/groups.controller';
 import { GroupsService } from './groups/groups.service';
 
+// Teams
 import { TeamsController } from './teams/teams.controller';
 import { TeamsService } from './teams/teams.service';
 
+// Members
 import { MembersController } from './members/members.controller';
 import { MembersService } from './members/members.service';
+// Team Role Types
+import { TeamRoleTypesController } from './roles/team-role-types.controller';
+import { TeamRoleTypesService } from './roles/team-role-types.service';
 
-import { RoleTypesController } from './roles/role-types.controller';
-import { RoleTypesService } from './roles/role-types.service';
+// Global Role Types
+import { GlobalRoleTypesController } from './roles/global-role-types.controller';
+import { GlobalRoleTypesService } from './roles/global-role-types.service';
 
+// User Roles 
 import { UserRolesController } from './roles/user-roles.controller';
 import { UserRolesService } from './roles/user-roles.service';
+
+// Sub-teams
+import { SubTeamController } from './sub-teams/sub-team.controller';
+import { SubTeamService } from './sub-teams/sub-team.service';
 
 @Module({
   imports: [PrismaModule],
@@ -22,16 +34,19 @@ import { UserRolesService } from './roles/user-roles.service';
     GroupsController,
     TeamsController,
     MembersController,
-    RoleTypesController,
-    UserRolesController,
+    TeamRoleTypesController,
+    GlobalRoleTypesController,   
+    UserRolesController, 
+    SubTeamController,    
   ],
   providers: [
     GroupsService,
     TeamsService,
     MembersService,
-    RoleTypesService,
+    TeamRoleTypesService,
+    GlobalRoleTypesService,      
     UserRolesService,
+    SubTeamService,            
   ],
 })
 export class OrgModule {}
-

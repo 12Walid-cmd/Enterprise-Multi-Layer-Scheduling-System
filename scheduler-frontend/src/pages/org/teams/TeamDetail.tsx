@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { TeamsAPI } from "../../../api";
-import { TeamMembersAPI } from "../../../api";
+import { TeamsAPI, TeamMembersAPI, TeamRoleTypesAPI } from "../../../api";
 import {
   Box,
   Button,
@@ -10,7 +9,10 @@ import {
   DialogContent,
   DialogTitle,
   Paper,
-  TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Typography,
 } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
@@ -23,9 +25,12 @@ export default function TeamDetail() {
   const [loading, setLoading] = useState(true);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
+  const [users, setUsers] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]); // team_role_types
+
   const [newMember, setNewMember] = useState({
     user_id: "",
-    role_type_id: "",
+    team_role_id: "",
   });
 
   const loadTeam = () => {
@@ -37,6 +42,11 @@ export default function TeamDetail() {
 
   useEffect(() => {
     loadTeam();
+
+    // TODO: UsersAPI.getAll() 
+    // UsersAPI.getAll().then((data) => setUsers(data));
+
+    TeamRoleTypesAPI.getAll().then((data) => setRoles(data));
   }, [id]);
 
   const handleDelete = async () => {
@@ -47,7 +57,7 @@ export default function TeamDetail() {
   const handleAddMember = async () => {
     await TeamMembersAPI.add(id!, newMember);
     loadTeam();
-    setNewMember({ user_id: "", role_type_id: "" });
+    setNewMember({ user_id: "", team_role_id: "" });
   };
 
   const handleRemoveMember = async (userId: string) => {
@@ -81,6 +91,10 @@ export default function TeamDetail() {
         <Typography><strong>Members:</strong> {team.team_members?.length ?? 0}</Typography>
 
         <Box mt={3} display="flex" gap={2}>
+          <Button
+            variant="outlined" onClick={() => navigate(`/teams/${team.id}/sub-teams`)}>
+            View Sub-teams
+          </Button>
           <Button variant="contained" onClick={() => navigate(`/teams/${id}/edit`)}>
             Edit Team
           </Button>
@@ -104,11 +118,11 @@ export default function TeamDetail() {
         <Paper key={m.id} sx={{ p: 2, mb: 1 }}>
           <Typography>
             <strong>User:</strong> {m.users?.first_name} {m.users?.last_name}
-            </Typography>
+          </Typography>
 
-            <Typography>
-            <strong>Role:</strong> {m.role_types?.name}
-            </Typography>
+          <Typography>
+            <strong>Role:</strong> {m.team_role_types?.name}
+          </Typography>
 
           <Button
             color="error"
@@ -144,10 +158,10 @@ export default function TeamDetail() {
       <FormControl fullWidth sx={{ mt: 2 }}>
         <InputLabel>Role</InputLabel>
         <Select
-          value={newMember.role_type_id}
+          value={newMember.team_role_id}
           label="Role"
           onChange={(e) =>
-            setNewMember({ ...newMember, role_type_id: e.target.value })
+            setNewMember({ ...newMember, team_role_id: e.target.value })
           }
         >
           {roles.map((r) => (

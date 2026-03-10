@@ -1,6 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TeamsAPI } from "../../../api";
-import { Box, Button, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
 import { useNavigate } from "react-router-dom";
 
 export default function CreateTeamPage() {
@@ -17,6 +26,14 @@ export default function CreateTeamPage() {
     await TeamsAPI.create(form);
     navigate("/teams");
   };
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
+
+
+  useEffect(() => {
+    fetch("/api/groups")
+      .then((res) => res.json())
+      .then((data) => setGroups(data));
+  }, []);
 
   return (
     <Box>
@@ -46,13 +63,24 @@ export default function CreateTeamPage() {
         sx={{ mb: 2 }}
       />
 
-      <TextField
-        fullWidth
-        label="Group ID"
-        value={form.group_id}
-        onChange={(e) => setForm({ ...form, group_id: e.target.value })}
-        sx={{ mb: 2 }}
-      />
+      <FormControl fullWidth sx={{ mb: 2 }}>
+        <InputLabel id="group-select-label">Group</InputLabel>
+        <Select
+          labelId="group-select-label"
+          value={form.group_id || ""}
+          label="Group"
+          onChange={(e) =>
+            setForm({ ...form, group_id: e.target.value })
+          }
+        >
+          {groups.map((g) => (
+            <MenuItem key={g.id} value={g.id}>
+              {g.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
 
       <Button variant="contained" onClick={handleSubmit}>
         Create

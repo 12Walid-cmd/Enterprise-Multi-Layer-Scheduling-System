@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, TextField, Button, Typography, Paper } from "@mui/material";
-import { GroupsAPI } from "../../../api/org/groups.api";
+import { GroupsAPI } from "../../../api";
 import { useNavigate } from "react-router-dom";
 
 export default function CreateGroupPage() {

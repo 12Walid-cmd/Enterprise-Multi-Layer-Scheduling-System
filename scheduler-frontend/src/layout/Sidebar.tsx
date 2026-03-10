@@ -1,27 +1,30 @@
+import { useState } from "react";
 import {
   Drawer,
+  Toolbar,
+  Typography,
   List,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Collapse,
-  Toolbar,
-  Typography,
 } from "@mui/material";
+
 import GroupsIcon from "@mui/icons-material/Groups";
 import GroupIcon from "@mui/icons-material/Group";
 import PeopleIcon from "@mui/icons-material/People";
 import ShieldIcon from "@mui/icons-material/Shield";
+import PersonIcon from "@mui/icons-material/Person";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 
 import { NavLink } from "react-router-dom";
-import { useState } from "react";
 
 const drawerWidth = 240;
 
 export default function Sidebar() {
   const [openOrg, setOpenOrg] = useState(false);
+  const [openUser, setOpenUser] = useState(false);
 
   return (
     <Drawer
@@ -41,7 +44,9 @@ export default function Sidebar() {
 
       <List>
 
-        {/* Organization Management (Parent) */}
+        {/* ============================
+            Organization Management
+        ============================ */}
         <ListItemButton onClick={() => setOpenOrg(!openOrg)}>
           <ListItemIcon sx={{ color: "white" }}>
             <GroupsIcon />
@@ -50,41 +55,77 @@ export default function Sidebar() {
           {openOrg ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
 
-        {/* Submenu */}
         <Collapse in={openOrg} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
 
-            <ListItemButton
-              component={NavLink}
-              to="/groups"
-              sx={{ pl: 4 }}
-            >
+            <ListItemButton component={NavLink} to="/groups" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
                 <GroupIcon />
               </ListItemIcon>
               <ListItemText primary="Groups" />
             </ListItemButton>
 
-            <ListItemButton
-              component={NavLink}
-              to="/teams"
-              sx={{ pl: 4 }}
-            >
+            <ListItemButton component={NavLink} to="/teams" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
                 <PeopleIcon />
               </ListItemIcon>
               <ListItemText primary="Teams" />
             </ListItemButton>
 
-            <ListItemButton
-              component={NavLink}
-              to="/roles/types"
-              sx={{ pl: 4 }}
-            >
+            {/* Sub-teams  */}
+            <ListItemButton component={NavLink} to="/teams" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <PeopleIcon />
+              </ListItemIcon>
+              <ListItemText primary="Sub-teams" />
+            </ListItemButton>
+
+
+            <ListItemButton component={NavLink} to="/roles/team-types" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
                 <ShieldIcon />
               </ListItemIcon>
-              <ListItemText primary="Roles" />
+              <ListItemText primary="Team Role Types" />
+            </ListItemButton>
+
+            <ListItemButton component={NavLink} to="/roles/global-types" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <ShieldIcon />
+              </ListItemIcon>
+              <ListItemText primary="Global Role Types" />
+            </ListItemButton>
+
+          </List>
+        </Collapse>
+
+        {/* ============================
+            User Management
+        ============================ */}
+        <ListItemButton onClick={() => setOpenUser(!openUser)}>
+          <ListItemIcon sx={{ color: "white" }}>
+            <PersonIcon />
+          </ListItemIcon>
+          <ListItemText primary="User Management" />
+          {openUser ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+
+        <Collapse in={openUser} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+
+            {/* Users List */}
+            <ListItemButton component={NavLink} to="/users" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <PeopleIcon />
+              </ListItemIcon>
+              <ListItemText primary="Users" />
+            </ListItemButton>
+
+            {/* Create User */}
+            <ListItemButton component={NavLink} to="/users/create" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <PersonIcon />
+              </ListItemIcon>
+              <ListItemText primary="Create User" />
             </ListItemButton>
 
           </List>

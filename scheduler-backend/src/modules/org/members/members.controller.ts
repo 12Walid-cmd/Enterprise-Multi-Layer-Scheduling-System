@@ -4,15 +4,15 @@ import { AddMemberDto } from './dto/add-member.dto';
 
 @Controller('teams/:teamId/members')
 export class MembersController {
-  constructor(private readonly membersService: MembersService) {}
+  constructor(private readonly service: MembersService) {}
 
   @Post()
   add(@Param('teamId') teamId: string, @Body() dto: AddMemberDto) {
-    return this.membersService.addMember(teamId, dto);
+    return this.service.addMember(teamId, dto);
   }
 
   @Delete(':userId')
   remove(@Param('teamId') teamId: string, @Param('userId') userId: string) {
-    return this.membersService.removeMember(teamId, userId);
+    return this.service.removeMember(teamId, userId);
   }
 }

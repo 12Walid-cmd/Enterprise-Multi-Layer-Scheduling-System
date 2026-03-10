@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { GroupsAPI } from "../../../api/org/groups.api";
+import { GroupsAPI } from "../../../api";
 import {
   Box,
   Typography,
