@@ -19,6 +19,6 @@ exports.createGroup = async (req, res) => {
 };
 
 exports.getGroups = async (req, res) => {
-  const result = await pool.query('SELECT * FROM groups');
+  const result = await pool.query('SELECT * FROM ems.groups ORDER BY name');
   res.json(result.rows);
 };
