@@ -97,6 +97,7 @@ function Rotations() {
   const [availableGroups, setAvailableGroups] = useState([]);
   const [availableRotationTypes, setAvailableRotationTypes] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [newRotation, setNewRotation] = useState({
     name: '',
@@ -139,21 +140,21 @@ function Rotations() {
     }
   };
 
-const fetchUsers = async () => {
-  try {
-    const response = await api.get('/members?limit=1000');
-    const formattedUsers = response.data.data.map(user => ({  
-      id: user.id,
-      name: `${user.first_name} ${user.last_name}`,
-      email: user.email,
-      initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`,
-      jobTitle: user.job_title || 'Staff' 
-    }));
-    setAvailableUsers(formattedUsers);
-  } catch (error) {
-    console.error("Error fetching users:", error);
-  }
-};
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/members?limit=1000');
+      const formattedUsers = response.data.data.map(user => ({
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`,
+        email: user.email,
+        initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`,
+        jobTitle: user.job_title || 'Staff'
+      }));
+      setAvailableUsers(formattedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
 
   const fetchTeams = async () => {
     try {
@@ -183,15 +184,106 @@ const fetchUsers = async () => {
   };
 
   const handleCreateRotation = async () => {
-    // Validation
+    
+    // 1. REQUIRED FIELDS VALIDATION
+    
     if (!newRotation.name || !newRotation.rotation_type || !newRotation.cadence_type) {
       alert("Please fill in all required fields (marked with *)");
       return;
     }
 
+    
+    // 2. NAME VALIDATION
+    
+    if (newRotation.name.trim().length === 0) {
+      alert("Rotation name cannot be empty or just spaces");
+      return;
+    }
+
+    if (newRotation.name.length > 255) {
+      alert("Rotation name must be less than 255 characters");
+      return;
+    }
+
+    // Check for special characters that might cause issues
+    const invalidChars = /[<>{}[\]\\/]/;
+    if (invalidChars.test(newRotation.name)) {
+      alert("Rotation name contains invalid characters (< > { } [ ] \\ /). Please use only letters, numbers, and basic punctuation.");
+      return;
+    }
+
+    
+    // 3. DUPLICATE NAME CHECK
+    
+    const duplicateName = rotations.some(
+      r => r.name.toLowerCase().trim() === newRotation.name.toLowerCase().trim()
+    );
+    if (duplicateName) {
+      alert("A rotation with this name already exists. Please choose a different name.");
+      return;
+    }
+
+    
+    // 4. CADENCE INTERVAL VALIDATION
+    
+    if (newRotation.cadence_interval < 1 || newRotation.cadence_interval > 365) {
+      alert("Cadence interval must be between 1 and 365");
+      return;
+    }
+
+    // Warn about unusually long weekly intervals
+    if (newRotation.cadence_type === 'WEEKLY' && newRotation.cadence_interval > 52) {
+      alert("Weekly rotation interval cannot exceed 52 (one year). Please use MONTHLY cadence for longer intervals.");
+      return;
+    }
+
+    // Warn about daily intervals that seem like they should be monthly
+    if (newRotation.cadence_type === 'DAILY' && newRotation.cadence_interval > 30) {
+      if (!window.confirm("You're creating a rotation that cycles every 30+ days but marked as DAILY. Did you mean MONTHLY instead?")) {
+        return;
+      }
+    }
+
+    
+    // 5. MIN ASSIGNEES VALIDATION
+    
+    if (newRotation.min_assignees < 1 || newRotation.min_assignees > 100) {
+      alert("Minimum assignees must be between 1 and 100");
+      return;
+    }
+
+    // Warn if min assignees seems unusually high
+    if (newRotation.min_assignees > 10) {
+      if (!window.confirm(`You set minimum assignees to ${newRotation.min_assignees}. This is unusually high. Continue anyway?`)) {
+        return;
+      }
+    }
+
+    
+    // 7. ROTATION TYPE BUSINESS RULES
+    
+    // Cross-Team Analyst should NOT have a single team
+    if (newRotation.rotation_type === 'Cross-Team Analyst' && newRotation.team_id) {
+      alert("Cross-Team Analyst rotations should not be assigned to a single team (they span multiple teams). Please leave team blank.");
+      return;
+    }
+
+    // Team-Level and Sub-Team rotations should have a team
+    if ((newRotation.rotation_type === 'Team-Level' || newRotation.rotation_type === 'Sub-Team') 
+        && !newRotation.team_id) {
+      if (!window.confirm("Team-Level and Sub-Team rotations typically require a team. Continue without assigning a team?")) {
+        return;
+      }
+    }
+
+    
+    // 8. CREATE ROTATION
+    
     try {
+      setIsSubmitting(true);
+      
       await api.post('/rotations', {
-        name: newRotation.name,
+        name: newRotation.name.trim(), // Trim whitespace
         rotation_type: newRotation.rotation_type,
         group_id: newRotation.group_id || null,
         team_id: newRotation.team_id || null,
@@ -218,9 +310,18 @@ const fetchUsers = async () => {
       await fetchRotations();
       
       alert("Rotation created successfully!");
+      
     } catch (error) {
       console.error("Error creating rotation:", error);
-      alert(error.response?.data?.error || "Failed to create rotation");
+      
+      // Handle specific error cases
+      if (error.response?.status === 400 && error.response?.data?.error?.includes('already exists')) {
+        alert("A rotation with this name already exists in the database.");
+      } else {
+        alert(error.response?.data?.error || "Failed to create rotation");
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -530,6 +631,8 @@ const fetchUsers = async () => {
                   placeholder="e.g., CDO On-Call Rotation"
                   value={newRotation.name}
                   onChange={(e) => setNewRotation({...newRotation, name: e.target.value})}
+                  maxLength="255"
+                  required
                 />
               </div>
 
@@ -539,6 +642,7 @@ const fetchUsers = async () => {
                   className="form-select"
                   value={newRotation.rotation_type}
                   onChange={(e) => setNewRotation({...newRotation, rotation_type: e.target.value})}
+                  required
                 >
                   <option value="">Select rotation type...</option>
                   {availableRotationTypes.map(type => (
@@ -581,6 +685,7 @@ const fetchUsers = async () => {
                   className="form-select"
                   value={newRotation.cadence_type}
                   onChange={(e) => setNewRotation({...newRotation, cadence_type: e.target.value})}
+                  required
                 >
                   <option value="">Select cadence...</option>
                   <option value="DAILY">Daily</option>
@@ -597,8 +702,10 @@ const fetchUsers = async () => {
                   className="form-input" 
                   placeholder="e.g., 1"
                   min="1"
+                  max="365"
                   value={newRotation.cadence_interval}
                   onChange={(e) => setNewRotation({...newRotation, cadence_interval: parseInt(e.target.value) || 1})}
+                  required
                 />
                 <small style={{color: '#6b7280', fontSize: '12px'}}>
                   Every {newRotation.cadence_interval || 1} {newRotation.cadence_type?.toLowerCase() || 'period'}(s)
@@ -612,16 +719,30 @@ const fetchUsers = async () => {
                   className="form-input" 
                   placeholder="e.g., 1"
                   min="1"
+                  max="100"
                   value={newRotation.min_assignees}
                   onChange={(e) => setNewRotation({...newRotation, min_assignees: parseInt(e.target.value) || 1})}
+                  required
                 />
               </div>
             </div>
 
             {/* Footer */}
             <div className="create-modal-footer">
-              <button className="secondary-button" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="primary-button" onClick={handleCreateRotation}>Create Rotation</button>
+              <button 
+                className="secondary-button" 
+                onClick={() => setShowModal(false)}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+              <button 
+                className="primary-button" 
+                onClick={handleCreateRotation}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Rotation'}
+              </button>
             </div>
           </div>
         </div>
@@ -667,8 +788,8 @@ const fetchUsers = async () => {
                         {rotationMembers.map((member, index) => (
                           <SortableMemberItem
                             key={member.id}
-                            index={index}
                             member={member}
+                            index={index}
                             onRemove={handleRemoveMember}
                           />
                         ))}

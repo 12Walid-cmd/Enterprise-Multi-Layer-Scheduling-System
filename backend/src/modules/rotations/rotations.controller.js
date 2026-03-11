@@ -216,3 +216,44 @@ exports.reorderRotationMembers = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+exports.createRotation = async (req, res) => {
+  try {
+    const {
+      name,
+      rotation_type,
+      group_id,
+      team_id,
+      cadence_type,
+      cadence_interval,
+      min_assignees
+    } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO ems.rotations 
+       (id, name, rotation_type, group_id, team_id, cadence_type, cadence_interval, min_assignees, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
+       RETURNING *`,
+      [
+        uuidv4(),
+        name,
+        rotation_type,
+        group_id,
+        team_id,
+        cadence_type,
+        cadence_interval,
+        min_assignees
+      ]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    // Handle duplicate name error (unique constraint violation)
+    if (err.code === '23505') {
+      return res.status(400).json({ 
+        error: 'A rotation with this name already exists' 
+      });
+    }
+    res.status(500).json({ error: err.message });
+  }
+};
