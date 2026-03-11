@@ -11,7 +11,7 @@ import {
   MenuItem,
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { SubTeamsAPI, TeamMembersAPI, UsersAPI, TeamRoleTypesAPI } from "../../../api";
+import { SubTeamsAPI, TeamMembersAPI, UsersAPI } from "../../../api";
 import type { TeamMember } from '../../../types/org';
 
 export const SubTeamDetail = () => {
@@ -22,13 +22,9 @@ export const SubTeamDetail = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
-  // 新增：用于添加成员的用户与角色
+  
   const [users, setUsers] = useState<any[]>([]);
-  const [roles, setRoles] = useState<any[]>([]);
-  const [newMember, setNewMember] = useState({
-    userId: "",
-    teamRoleId: "",
-  });
+  const [newMemberUserId, setNewMemberUserId] = useState("");
 
   const load = async () => {
     if (!id) return;
@@ -43,23 +39,19 @@ export const SubTeamDetail = () => {
   };
 
   const addMember = async () => {
-    if (!newMember.userId || !newMember.teamRoleId) return;
+    if (!newMemberUserId) return;
 
     await SubTeamsAPI.addMember(id!, {
-      userId: newMember.userId,
-      teamRoleId: newMember.teamRoleId,
+      userId: newMemberUserId,
     });
 
-    setNewMember({ userId: "", teamRoleId: "" });
+    setNewMemberUserId("");
     load();
   };
 
   useEffect(() => {
     load();
-
-    // 加载用户与角色
     UsersAPI.getAll().then(setUsers);
-    TeamRoleTypesAPI.getAll().then(setRoles);
   }, [id]);
 
   if (!subTeam) {
@@ -68,6 +60,7 @@ export const SubTeamDetail = () => {
 
   return (
     <Box p={3}>
+      {/* Header */}
       <Stack direction="row" justifyContent="space-between" mb={3}>
         <Typography variant="h5">{subTeam.name}</Typography>
         <Button
@@ -78,6 +71,7 @@ export const SubTeamDetail = () => {
         </Button>
       </Stack>
 
+      {/* Description */}
       <Paper sx={{ p: 2, mb: 3 }}>
         <Typography variant="subtitle1">Description</Typography>
         <Typography variant="body2" color="text.secondary">
@@ -85,10 +79,9 @@ export const SubTeamDetail = () => {
         </Typography>
       </Paper>
 
+      {/* Members */}
       <Paper sx={{ p: 2 }}>
-        <Stack direction="row" justifyContent="space-between" mb={1}>
-          <Typography variant="subtitle1">Members</Typography>
-        </Stack>
+        <Typography variant="subtitle1" mb={1}>Members</Typography>
 
         {members.map((m: any) => (
           <Typography key={m.user_id}>
@@ -104,38 +97,19 @@ export const SubTeamDetail = () => {
         )}
       </Paper>
 
-      {/* 页面内添加成员 */}
+      {/* Add Member */}
       <Typography variant="h6" mt={4}>Add Member</Typography>
 
       <FormControl fullWidth sx={{ mt: 2 }}>
         <InputLabel>User</InputLabel>
         <Select
-          value={newMember.userId}
+          value={newMemberUserId}
           label="User"
-          onChange={(e) =>
-            setNewMember({ ...newMember, userId: e.target.value })
-          }
+          onChange={(e) => setNewMemberUserId(e.target.value)}
         >
           {users.map((u) => (
             <MenuItem key={u.id} value={u.id}>
               {u.first_name + " " + u.last_name}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      <FormControl fullWidth sx={{ mt: 2 }}>
-        <InputLabel>Role</InputLabel>
-        <Select
-          value={newMember.teamRoleId}
-          label="Role"
-          onChange={(e) =>
-            setNewMember({ ...newMember, teamRoleId: e.target.value })
-          }
-        >
-          {roles.map((r) => (
-            <MenuItem key={r.id} value={r.id}>
-              {r.name}
             </MenuItem>
           ))}
         </Select>
