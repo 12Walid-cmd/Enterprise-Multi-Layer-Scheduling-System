@@ -18,7 +18,7 @@ export const EditSubTeamPage = () => {
         name: "",
         description: "",
         timezone: "",
-        parent_team_id: "",
+        // parent_team_id: "",
     });
 
 
@@ -26,12 +26,12 @@ export const EditSubTeamPage = () => {
         if (!subTeamId) return;
         const st = await SubTeamsAPI.getOne(subTeamId);
 
-        console.log("Loaded SubTeam:", st);
+        console.log("--------------------------------------------Loaded SubTeam:", st);
         setForm({
             name: st.name,
             description: st.description ?? "",
             timezone: st.timezone ?? "",
-            parent_team_id: st.parent_team_id,
+            // parent_team_id: st.parent_team_id,
         });
     };
 
@@ -51,7 +51,7 @@ export const EditSubTeamPage = () => {
             name: form.name,
             description: form.description,
             timezone: form.timezone,
-            parent_team_id: form.parent_team_id,
+            // parent_team_id: form.parent_team_id,
         });
 
         navigate(`/sub-teams/${subTeamId}`);

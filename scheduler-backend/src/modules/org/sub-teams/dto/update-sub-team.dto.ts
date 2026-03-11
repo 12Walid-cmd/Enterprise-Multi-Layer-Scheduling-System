@@ -13,7 +13,7 @@ export class UpdateSubTeamDto {
   @IsString()
   timezone?: string;
 
-  @IsOptional()
-  @IsString()
-  parent_team_id?: string;
+  // @IsOptional()
+  // @IsString()
+  // parent_team_id?: string;
 }
