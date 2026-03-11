@@ -5,17 +5,13 @@ import {
   Paper,
   Stack,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { SubTeamsAPI, TeamMembersAPI } from "../../../api";
+import { SubTeamsAPI, TeamMembersAPI, UsersAPI, TeamRoleTypesAPI } from "../../../api";
 import type { TeamMember } from '../../../types/org';
 
 export const SubTeamDetail = () => {
@@ -26,8 +22,13 @@ export const SubTeamDetail = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
-  const [openAdd, setOpenAdd] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState("");
+  // 新增：用于添加成员的用户与角色
+  const [users, setUsers] = useState<any[]>([]);
+  const [roles, setRoles] = useState<any[]>([]);
+  const [newMember, setNewMember] = useState({
+    userId: "",
+    teamRoleId: "",
+  });
 
   const load = async () => {
     if (!id) return;
@@ -42,17 +43,23 @@ export const SubTeamDetail = () => {
   };
 
   const addMember = async () => {
-    if (!selectedUserId) return;
+    if (!newMember.userId || !newMember.teamRoleId) return;
 
-    await SubTeamsAPI.addMember(id!, { userId: selectedUserId });
+    await SubTeamsAPI.addMember(id!, {
+      userId: newMember.userId,
+      teamRoleId: newMember.teamRoleId,
+    });
 
-    setOpenAdd(false);
-    setSelectedUserId("");
-    load(); 
+    setNewMember({ userId: "", teamRoleId: "" });
+    load();
   };
 
   useEffect(() => {
     load();
+
+    // 加载用户与角色
+    UsersAPI.getAll().then(setUsers);
+    TeamRoleTypesAPI.getAll().then(setRoles);
   }, [id]);
 
   if (!subTeam) {
@@ -65,7 +72,7 @@ export const SubTeamDetail = () => {
         <Typography variant="h5">{subTeam.name}</Typography>
         <Button
           variant="outlined"
-          onClick={() => navigate(`/teams/sub-teams/${id}/edit`)}
+          onClick={() => navigate(`/sub-teams/${id}/edit`)}
         >
           Edit
         </Button>
@@ -81,9 +88,6 @@ export const SubTeamDetail = () => {
       <Paper sx={{ p: 2 }}>
         <Stack direction="row" justifyContent="space-between" mb={1}>
           <Typography variant="subtitle1">Members</Typography>
-          <Button variant="contained" onClick={() => setOpenAdd(true)}>
-            Add Member
-          </Button>
         </Stack>
 
         {members.map((m: any) => (
@@ -100,33 +104,46 @@ export const SubTeamDetail = () => {
         )}
       </Paper>
 
-      {/* Add Member Dialog */}
-      <Dialog open={openAdd} onClose={() => setOpenAdd(false)}>
-        <DialogTitle>Add Member to Subteam</DialogTitle>
-        <DialogContent sx={{ mt: 2 }}>
-          <FormControl fullWidth>
-            <InputLabel>Team Member</InputLabel>
-            <Select
-              value={selectedUserId}
-              label="Team Member"
-              onChange={(e) => setSelectedUserId(e.target.value)}
-            >
-              {teamMembers.map((tm: any) => (
-                <MenuItem key={tm.user_id} value={tm.user_id}>
-                  {tm.users?.first_name} {tm.users?.last_name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
+      {/* 页面内添加成员 */}
+      <Typography variant="h6" mt={4}>Add Member</Typography>
 
-        <DialogActions>
-          <Button onClick={() => setOpenAdd(false)}>Cancel</Button>
-          <Button variant="contained" onClick={addMember}>
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <FormControl fullWidth sx={{ mt: 2 }}>
+        <InputLabel>User</InputLabel>
+        <Select
+          value={newMember.userId}
+          label="User"
+          onChange={(e) =>
+            setNewMember({ ...newMember, userId: e.target.value })
+          }
+        >
+          {users.map((u) => (
+            <MenuItem key={u.id} value={u.id}>
+              {u.first_name + " " + u.last_name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <FormControl fullWidth sx={{ mt: 2 }}>
+        <InputLabel>Role</InputLabel>
+        <Select
+          value={newMember.teamRoleId}
+          label="Role"
+          onChange={(e) =>
+            setNewMember({ ...newMember, teamRoleId: e.target.value })
+          }
+        >
+          {roles.map((r) => (
+            <MenuItem key={r.id} value={r.id}>
+              {r.name}
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+
+      <Button variant="contained" sx={{ mt: 2 }} onClick={addMember}>
+        Add Member
+      </Button>
     </Box>
   );
 };
