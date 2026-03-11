@@ -107,7 +107,7 @@ exports.getRotationMembers = async (req, res) => {
         END as email,
         CASE 
           WHEN rm.member_type = 'individual' THEN SUBSTRING(u.first_name, 1, 1) || SUBSTRING(u.last_name, 1, 1)
-          ELSE SUBSTRING(t.name, 1, 2)
+          ELSE UPPER(LEFT(t.name, 1) || COALESCE(SUBSTRING(t.name FROM '\s+(\S)'), ''))
         END as initials,
         CASE 
           WHEN rm.member_type = 'team' THEN t.member_count
