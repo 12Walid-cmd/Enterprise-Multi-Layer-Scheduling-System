@@ -99,6 +99,14 @@ function Rotations() {
   const [openMenuId, setOpenMenuId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Filters state
+  const [filters, setFilters] = useState({
+    search: '',
+    rotationType: 'All Types',
+    team: 'All Teams',
+    status: 'All Status'
+  });
+  
   const [newRotation, setNewRotation] = useState({
     name: '',
     rotation_type: '',
@@ -118,6 +126,40 @@ function Rotations() {
     })
   );
 
+  // Filter rotations based on current filters
+  const getFilteredRotations = () => {
+    return rotations.filter(rotation => {
+      // Search filter (searches name and rotation type)
+      if (filters.search && 
+          !rotation.name.toLowerCase().includes(filters.search.toLowerCase()) &&
+          !rotation.rotation_type.toLowerCase().includes(filters.search.toLowerCase())) {
+        return false;
+      }
+
+      // Rotation Type filter
+      if (filters.rotationType !== 'All Types' && 
+          rotation.rotation_type !== filters.rotationType) {
+        return false;
+      }
+
+      // Team filter
+      if (filters.team !== 'All Teams' && 
+          rotation.team_name !== filters.team) {
+        return false;
+      }
+
+      // Status filter
+      if (filters.status === 'Active' && !rotation.is_active) {
+        return false;
+      }
+      if (filters.status === 'Inactive' && rotation.is_active) {
+        return false;
+      }
+
+      return true;
+    });
+  };
+
   // Fetch rotations on component mount
   useEffect(() => {
     fetchRotations();
@@ -125,6 +167,7 @@ function Rotations() {
     fetchTeams();
     fetchGroups();
     fetchRotationTypes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchRotations = async () => {
@@ -184,17 +227,17 @@ function Rotations() {
   };
 
   const handleCreateRotation = async () => {
-    
+  
     // 1. REQUIRED FIELDS VALIDATION
-    
+  
     if (!newRotation.name || !newRotation.rotation_type || !newRotation.cadence_type) {
       alert("Please fill in all required fields (marked with *)");
       return;
     }
 
-    
+  
     // 2. NAME VALIDATION
-    
+  
     if (newRotation.name.trim().length === 0) {
       alert("Rotation name cannot be empty or just spaces");
       return;
@@ -212,9 +255,9 @@ function Rotations() {
       return;
     }
 
-    
+  
     // 3. DUPLICATE NAME CHECK
-    
+  
     const duplicateName = rotations.some(
       r => r.name.toLowerCase().trim() === newRotation.name.toLowerCase().trim()
     );
@@ -223,9 +266,9 @@ function Rotations() {
       return;
     }
 
-    
+  
     // 4. CADENCE INTERVAL VALIDATION
-    
+  
     if (newRotation.cadence_interval < 1 || newRotation.cadence_interval > 365) {
       alert("Cadence interval must be between 1 and 365");
       return;
@@ -244,9 +287,9 @@ function Rotations() {
       }
     }
 
-    
+  
     // 5. MIN ASSIGNEES VALIDATION
-    
+  
     if (newRotation.min_assignees < 1 || newRotation.min_assignees > 100) {
       alert("Minimum assignees must be between 1 and 100");
       return;
@@ -258,10 +301,9 @@ function Rotations() {
         return;
       }
     }
-
-    
-    // 7. ROTATION TYPE BUSINESS RULES
-    
+  
+    // 6. ROTATION TYPE BUSINESS RULES
+  
     // Cross-Team Analyst should NOT have a single team
     if (newRotation.rotation_type === 'Cross-Team Analyst' && newRotation.team_id) {
       alert("Cross-Team Analyst rotations should not be assigned to a single team (they span multiple teams). Please leave team blank.");
@@ -276,9 +318,9 @@ function Rotations() {
       }
     }
 
-    
-    // 8. CREATE ROTATION
-    
+  
+    // 7. CREATE ROTATION
+  
     try {
       setIsSubmitting(true);
       
@@ -477,137 +519,196 @@ function Rotations() {
       <div className="filters">
         <div className="filter-group">
           <div className="filter-label">Search</div>
-          <input type="text" className="search-input" placeholder="Search rotations..." />
+          <input 
+            type="text" 
+            className="search-input" 
+            placeholder="Search rotations..." 
+            value={filters.search}
+            onChange={(e) => setFilters({...filters, search: e.target.value})}
+          />
         </div>
 
         <div className="filter-group">
           <div className="filter-label">Rotation Type</div>
-          <select className="filter-select">
+          <select 
+            className="filter-select"
+            value={filters.rotationType}
+            onChange={(e) => setFilters({...filters, rotationType: e.target.value})}
+          >
             <option>All Types</option>
-            <option>On-Call</option>
-            <option>Mountain Shift</option>
-            <option>Analyst</option>
-            <option>Service Desk</option>
+            {availableRotationTypes.map(type => (
+              <option key={type.id} value={type.name}>{type.name}</option>
+            ))}
           </select>
         </div>
 
         <div className="filter-group">
           <div className="filter-label">Team</div>
-          <select className="filter-select">
+          <select 
+            className="filter-select"
+            value={filters.team}
+            onChange={(e) => setFilters({...filters, team: e.target.value})}
+          >
             <option>All Teams</option>
-            <option>CDO FDN Business Services</option>
-            <option>CDO FDN Subsurface and Land</option>
-            <option>CDO FDN Ops App Support</option>
-            <option>IT Apps</option>
-            <option>Service Desk</option>
+            {availableTeams.map(team => (
+              <option key={team.id} value={team.name}>{team.name}</option>
+            ))}
           </select>
         </div>
 
         <div className="filter-group">
           <div className="filter-label">Status</div>
-          <select className="filter-select">
+          <select 
+            className="filter-select"
+            value={filters.status}
+            onChange={(e) => setFilters({...filters, status: e.target.value})}
+          >
             <option>All Status</option>
             <option>Active</option>
             <option>Inactive</option>
           </select>
         </div>
+
+        {/* Clear Filters Button */}
+        {(filters.search || filters.rotationType !== 'All Types' || 
+          filters.team !== 'All Teams' || filters.status !== 'All Status') && (
+          <button 
+            onClick={() => setFilters({
+              search: '',
+              rotationType: 'All Types',
+              team: 'All Teams',
+              status: 'All Status'
+            })}
+            style={{
+              padding: '8px 16px',
+              background: '#ef4444',
+              color: 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              marginTop: '24px'
+            }}
+          >
+            ✕ Clear Filters
+          </button>
+        )}
       </div>
 
       {/* Rotations Grid */}
       <div className="rotations-grid">
-        {rotations.map((rotation) => (
-          <div key={rotation.id} className={`rotation-card ${rotation.is_active === false ? "inactive" : ""}`}>
-            <div className="rotation-header">
-              <div>
-                <div className="rotation-title">{rotation.name}</div>
-                <div className="rotation-type">{rotation.rotation_type} • {rotation.cadence_type}</div>
-              </div>
-              <div style={{position: 'relative'}}>
-                <div 
-                  className="rotation-menu" 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setOpenMenuId(openMenuId === rotation.id ? null : rotation.id);
-                  }}
-                >
-                  ⋮
+        {getFilteredRotations().length === 0 ? (
+          <div style={{
+            gridColumn: '1 / -1',
+            textAlign: 'center',
+            padding: '60px 20px',
+            color: '#9ca3af'
+          }}>
+            <div style={{fontSize: '48px', marginBottom: '16px'}}>🔍</div>
+            <h3 style={{color: '#6b7280', marginBottom: '8px', fontSize: '18px'}}>No rotations found</h3>
+            <p style={{color: '#9ca3af'}}>
+              {filters.search || filters.rotationType !== 'All Types' || 
+               filters.team !== 'All Teams' || filters.status !== 'All Status' 
+                ? 'Try adjusting your filters' 
+                : 'Create your first rotation to get started'}
+            </p>
+          </div>
+        ) : (
+          getFilteredRotations().map((rotation) => (
+            <div key={rotation.id} className={`rotation-card ${rotation.is_active === false ? "inactive" : ""}`}>
+              <div className="rotation-header">
+                <div>
+                  <div className="rotation-title">{rotation.name}</div>
+                  <div className="rotation-type">{rotation.rotation_type} • {rotation.cadence_type}</div>
                 </div>
-                
-                {openMenuId === rotation.id && (
-                  <div className="rotation-dropdown-menu">
-                    <button 
-                      className="dropdown-menu-item"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleToggleRotationStatus(rotation);
-                      }}
-                    >
-                      {rotation.is_active ? '🚫 Deactivate Rotation' : '✅ Activate Rotation'}
-                    </button>
-                    <button 
-                      className="dropdown-menu-item"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        alert("Edit - Coming soon!");
-                        setOpenMenuId(null);
-                      }}
-                    >
-                      ✏️ Edit Rotation
-                    </button>
+                <div style={{position: 'relative'}}>
+                  <div 
+                    className="rotation-menu" 
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setOpenMenuId(openMenuId === rotation.id ? null : rotation.id);
+                    }}
+                  >
+                    ⋮
+                  </div>
+                  
+                  {openMenuId === rotation.id && (
+                    <div className="rotation-dropdown-menu">
+                      <button 
+                        className="dropdown-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleRotationStatus(rotation);
+                        }}
+                      >
+                        {rotation.is_active ? '🚫 Deactivate Rotation' : '✅ Activate Rotation'}
+                      </button>
+                      <button 
+                        className="dropdown-menu-item"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          alert("Edit - Coming soon!");
+                          setOpenMenuId(null);
+                        }}
+                      >
+                        ✏️ Edit Rotation
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rotation-details">
+                {rotation.group_name && (
+                  <div className="detail-row">
+                    <span className="detail-icon">🏢</span>
+                    <span>{rotation.group_name}</span>
                   </div>
                 )}
-              </div>
-            </div>
+                
+                {rotation.team_name && (
+                  <div className="detail-row">
+                    <span className="detail-icon">👥</span>
+                    <span>{rotation.team_name}</span>
+                  </div>
+                )}
 
-            <div className="rotation-details">
-              {rotation.group_name && (
                 <div className="detail-row">
-                  <span className="detail-icon">🏢</span>
-                  <span>{rotation.group_name}</span>
+                  <span className="detail-icon">📆</span>
+                  <span>
+                    Every {rotation.cadence_interval}{' '}
+                    {rotation.cadence_type === 'DAILY' ? (rotation.cadence_interval === 1 ? 'day' : 'days') :
+                     rotation.cadence_type === 'WEEKLY' ? (rotation.cadence_interval === 1 ? 'week' : 'weeks') :
+                     rotation.cadence_type === 'BI_WEEKLY' ? (rotation.cadence_interval === 1 ? 'bi-week' : 'bi-weeks') :
+                     rotation.cadence_type === 'MONTHLY' ? (rotation.cadence_interval === 1 ? 'month' : 'months') :
+                     rotation.cadence_type.toLowerCase()}
+                  </span>
                 </div>
-              )}
-              
-              {rotation.team_name && (
+
                 <div className="detail-row">
-                  <span className="detail-icon">👥</span>
-                  <span>{rotation.team_name}</span>
+                  <span className="detail-icon">👤</span>
+                  <span>Min {rotation.min_assignees} assignee(s)</span>
                 </div>
-              )}
 
-              <div className="detail-row">
-                <span className="detail-icon">📆</span>
-                <span>
-                  Every {rotation.cadence_interval}{' '}
-                  {rotation.cadence_type === 'DAILY' ? (rotation.cadence_interval === 1 ? 'day' : 'days') :
-                   rotation.cadence_type === 'WEEKLY' ? (rotation.cadence_interval === 1 ? 'week' : 'weeks') :
-                   rotation.cadence_type === 'BI_WEEKLY' ? (rotation.cadence_interval === 1 ? 'bi-week' : 'bi-weeks') :
-                   rotation.cadence_type === 'MONTHLY' ? (rotation.cadence_interval === 1 ? 'month' : 'months') :
-                   rotation.cadence_type.toLowerCase()}
-                </span>
+                <div className="detail-row">
+                  <span className={`status-badge ${rotation.is_active ? "status-active" : "status-inactive"}`}>
+                    {rotation.is_active ? "ACTIVE" : "INACTIVE"}
+                  </span>
+                </div>
               </div>
 
-              <div className="detail-row">
-                <span className="detail-icon">👤</span>
-                <span>Min {rotation.min_assignees} assignee(s)</span>
-              </div>
-
-              <div className="detail-row">
-                <span className={`status-badge ${rotation.is_active ? "status-active" : "status-inactive"}`}>
-                  {rotation.is_active ? "ACTIVE" : "INACTIVE"}
-                </span>
+              <div className="rotation-actions">
+                <button className="action-btn" onClick={(e) => { e.stopPropagation(); alert("View Details - Coming soon!"); }}>
+                  View Details
+                </button>
+                <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleManageMembers(rotation); }}>
+                  Manage Members
+                </button>
               </div>
             </div>
-
-            <div className="rotation-actions">
-              <button className="action-btn" onClick={(e) => { e.stopPropagation(); alert("View Details - Coming soon!"); }}>
-                View Details
-              </button>
-              <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleManageMembers(rotation); }}>
-                Manage Members
-              </button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
       {/* Create Rotation Modal */}
