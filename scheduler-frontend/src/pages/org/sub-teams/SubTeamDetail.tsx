@@ -1,22 +1,54 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, Paper, Stack, Button} from '@mui/material';
+import {
+  Box,
+  Typography,
+  Paper,
+  Stack,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+} from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSubTeam, getSubTeamMembers, type Member } from "../../../api";
-
+import { SubTeamsAPI, TeamMembersAPI } from "../../../api";
+import type { TeamMember } from '../../../types/org';
 
 export const SubTeamDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [subTeam, setSubTeam] = useState<any>(null);
-  const [members, setMembers] = useState<Member[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  const [openAdd, setOpenAdd] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState("");
 
   const load = async () => {
     if (!id) return;
-    const st = await getSubTeam(id);
-    const m = await getSubTeamMembers(id);
+
+    const st = await SubTeamsAPI.getOne(id);
+    const members = await SubTeamsAPI.getMembers(id);
+    const teamMembers = await TeamMembersAPI.get(st.parent_team_id);
+
     setSubTeam(st);
-    setMembers(m);
+    setMembers(members);
+    setTeamMembers(teamMembers);
+  };
+
+  const addMember = async () => {
+    if (!selectedUserId) return;
+
+    await SubTeamsAPI.addMember(id!, { userId: selectedUserId });
+
+    setOpenAdd(false);
+    setSelectedUserId("");
+    load(); 
   };
 
   useEffect(() => {
@@ -47,13 +79,17 @@ export const SubTeamDetail = () => {
       </Paper>
 
       <Paper sx={{ p: 2 }}>
-        <Typography variant="subtitle1" mb={1}>
-          Members
-        </Typography>
+        <Stack direction="row" justifyContent="space-between" mb={1}>
+          <Typography variant="subtitle1">Members</Typography>
+          <Button variant="contained" onClick={() => setOpenAdd(true)}>
+            Add Member
+          </Button>
+        </Stack>
 
         {members.map((m: any) => (
           <Typography key={m.user_id}>
-            {m.users?.name ?? m.user_id}
+            {m.users?.first_name} {m.users?.last_name}
+            {m.team_roles?.name ? ` — ${m.team_roles.name}` : " — No role"}
           </Typography>
         ))}
 
@@ -63,6 +99,34 @@ export const SubTeamDetail = () => {
           </Typography>
         )}
       </Paper>
+
+      {/* Add Member Dialog */}
+      <Dialog open={openAdd} onClose={() => setOpenAdd(false)}>
+        <DialogTitle>Add Member to Subteam</DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <FormControl fullWidth>
+            <InputLabel>Team Member</InputLabel>
+            <Select
+              value={selectedUserId}
+              label="Team Member"
+              onChange={(e) => setSelectedUserId(e.target.value)}
+            >
+              {teamMembers.map((tm: any) => (
+                <MenuItem key={tm.user_id} value={tm.user_id}>
+                  {tm.users?.first_name} {tm.users?.last_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenAdd(false)}>Cancel</Button>
+          <Button variant="contained" onClick={addMember}>
+            Add
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

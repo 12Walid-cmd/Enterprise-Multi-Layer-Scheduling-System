@@ -67,6 +67,13 @@ export interface UpdateTeamDto {
   name?: string;
   description?: string;
   timezone?: string;
+  parent_team_id?: string;
+}
+
+export interface CreateSubTeam {
+  name: string;
+  description?: string;
+  timezone?: string;
 }
 
 /* ============================================================
@@ -93,8 +100,8 @@ export interface TeamMember {
 }
 
 export interface AddTeamMemberDto {
-  user_id: string;
-  team_role_id: string;
+  userId: string;
+  teamRoleId: string;
 }
 
 /* ============================================================
@@ -162,3 +169,8 @@ export interface AssignUserGlobalRoleDto {
   user_id: string;
   global_role_id: string;
 }
+
+
+
+
+

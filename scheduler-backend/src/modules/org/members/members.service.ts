@@ -6,6 +6,27 @@ import { AddMemberDto } from './dto/add-member.dto';
 export class MembersService {
   constructor(private readonly prisma: PrismaService) {}
 
+  getMembers(teamId: string) {
+    return this.prisma.team_members.findMany({
+      where: { team_id: teamId },
+      include: {
+        users: {
+          select: {
+            first_name: true,
+            last_name: true,
+            email: true,
+          },
+        },
+        team_roles: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
+  }
+
+
   addMember(teamId: string, dto: AddMemberDto) {
     return this.prisma.team_members.create({
       data: {

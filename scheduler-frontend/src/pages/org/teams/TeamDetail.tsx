@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { TeamsAPI, TeamMembersAPI, TeamRoleTypesAPI } from "../../../api";
+import { TeamsAPI, TeamMembersAPI, TeamRoleTypesAPI, UsersAPI } from "../../../api";
 import {
   Box,
   Button,
@@ -29,8 +29,8 @@ export default function TeamDetail() {
   const [roles, setRoles] = useState<any[]>([]); // team_role_types
 
   const [newMember, setNewMember] = useState({
-    user_id: "",
-    team_role_id: "",
+    userId: "",
+    teamRoleId: "",
   });
 
   const loadTeam = () => {
@@ -43,8 +43,7 @@ export default function TeamDetail() {
   useEffect(() => {
     loadTeam();
 
-    // TODO: UsersAPI.getAll() 
-    // UsersAPI.getAll().then((data) => setUsers(data));
+    UsersAPI.getAll().then((data) => setUsers(data));
 
     TeamRoleTypesAPI.getAll().then((data) => setRoles(data));
   }, [id]);
@@ -55,9 +54,12 @@ export default function TeamDetail() {
   };
 
   const handleAddMember = async () => {
-    await TeamMembersAPI.add(id!, newMember);
+    await TeamMembersAPI.add(id!, {
+      userId: newMember.userId,
+      teamRoleId: newMember.teamRoleId,
+    });
     loadTeam();
-    setNewMember({ user_id: "", team_role_id: "" });
+    setNewMember({ userId: "", teamRoleId: "" });
   };
 
   const handleRemoveMember = async (userId: string) => {
@@ -120,8 +122,9 @@ export default function TeamDetail() {
             <strong>User:</strong> {m.users?.first_name} {m.users?.last_name}
           </Typography>
 
+
           <Typography>
-            <strong>Role:</strong> {m.team_role_types?.name}
+            <strong>Role:</strong> { m.team_roles?.name }
           </Typography>
 
           <Button
@@ -141,15 +144,15 @@ export default function TeamDetail() {
       <FormControl fullWidth sx={{ mt: 2 }}>
         <InputLabel>User</InputLabel>
         <Select
-          value={newMember.user_id}
+          value={newMember.userId}
           label="User"
           onChange={(e) =>
-            setNewMember({ ...newMember, user_id: e.target.value })
+            setNewMember({ ...newMember, userId: e.target.value })
           }
         >
           {users.map((u) => (
             <MenuItem key={u.id} value={u.id}>
-              {u.name || u.email}
+              {u.first_name + " " + u.last_name}
             </MenuItem>
           ))}
         </Select>
@@ -158,10 +161,10 @@ export default function TeamDetail() {
       <FormControl fullWidth sx={{ mt: 2 }}>
         <InputLabel>Role</InputLabel>
         <Select
-          value={newMember.team_role_id}
+          value={newMember.teamRoleId}
           label="Role"
           onChange={(e) =>
-            setNewMember({ ...newMember, team_role_id: e.target.value })
+            setNewMember({ ...newMember, teamRoleId: e.target.value })
           }
         >
           {roles.map((r) => (

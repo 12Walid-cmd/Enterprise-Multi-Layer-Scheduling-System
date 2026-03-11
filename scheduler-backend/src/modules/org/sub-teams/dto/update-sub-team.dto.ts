@@ -12,4 +12,8 @@ export class UpdateSubTeamDto {
   @IsOptional()
   @IsString()
   timezone?: string;
+
+  @IsOptional()
+  @IsString()
+  parent_team_id?: string;
 }

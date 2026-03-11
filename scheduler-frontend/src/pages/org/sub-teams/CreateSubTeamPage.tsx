@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
     Box,
     Button,
@@ -12,7 +12,7 @@ import {
     Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createSubTeam } from "../../../api";
+import { SubTeamsAPI } from "../../../api";
 
 export const CreateSubTeamPage = () => {
     const { teamId } = useParams();
@@ -48,7 +48,7 @@ export const CreateSubTeamPage = () => {
     const handleSubmit = async () => {
         if (!validate()) return;
 
-        await createSubTeam(teamId!, form);
+        await SubTeamsAPI.create(teamId!, form);
         navigate(`/teams/${teamId}/sub-teams`);
     };
 

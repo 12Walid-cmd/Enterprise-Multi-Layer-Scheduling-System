@@ -1,67 +1,33 @@
 import { http } from "../http";
+import type{
+  TeamMember,
+  SubTeam,
+  UpdateTeamDto,
+  CreateSubTeam
+} from "../../types/org";
 
-export interface SubTeam {
-  id: string;
-  name: string;
-  description?: string | null;
-  timezone?: string | null;
-  parent_team_id: string | null;
-}
+export const SubTeamsAPI = {
+  getAll(teamId: string): Promise<SubTeam[]> {
+    return http.get(`/teams/${teamId}/sub-teams`).then(res => res.data);
+  },
 
-export interface CreateSubTeamPayload {
-  name: string;
-  description?: string;
-  timezone?: string;
-}
+  create(teamId: string, payload: CreateSubTeam): Promise<SubTeam> {
+    return http.post(`/teams/${teamId}/sub-teams`, payload).then(res => res.data);
+  },
 
-export interface Member {
-  user_id: string;
-  users: {
-    id: string;
-    name: string;
-    email: string;
-  };
-}
+  getOne(subTeamId: string): Promise<SubTeam> {
+    return http.get(`/teams/sub-teams/${subTeamId}`).then(res => res.data);
+  },
 
-export const getSubTeams = async (teamId: string): Promise<SubTeam[]> => {
-  const res = await http.get(`/teams/${teamId}/sub-teams`);
-  return res.data;
-};
+  update(subTeamId: string, payload: UpdateTeamDto): Promise<SubTeam> {
+    return http.put(`/teams/sub-teams/${subTeamId}`, payload).then(res => res.data);
+  },
 
-export const createSubTeam = async (
-  teamId: string,
-  payload: CreateSubTeamPayload,
-): Promise<SubTeam> => {
-  const res = await http.post(`/teams/${teamId}/sub-teams`, payload);
-  return res.data;
-};
+  getMembers(subTeamId: string): Promise<TeamMember[]> {
+    return http.get(`/teams/sub-teams/${subTeamId}/members`).then(res => res.data);
+  },
 
-export const getSubTeam = async (subTeamId: string): Promise<SubTeam> => {
-  const res = await http.get(`/teams/sub-teams/${subTeamId}`);
-  return res.data;
-};
-
-export const updateSubTeam = async (
-  subTeamId: string,
-  payload: CreateSubTeamPayload,
-): Promise<SubTeam> => {
-  const res = await http.put(`/teams/sub-teams/${subTeamId}`, payload);
-  return res.data;
-};
-
-export const getSubTeamMembers = async (
-  subTeamId: string,
-): Promise<Member[]> => {
-  const res = await http.get(`/teams/sub-teams/${subTeamId}/members`);
-  return res.data;
-};
-
-export const addSubTeamMember = async (
-  subTeamId: string,
-  userId: string,
-) => {
-  const res = await http.post(`/teams/${subTeamId}/members`, {
-    userId,
-  });
-  return res.data;
+  addMember(subTeamId: string, payload: { userId: string }) {
+  return http.post(`/teams/${subTeamId}/members`, payload).then(res => res.data);
+},
 };

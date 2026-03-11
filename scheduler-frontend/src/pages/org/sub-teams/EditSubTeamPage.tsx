@@ -2,16 +2,13 @@ import { useEffect, useState } from 'react';
 import {
     Box,
     Button,
-    MenuItem,
     Paper,
-    Select,
     Stack,
     TextField,
     Typography,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getSubTeam, updateSubTeam } from "../../../api";
-import type { Team } from '../../../types/org';
+import { SubTeamsAPI } from "../../../api";
 
 export const EditSubTeamPage = () => {
     const { subTeamId } = useParams();
@@ -21,20 +18,20 @@ export const EditSubTeamPage = () => {
         name: "",
         description: "",
         timezone: "",
-        parent_team_id: null as string | null,
+        parent_team_id: "",
     });
 
-    const [teams] = useState<Team[]>([]);
 
     const load = async () => {
         if (!subTeamId) return;
-        const st = await getSubTeam(subTeamId);
+        const st = await SubTeamsAPI.getOne(subTeamId);
 
+        console.log("Loaded SubTeam:", st);
         setForm({
             name: st.name,
             description: st.description ?? "",
             timezone: st.timezone ?? "",
-            parent_team_id: st.parent_team_id,   
+            parent_team_id: st.parent_team_id,
         });
     };
 
@@ -50,7 +47,7 @@ export const EditSubTeamPage = () => {
     const handleSubmit = async () => {
         if (!subTeamId) return;
 
-        await updateSubTeam(subTeamId, {
+        await SubTeamsAPI.update(subTeamId, {
             name: form.name,
             description: form.description,
             timezone: form.timezone,
@@ -67,19 +64,6 @@ export const EditSubTeamPage = () => {
 
             <Paper sx={{ p: 3 }}>
                 <Stack spacing={2}>
-
-                    <Select
-                        value={form.parent_team_id}
-                        onChange={(e) =>
-                            setForm({ ...form, parent_team_id: e.target.value })
-                        }
-                    >
-                        {teams.map((t) => (
-                            <MenuItem key={t.id} value={t.id}>
-                                {t.name}
-                            </MenuItem>
-                        ))}
-                    </Select>
                     <TextField
                         label="Name"
                         value={form.name}

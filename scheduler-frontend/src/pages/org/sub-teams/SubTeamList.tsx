@@ -9,8 +9,9 @@ import {
   Typography,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import { getSubTeams, type SubTeam } from "../../../api";
+import { SubTeamsAPI } from "../../../api";
 import { useNavigate } from 'react-router-dom';
+import type { SubTeam } from "../../../types/org"; 
 
 
 export const SubTeamList = ({ teamId }: { teamId: string }) => {
@@ -18,7 +19,7 @@ export const SubTeamList = ({ teamId }: { teamId: string }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getSubTeams(teamId).then(setSubTeams);
+    SubTeamsAPI.getAll(teamId).then(setSubTeams);
   }, [teamId]);
 
   return (

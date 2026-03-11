@@ -1,28 +1,26 @@
 import { http } from "../http";
 
 
-export const getUsers = (search?: string) => {
-  return http.get("/users", {
-    params: { search },
-  });
-};
+export const UsersAPI = {
+  getAll(search?: string) {
+    return http.get("/users", {
+      params: { search },
+    }).then(res => res.data);
+  },
 
+  getOne(id: string | number) {
+    return http.get(`/users/${id}`).then(res => res.data);
+  },
 
-export const getUser = (id: string | number) => {
-  return http.get(`/users/${id}`);
-};
+  create(data: any) {
+    return http.post("/users", data).then(res => res.data);
+  },
 
+  update(id: string | number, data: any) {
+    return http.patch(`/users/${id}`, data).then(res => res.data);
+  },
 
-export const createUser = (data: any) => {
-  return http.post("/users", data);
-};
-
-
-export const updateUser = (id: string | number, data: any) => {
-  return http.patch(`/users/${id}`, data);
-};
-
-
-export const deleteUser = (id: string | number) => {
-  return http.delete(`/users/${id}`);
+  delete(id: string | number) {
+    return http.delete(`/users/${id}`).then(res => res.data);
+  },
 };
