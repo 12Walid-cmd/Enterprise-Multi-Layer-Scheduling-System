@@ -98,7 +98,9 @@ function Rotations() {
   const [availableRotationTypes, setAvailableRotationTypes] = useState([]);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [teamPreviewMembers, setTeamPreviewMembers] = useState([]);
+  const [teamPreviewLoading, setTeamPreviewLoading] = useState(false);
+
   // Filters state
   const [filters, setFilters] = useState({
     search: '',
@@ -129,38 +131,30 @@ function Rotations() {
   // Filter rotations based on current filters
   const getFilteredRotations = () => {
     return rotations.filter(rotation => {
-      // Search filter (searches name and rotation type)
       if (filters.search && 
           !rotation.name.toLowerCase().includes(filters.search.toLowerCase()) &&
           !rotation.rotation_type.toLowerCase().includes(filters.search.toLowerCase())) {
         return false;
       }
-
-      // Rotation Type filter
       if (filters.rotationType !== 'All Types' && 
           rotation.rotation_type !== filters.rotationType) {
         return false;
       }
-
-      // Team filter
       if (filters.team !== 'All Teams' && 
           rotation.team_name !== filters.team) {
         return false;
       }
-
-      // Status filter
       if (filters.status === 'Active' && !rotation.is_active) {
         return false;
       }
       if (filters.status === 'Inactive' && rotation.is_active) {
         return false;
       }
-
       return true;
     });
   };
 
-  // Fetch rotations on component mount
+  // Fetch on mount
   useEffect(() => {
     fetchRotations();
     fetchUsers();
@@ -169,6 +163,27 @@ function Rotations() {
     fetchRotationTypes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Fetch team preview members when selectedTeam changes
+  useEffect(() => {
+    if (!selectedTeam) {
+      setTeamPreviewMembers([]);
+      return;
+    }
+    const fetchTeamPreview = async () => {
+      setTeamPreviewLoading(true);
+      try {
+        const response = await api.get(`/teams/${selectedTeam}/members`);
+        setTeamPreviewMembers(response.data);
+      } catch (error) {
+        console.error("Error fetching team preview:", error);
+        setTeamPreviewMembers([]);
+      } finally {
+        setTeamPreviewLoading(false);
+      }
+    };
+    fetchTeamPreview();
+  }, [selectedTeam]);
 
   const fetchRotations = async () => {
     try {
@@ -227,37 +242,23 @@ function Rotations() {
   };
 
   const handleCreateRotation = async () => {
-  
-    // 1. REQUIRED FIELDS VALIDATION
-  
     if (!newRotation.name || !newRotation.rotation_type || !newRotation.cadence_type) {
       alert("Please fill in all required fields (marked with *)");
       return;
     }
-
-  
-    // 2. NAME VALIDATION
-  
     if (newRotation.name.trim().length === 0) {
       alert("Rotation name cannot be empty or just spaces");
       return;
     }
-
     if (newRotation.name.length > 255) {
       alert("Rotation name must be less than 255 characters");
       return;
     }
-
-    // Check for special characters that might cause issues
     const invalidChars = /[<>{}[\]\\/]/;
     if (invalidChars.test(newRotation.name)) {
       alert("Rotation name contains invalid characters (< > { } [ ] \\ /). Please use only letters, numbers, and basic punctuation.");
       return;
     }
-
-  
-    // 3. DUPLICATE NAME CHECK
-  
     const duplicateName = rotations.some(
       r => r.name.toLowerCase().trim() === newRotation.name.toLowerCase().trim()
     );
@@ -265,52 +266,32 @@ function Rotations() {
       alert("A rotation with this name already exists. Please choose a different name.");
       return;
     }
-
-  
-    // 4. CADENCE INTERVAL VALIDATION
-  
     if (newRotation.cadence_interval < 1 || newRotation.cadence_interval > 365) {
       alert("Cadence interval must be between 1 and 365");
       return;
     }
-
-    // Warn about unusually long weekly intervals
     if (newRotation.cadence_type === 'WEEKLY' && newRotation.cadence_interval > 52) {
       alert("Weekly rotation interval cannot exceed 52 (one year). Please use MONTHLY cadence for longer intervals.");
       return;
     }
-
-    // Warn about daily intervals that seem like they should be monthly
     if (newRotation.cadence_type === 'DAILY' && newRotation.cadence_interval > 30) {
       if (!window.confirm("You're creating a rotation that cycles every 30+ days but marked as DAILY. Did you mean MONTHLY instead?")) {
         return;
       }
     }
-
-  
-    // 5. MIN ASSIGNEES VALIDATION
-  
     if (newRotation.min_assignees < 1 || newRotation.min_assignees > 100) {
       alert("Minimum assignees must be between 1 and 100");
       return;
     }
-
-    // Warn if min assignees seems unusually high
     if (newRotation.min_assignees > 10) {
       if (!window.confirm(`You set minimum assignees to ${newRotation.min_assignees}. This is unusually high. Continue anyway?`)) {
         return;
       }
     }
-  
-    // 6. ROTATION TYPE BUSINESS RULES
-  
-    // Cross-Team Analyst should NOT have a single team
     if (newRotation.rotation_type === 'Cross-Team Analyst' && newRotation.team_id) {
       alert("Cross-Team Analyst rotations should not be assigned to a single team (they span multiple teams). Please leave team blank.");
       return;
     }
-
-    // Team-Level and Sub-Team rotations should have a team
     if ((newRotation.rotation_type === 'Team-Level' || newRotation.rotation_type === 'Sub-Team') 
         && !newRotation.team_id) {
       if (!window.confirm("Team-Level and Sub-Team rotations typically require a team. Continue without assigning a team?")) {
@@ -318,14 +299,10 @@ function Rotations() {
       }
     }
 
-  
-    // 7. CREATE ROTATION
-  
     try {
       setIsSubmitting(true);
-      
       await api.post('/rotations', {
-        name: newRotation.name.trim(), // Trim whitespace
+        name: newRotation.name.trim(),
         rotation_type: newRotation.rotation_type,
         group_id: newRotation.group_id || null,
         team_id: newRotation.team_id || null,
@@ -333,11 +310,7 @@ function Rotations() {
         cadence_interval: newRotation.cadence_interval,
         min_assignees: newRotation.min_assignees
       });
-
-      // Close modal
       setShowModal(false);
-      
-      // Reset form
       setNewRotation({
         name: '',
         rotation_type: '',
@@ -347,16 +320,10 @@ function Rotations() {
         cadence_interval: 1,
         min_assignees: 1
       });
-
-      // Refresh rotations list
       await fetchRotations();
-      
       alert("Rotation created successfully!");
-      
     } catch (error) {
       console.error("Error creating rotation:", error);
-      
-      // Handle specific error cases
       if (error.response?.status === 400 && error.response?.data?.error?.includes('already exists')) {
         alert("A rotation with this name already exists in the database.");
       } else {
@@ -370,16 +337,11 @@ function Rotations() {
   const handleToggleRotationStatus = async (rotation) => {
     const action = rotation.is_active ? 'deactivate' : 'activate';
     const newStatus = !rotation.is_active;
-    
     if (!window.confirm(`Are you sure you want to ${action} this rotation?${rotation.is_active ? ' Members will be preserved but the rotation will be marked as inactive.' : ''}`)) {
       return;
     }
-
     try {
-      await api.patch(`/rotations/${rotation.id}`, {
-        is_active: newStatus
-      });
-      
+      await api.patch(`/rotations/${rotation.id}`, { is_active: newStatus });
       await fetchRotations();
       setOpenMenuId(null);
       alert(`Rotation ${action}d successfully!`);
@@ -392,7 +354,6 @@ function Rotations() {
   const handleManageMembers = async (rotation) => {
     setSelectedRotation(rotation);
     setShowMembersModal(true);
-    
     try {
       const response = await api.get(`/rotations/${rotation.id}/members`);
       setRotationMembers(response.data);
@@ -404,17 +365,11 @@ function Rotations() {
 
   const handleDragEnd = async (event) => {
     const { active, over } = event;
-
     if (active.id !== over.id) {
       const oldIndex = rotationMembers.findIndex((m) => m.id === active.id);
       const newIndex = rotationMembers.findIndex((m) => m.id === over.id);
-
       const reorderedMembers = arrayMove(rotationMembers, oldIndex, newIndex);
-      
-      // Update UI immediately
       setRotationMembers(reorderedMembers);
-
-      // Update database
       try {
         await api.patch(`/rotations/${selectedRotation.id}/members/reorder`, {
           memberIds: reorderedMembers.map(m => m.id)
@@ -422,7 +377,6 @@ function Rotations() {
       } catch (error) {
         console.error("Error updating member order:", error);
         alert("Failed to update member order");
-        // Revert on error
         await handleManageMembers(selectedRotation);
       }
     }
@@ -437,20 +391,17 @@ function Rotations() {
       alert("Please select a team");
       return;
     }
-
     try {
       await api.post(`/rotations/${selectedRotation.id}/members`, {
         type: addMemberMode,
         userIds: addMemberMode === "individual" ? selectedUsers : undefined,
         teamId: addMemberMode === "team" ? selectedTeam : undefined
       });
-      
-      // Refresh members list
       const response = await api.get(`/rotations/${selectedRotation.id}/members`);
       setRotationMembers(response.data);
-      
       setSelectedUsers([]);
       setSelectedTeam("");
+      setTeamPreviewMembers([]);
       alert(`Successfully added ${addMemberMode === "individual" ? selectedUsers.length + " member(s)" : "team"}!`);
     } catch (error) {
       console.error("Error adding members:", error);
@@ -460,7 +411,6 @@ function Rotations() {
 
   const handleRemoveMember = async (memberId) => {
     if (!window.confirm("Are you sure you want to remove this member?")) return;
-
     try {
       await api.delete(`/rotations/${selectedRotation.id}/members/${memberId}`);
       setRotationMembers(rotationMembers.filter(m => m.id !== memberId));
@@ -508,7 +458,6 @@ function Rotations() {
             Create and manage rotation pools for your teams
           </p>
         </div>
-
         <button className="primary-button" onClick={() => setShowModal(true)}>
           <span>➕</span>
           <span>Create Rotation</span>
@@ -527,7 +476,6 @@ function Rotations() {
             onChange={(e) => setFilters({...filters, search: e.target.value})}
           />
         </div>
-
         <div className="filter-group">
           <div className="filter-label">Rotation Type</div>
           <select 
@@ -541,7 +489,6 @@ function Rotations() {
             ))}
           </select>
         </div>
-
         <div className="filter-group">
           <div className="filter-label">Team</div>
           <select 
@@ -555,7 +502,6 @@ function Rotations() {
             ))}
           </select>
         </div>
-
         <div className="filter-group">
           <div className="filter-label">Status</div>
           <select 
@@ -568,8 +514,6 @@ function Rotations() {
             <option>Inactive</option>
           </select>
         </div>
-
-        {/* Clear Filters Button */}
         {(filters.search || filters.rotationType !== 'All Types' || 
           filters.team !== 'All Teams' || filters.status !== 'All Status') && (
           <button 
@@ -632,7 +576,6 @@ function Rotations() {
                   >
                     ⋮
                   </div>
-                  
                   {openMenuId === rotation.id && (
                     <div className="rotation-dropdown-menu">
                       <button 
@@ -666,14 +609,12 @@ function Rotations() {
                     <span>{rotation.group_name}</span>
                   </div>
                 )}
-                
                 {rotation.team_name && (
                   <div className="detail-row">
                     <span className="detail-icon">👥</span>
                     <span>{rotation.team_name}</span>
                   </div>
                 )}
-
                 <div className="detail-row">
                   <span className="detail-icon">📆</span>
                   <span>
@@ -685,12 +626,10 @@ function Rotations() {
                      rotation.cadence_type.toLowerCase()}
                   </span>
                 </div>
-
                 <div className="detail-row">
                   <span className="detail-icon">👤</span>
                   <span>Min {rotation.min_assignees} assignee(s)</span>
                 </div>
-
                 <div className="detail-row">
                   <span className={`status-badge ${rotation.is_active ? "status-active" : "status-inactive"}`}>
                     {rotation.is_active ? "ACTIVE" : "INACTIVE"}
@@ -715,14 +654,10 @@ function Rotations() {
       {showModal && (
         <div className="create-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="create-modal-content" onClick={(e) => e.stopPropagation()}>
-            
-            {/* Header */}
             <div className="create-modal-header">
               <h2 className="create-modal-title">Create New Rotation</h2>
               <button className="create-modal-close" onClick={() => setShowModal(false)}>×</button>
             </div>
-
-            {/* Body */}
             <div className="create-modal-body">
               <div className="form-group">
                 <label className="form-label">Rotation Name *</label>
@@ -736,7 +671,6 @@ function Rotations() {
                   required
                 />
               </div>
-
               <div className="form-group">
                 <label className="form-label">Rotation Type *</label>
                 <select 
@@ -751,7 +685,6 @@ function Rotations() {
                   ))}
                 </select>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Group</label>
                 <select 
@@ -765,7 +698,6 @@ function Rotations() {
                   ))}
                 </select>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Team</label>
                 <select 
@@ -779,7 +711,6 @@ function Rotations() {
                   ))}
                 </select>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Cadence Type *</label>
                 <select 
@@ -795,7 +726,6 @@ function Rotations() {
                   <option value="MONTHLY">Monthly</option>
                 </select>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Cadence Interval *</label>
                 <input 
@@ -812,7 +742,6 @@ function Rotations() {
                   Every {newRotation.cadence_interval || 1} {newRotation.cadence_type?.toLowerCase() || 'period'}(s)
                 </small>
               </div>
-
               <div className="form-group">
                 <label className="form-label">Minimum Assignees *</label>
                 <input 
@@ -827,8 +756,6 @@ function Rotations() {
                 />
               </div>
             </div>
-
-            {/* Footer */}
             <div className="create-modal-footer">
               <button 
                 className="secondary-button" 
@@ -865,11 +792,10 @@ function Rotations() {
 
             {/* Body */}
             <div className="members-modal-body">
-              
+
               {/* Current Members Section */}
               <div className="current-members-section">
                 <h3 className="members-section-title">Current Members ({rotationMembers.length})</h3>
-                
                 {rotationMembers.length === 0 ? (
                   <div className="members-empty-state">
                     <div className="members-empty-icon">👥</div>
@@ -901,101 +827,167 @@ function Rotations() {
               </div>
 
               {/* Add Members Section */}
-              <div className="add-members-area">
-                <h3 className="members-section-title">Add Members</h3>
+              <div className="add-members-area" style={{ display: 'flex', gap: '16px' }}>
 
-                {/* Toggle Individual vs Team */}
-                <div className="member-mode-toggle">
-                  <button
-                    className={`mode-toggle-btn ${addMemberMode === "individual" ? "active" : ""}`}
-                    onClick={() => { setAddMemberMode("individual"); setSearchQuery(""); }}
-                  >
-                    👤 Add Individuals
-                  </button>
-                  <button
-                    className={`mode-toggle-btn ${addMemberMode === "team" ? "active" : ""}`}
-                    onClick={() => { setAddMemberMode("team"); setSearchQuery(""); }}
-                  >
-                    👥 Add Entire Team
-                  </button>
-                </div>
+                {/* Left side — selection */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 className="members-section-title">Add Members</h3>
 
-                {/* Search Box */}
-                <div className="member-search-wrapper">
-                  <input
-                    type="text"
-                    placeholder={addMemberMode === "individual" ? "Search users..." : "Search teams..."}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="member-search-input"
-                  />
-                </div>
+                  {/* Toggle Individual vs Team */}
+                  <div className="member-mode-toggle">
+                    <button
+                      className={`mode-toggle-btn ${addMemberMode === "individual" ? "active" : ""}`}
+                      onClick={() => { setAddMemberMode("individual"); setSearchQuery(""); setTeamPreviewMembers([]); }}
+                    >
+                      👤 Add Individuals
+                    </button>
+                    <button
+                      className={`mode-toggle-btn ${addMemberMode === "team" ? "active" : ""}`}
+                      onClick={() => { setAddMemberMode("team"); setSearchQuery(""); setTeamPreviewMembers([]); }}
+                    >
+                      👥 Add Entire Team
+                    </button>
+                  </div>
 
-                {/* Selection List */}
-                <div className="member-selection-list">
-                  {addMemberMode === "individual" ? (
-                    filteredUsers.length === 0 ? (
-                      <p className="no-members-text">No users available</p>
-                    ) : (
-                      filteredUsers.map(user => (
-                        <div
-                          key={user.id}
-                          className={`member-select-item ${selectedUsers.includes(user.id) ? "selected" : ""}`}
-                          onClick={() => toggleUserSelection(user.id)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedUsers.includes(user.id)}
-                            onChange={() => {}}
-                            className="member-select-checkbox"
-                          />
-                          <div className="member-select-info">
-                            <div className="member-select-name">{user.name}</div>
-                            <div className="member-select-detail">{user.email}</div>
+                  {/* Search Box */}
+                  <div className="member-search-wrapper">
+                    <input
+                      type="text"
+                      placeholder={addMemberMode === "individual" ? "Search users..." : "Search teams..."}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="member-search-input"
+                    />
+                  </div>
+
+                  {/* Selection List */}
+                  <div className="member-selection-list">
+                    {addMemberMode === "individual" ? (
+                      filteredUsers.length === 0 ? (
+                        <p className="no-members-text">No users available</p>
+                      ) : (
+                        filteredUsers.map(user => (
+                          <div
+                            key={user.id}
+                            className={`member-select-item ${selectedUsers.includes(user.id) ? "selected" : ""}`}
+                            onClick={() => toggleUserSelection(user.id)}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedUsers.includes(user.id)}
+                              onChange={() => {}}
+                              className="member-select-checkbox"
+                            />
+                            <div className="member-select-info">
+                              <div className="member-select-name">{user.name}</div>
+                              <div className="member-select-detail">{user.email}</div>
+                            </div>
+                            <span className="member-mode-badge">{user.jobTitle}</span>
                           </div>
-                          <span className="member-mode-badge">{user.jobTitle}</span>
+                        ))
+                      )
+                    ) : (
+                      filteredTeams.length === 0 ? (
+                        <p className="no-members-text">No teams available</p>
+                      ) : (
+                        filteredTeams.map(team => (
+                          <div
+                            key={team.id}
+                            className={`member-select-item ${selectedTeam === team.id ? "selected" : ""}`}
+                            onClick={() => setSelectedTeam(selectedTeam === team.id ? "" : team.id)}
+                          >
+                            <input
+                              type="radio"
+                              name="team"
+                              checked={selectedTeam === team.id}
+                              onChange={() => {}}
+                              className="member-select-radio"
+                            />
+                            <div className="member-select-info">
+                              <div className="member-select-name">👥 {team.name}</div>
+                              <div className="member-select-detail">{team.member_count || 0} members</div>
+                            </div>
+                          </div>
+                        ))
+                      )
+                    )}
+                  </div>
+
+                  <button
+                    className="add-members-btn"
+                    onClick={handleAddMembers}
+                    disabled={
+                      (addMemberMode === "individual" && selectedUsers.length === 0) ||
+                      (addMemberMode === "team" && !selectedTeam)
+                    }
+                  >
+                    {addMemberMode === "individual"
+                      ? `Add ${selectedUsers.length} Member${selectedUsers.length !== 1 ? "s" : ""}`
+                      : "Add Team"}
+                  </button>
+                </div>
+
+                {/* Right side — Team Preview Panel */}
+                {addMemberMode === "team" && (
+                  <div style={{
+                    width: '260px',
+                    flexShrink: 0,
+                    background: '#f9fafb',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px',
+                    maxHeight: '380px',
+                    overflowY: 'auto'
+                  }}>
+                    <div style={{ fontWeight: '600', fontSize: '14px', color: '#374151', marginBottom: '4px' }}>
+                      {selectedTeam
+                        ? `${teamPreviewMembers.length} member${teamPreviewMembers.length !== 1 ? 's' : ''} in this team`
+                        : 'Select a team to preview members'}
+                    </div>
+
+                    {teamPreviewLoading ? (
+                      <div style={{ color: '#9ca3af', fontSize: '13px', textAlign: 'center', paddingTop: '20px' }}>
+                        Loading...
+                      </div>
+                    ) : !selectedTeam ? (
+                      <div style={{ color: '#9ca3af', fontSize: '13px', textAlign: 'center', paddingTop: '20px' }}>
+                        👈 Pick a team on the left
+                      </div>
+                    ) : teamPreviewMembers.length === 0 ? (
+                      <div style={{ color: '#9ca3af', fontSize: '13px', textAlign: 'center', paddingTop: '20px' }}>
+                        No members in this team
+                      </div>
+                    ) : (
+                      teamPreviewMembers.map(member => (
+                        <div key={member.user_id} style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '8px',
+                          background: 'white',
+                          borderRadius: '6px',
+                          border: '1px solid #e5e7eb'
+                        }}>
+                          <div className="member-avatar-circle" style={{ flexShrink: 0, fontSize: '12px', width: '32px', height: '32px' }}>
+                            {member.first_name?.[0]}{member.last_name?.[0]}
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '13px', fontWeight: '500', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {member.first_name} {member.last_name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {member.role_name || member.email}
+                            </div>
+                          </div>
                         </div>
                       ))
-                    )
-                  ) : (
-                    filteredTeams.length === 0 ? (
-                      <p className="no-members-text">No teams available</p>
-                    ) : (
-                      filteredTeams.map(team => (
-                        <div
-                          key={team.id}
-                          className={`member-select-item ${selectedTeam === team.id ? "selected" : ""}`}
-                          onClick={() => setSelectedTeam(team.id)}
-                        >
-                          <input
-                            type="radio"
-                            name="team"
-                            checked={selectedTeam === team.id}
-                            onChange={() => {}}
-                            className="member-select-radio"
-                          />
-                          <div className="member-select-info">
-                            <div className="member-select-name">👥 {team.name}</div>
-                            <div className="member-select-detail">{team.member_count || 0} members</div>
-                          </div>
-                        </div>
-                      ))
-                    )
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
 
-                <button
-                  className="add-members-btn"
-                  onClick={handleAddMembers}
-                  disabled={
-                    (addMemberMode === "individual" && selectedUsers.length === 0) ||
-                    (addMemberMode === "team" && !selectedTeam)
-                  }
-                >
-                  {addMemberMode === "individual"
-                    ? `Add ${selectedUsers.length} Member${selectedUsers.length !== 1 ? "s" : ""}`
-                    : "Add Team"}
-                </button>
               </div>
             </div>
 
