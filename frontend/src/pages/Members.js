@@ -11,7 +11,6 @@ function Members() {
     remote: 0
   });
   const [search, setSearch] = useState("");
-  const [workingMode, setWorkingMode] = useState("All");
   const [status, setStatus] = useState("All");
   const [location, setLocation] = useState("All");
 
@@ -20,6 +19,7 @@ function Members() {
   const [total, setTotal] = useState(0);
   const limit = 10;
 
+  
   const [countries, setCountries] = useState([]);
   const [provinces, setProvinces] = useState([]);
   const [cities, setCities] = useState([]);
@@ -29,16 +29,28 @@ function Members() {
   const [editMode, setEditMode] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
 
+  const [jobTitles, setJobTitles] = useState([]);
+  const [jobTitleFilter, setJobTitleFilter] = useState("All");
+
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
     email: "",
     working_mode: "",
-    city: "",
-    province: "",
-    country: "",
+    role_type_id: "",
+    city_id: "",
     is_active: true
   });
+
+
+  useEffect(() => {
+    fetchJobTitles();
+  }, []);
+
+  const fetchJobTitles = async () => {
+    const res = await api.get("/roles");
+    setJobTitles(res.data);
+  };
 
   // ================================
   // Fetch Members
@@ -51,7 +63,7 @@ function Members() {
           page,
           limit,
           search,
-          workingMode,
+          jobTitle: jobTitleFilter,
           status,
           location
         }
@@ -64,7 +76,7 @@ function Members() {
     } catch (err) {
       console.error(err);
     }
-  }, [page, search, workingMode, status, location]);
+  }, [page, search, jobTitleFilter, status, location]);
 
     useEffect(() => {
       fetchMembers();
@@ -72,7 +84,7 @@ function Members() {
 
     useEffect(() => {
       setPage(1);
-    }, [search, workingMode, status, location]);
+    }, [search, jobTitleFilter, status, location]);
 
   // Pagination calculations
   const totalPages = Math.ceil(total / limit);
@@ -165,13 +177,9 @@ function Members() {
     try {
 
       if (editMode) {
-
       await api.put(`/members/${selectedMemberId}`, formData);
-
     } else {
-
       await api.post("/members", formData);
-
     }
 
       setShowModal(false);
@@ -179,8 +187,8 @@ function Members() {
       fetchMembers();
 
     } catch (err) {
-      console.error(err);
-      alert("Failed to create member");
+      console.error("FRONT ERROR", err.response?.data);
+      alert(err.response?.data?.message || "Failed to create member");
     }
 
   };
@@ -207,7 +215,7 @@ function Members() {
   // ================================
   // Edit Member
   // ================================
-  const handleEdit = (member) => {
+  const handleEdit = async (member) => {
 
     setEditMode(true);
     setSelectedMemberId(member.id);
@@ -217,7 +225,10 @@ function Members() {
       last_name: member.last_name,
       email: member.email,
       working_mode: member.working_mode,
+      role_type_id: member.role_type_id,
       city: member.city_id,
+      province: member.province_id,
+      country: member.country_id,
       is_active: member.is_active
     });
 
@@ -227,18 +238,11 @@ function Members() {
 
   const getInitials = (first, last) => first?.[0] + last?.[0];
 
-  const workingBadge = (mode) => {
-    if (mode === "LOCAL") return "badge badge-local";
-    if (mode === "REMOTE") return "badge badge-remote";
-    if (mode === "HYBRID") return "badge badge-hybrid";
-    return "badge";
-  };
-
   const statusBadge = (active) =>
     active ? "badge badge-active" : "badge badge-inactive";
 
   return (
-    <div>
+    <div className="members-container">
 
       {/* Header */}
       <div className="page-header">
@@ -299,16 +303,19 @@ function Members() {
         </div>
 
         <div>
-          <div className="filter-label">Working Mode</div>
+          <div className="filter-label">Job Title</div>
           <select
             className="filter-select"
-            value={workingMode}
-            onChange={(e) => setWorkingMode(e.target.value)}
+            value={jobTitleFilter}
+            onChange={(e) => setJobTitleFilter(e.target.value)}
           >
-            <option value="All">All Modes</option>
-            <option value="LOCAL">Local</option>
-            <option value="REMOTE">Remote</option>
-            <option value="HYBRID">Hybrid</option>
+            <option value="All">All Job Titles</option>
+            
+            {jobTitles.map(role => (
+              <option key={role.id} value={role.id}>
+                {role.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -578,6 +585,23 @@ function Members() {
                       <option value="LOCAL">Local</option>
                       <option value="REMOTE">Remote</option>
                       <option value="HYBRID">Hybrid</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Job Title</label>
+                    <select
+                      name="role_type_id"
+                      value={formData.role_type_id}
+                      onChange={handleChange}
+                    >
+                      <option value="">Select Job Title</option>
+                      {jobTitles.map(role => (
+                        <option key={role.id} value={role.id}>
+                          {role.name}
+                        </option>
+                      ))}
+
                     </select>
                   </div>
 
