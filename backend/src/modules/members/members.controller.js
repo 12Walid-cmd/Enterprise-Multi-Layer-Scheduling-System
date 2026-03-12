@@ -10,7 +10,7 @@ exports.getMembers = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { search, workingMode, status, location } = req.query;
+    const { search, jobTitle, status, location } = req.query;
 
     let filters = [];
     let values = [];
@@ -21,10 +21,10 @@ exports.getMembers = async (req, res) => {
       values.push(`%${search}%`);
       index++;
     }
-
-    if (workingMode && workingMode !== "All") {
-      filters.push(`u.working_mode = $${index}`);
-      values.push(workingMode.toUpperCase());
+    
+    if (jobTitle && jobTitle !== "All") {
+      filters.push(`rt.id = $${index}`);
+      values.push(jobTitle);
       index++;
     }
 
@@ -73,11 +73,18 @@ exports.getMembers = async (req, res) => {
         u.first_name,
         u.last_name,
         u.email,
+        u.working_mode,
         u.is_active,
-        STRING_AGG(DISTINCT rt.name, ', ') AS job_title, 
 
+        STRING_AGG(DISTINCT rt.name, ', ') AS job_title,
+
+        u.city_id,
         c.name AS city,
+
+        p.id AS province_id,
         p.name AS province,
+
+        co.id AS country_id,
         co.name AS country,
 
         COUNT(DISTINCT tm.team_id) AS team_count
@@ -89,7 +96,14 @@ exports.getMembers = async (req, res) => {
       LEFT JOIN ems.provinces p ON c.province_id = p.id
       LEFT JOIN ems.countries co ON p.country_id = co.id
       ${whereClause}
-      GROUP BY u.id, c.name, p.name, co.name
+      GROUP BY
+        u.id,
+        u.city_id,
+        c.name,
+        p.id,
+        p.name,
+        co.id,
+        co.name
       ORDER BY u.created_at DESC
       LIMIT $${index} OFFSET $${index + 1}
     `;
@@ -165,6 +179,8 @@ exports.createMember = async (req, res) => {
       city,
       is_active
     ]);
+
+   
 
     res.status(201).json({
       message: "Member created successfully",

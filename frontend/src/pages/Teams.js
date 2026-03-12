@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/api";
-import "../styles/Team.css";
+import "../styles/teams.css";
 
 function Teams() {
   // ===============================
@@ -45,14 +45,14 @@ function Teams() {
   const [newTeamGroupId, setNewTeamGroupId] = useState("");
   const [newTeamTimezone, setNewTeamTimezone] = useState("");
 
-  // ===============================
-  // Initial page load
-  // ===============================
-  // On first render, load teams and groups from the backend
-  useEffect(() => {
-    fetchTeams();
-    fetchGroups();
-  }, []);
+ // ===============================
+    // Initial page load
+    // ===============================
+    // On first render, load teams and groups from the backend
+    useEffect(() => {
+      fetchTeams();
+      fetchGroups();
+    }, []);
 
   // ===============================
   // API: Load all teams
@@ -167,10 +167,12 @@ function Teams() {
     }
   };
 
-  // ===============================
-  // Helper functions
-  // ===============================
-  // Builds a readable full name for a member
+    
+
+    // ===============================
+    // Helper functions
+    // ===============================
+    // Builds a readable full name for a member
   const formatMemberName = (member) => {
     return `${member.first_name || ""} ${member.last_name || ""}`.trim() || "N/A";
   };
