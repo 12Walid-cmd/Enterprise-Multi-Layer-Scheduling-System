@@ -257,3 +257,90 @@ exports.createRotation = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// GET ALL TEMPLATES
+exports.getTemplates = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT *
+      FROM ems.rotation_templates
+      ORDER BY created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("getTemplates error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// CREATE TEMPLATE
+exports.createTemplate = async (req, res) => {
+  try {
+    const { name, rotation_type, cadence_type, cadence_interval, min_assignees, is_private } = req.body;
+
+    const result = await pool.query(
+      `INSERT INTO ems.rotation_templates
+        (name, rotation_type, cadence_type, cadence_interval, min_assignees, is_private)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [name, rotation_type, cadence_type, cadence_interval || 1, min_assignees || 1, is_private || false]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("createTemplate error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// UPDATE TEMPLATE
+exports.updateTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, rotation_type, cadence_type, cadence_interval, min_assignees, is_private } = req.body;
+
+    const result = await pool.query(
+      `UPDATE ems.rotation_templates
+       SET
+         name = COALESCE($1, name),
+         rotation_type = COALESCE($2, rotation_type),
+         cadence_type = COALESCE($3, cadence_type),
+         cadence_interval = COALESCE($4, cadence_interval),
+         min_assignees = COALESCE($5, min_assignees),
+         is_private = COALESCE($6, is_private)
+       WHERE id = $7
+       RETURNING *`,
+      [name, rotation_type, cadence_type, cadence_interval, min_assignees, is_private, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error("updateTemplate error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// DELETE TEMPLATE
+exports.deleteTemplate = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      `DELETE FROM ems.rotation_templates WHERE id = $1 RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    res.json({ message: 'Template deleted successfully' });
+  } catch (err) {
+    console.error("deleteTemplate error:", err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
