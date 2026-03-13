@@ -32,6 +32,8 @@ function Members() {
   const [jobTitles, setJobTitles] = useState([]);
   const [jobTitleFilter, setJobTitleFilter] = useState("All");
 
+  const [openDropdown, setOpenDropdown] = useState(null);
+
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
@@ -173,7 +175,7 @@ function Members() {
   // Submit Member
   // ================================
   const handleSubmit = async () => {
-
+    console.log("submit-->", formData);
     try {
 
       if (editMode) {
@@ -225,7 +227,7 @@ function Members() {
       last_name: member.last_name,
       email: member.email,
       working_mode: member.working_mode,
-      role_type_id: member.role_type_id,
+      role_type_id: member.role_type_id || "",
       city: member.city_id,
       province: member.province_id,
       country: member.country_id,
@@ -242,7 +244,10 @@ function Members() {
     active ? "badge badge-active" : "badge badge-inactive";
 
   return (
+
+    
     <div className="members-container">
+    
 
       {/* Header */}
       <div className="page-header">
@@ -358,7 +363,7 @@ function Members() {
               <th>Location</th>
               <th>Status</th>
               <th>Teams</th>
-              <th>Actions</th>
+              <th> </th>
             </tr>
           </thead>
 
@@ -405,19 +410,33 @@ function Members() {
                 </td>
 
                 <td>
+                  
+                  <div style={{ position: "relative", display: "inline-block" }}>
+                      <button
+                        className="btn-three-dots"
+                        onClick={() => setOpenDropdown(openDropdown === member.id ? null : member.id)}
+                      >
+                        ⋮
+                      </button>
 
-                  <button
-                    className="btn-edit"
-                    onClick={() => handleEdit(member)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="btn-delete"
-                    onClick={() => handleDelete(member.id)}
-                  >
-                    Delete
-                  </button>
+                      {openDropdown === member.id && (
+                        <div className="dots-dropdown">
+                          <button
+                            className="dots-option dots-option-edit"
+                            onClick={() => { handleEdit(member); setOpenDropdown(null); }}
+                          >
+                            ✏️ Edit Member
+                          </button>
+                          <button
+                            className="dots-option dots-option-delete"
+                            onClick={() => { handleDelete(member.id); setOpenDropdown(null); }}
+                          >
+                            🚫 Delete Member
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    
 
                 </td>
 
@@ -697,7 +716,6 @@ function Members() {
 
             </div>
       )}
-
     </div>
   );
 }

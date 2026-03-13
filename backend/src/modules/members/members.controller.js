@@ -145,14 +145,18 @@ exports.getMembers = async (req, res) => {
 // CREATE NEW MEMBER
 // ===============================
 exports.createMember = async (req, res) => {
+
+  const client = await pool.connect();
   try {
 
+    await client.query("BEGIN");
     const {
       first_name,
       last_name,
       email,
       working_mode,
       city,
+      role_type_id,
       is_active
     } = req.body;
 
@@ -180,7 +184,18 @@ exports.createMember = async (req, res) => {
       is_active
     ]);
 
+
+    const userId = result.rows[0].id;
+  
+
+    if (role_type_id) {
+      await client.query(`
+        INSERT INTO ems.team_members (user_id, role_type_id)
+        VALUES ($1,$2)
+      `, [userId, role_type_id]);
+    }
    
+    await client.query("COMMIT");
 
     res.status(201).json({
       message: "Member created successfully",
@@ -207,7 +222,10 @@ exports.createMember = async (req, res) => {
 // UPDATE MEMBER
 // ===============================
 exports.updateMember = async (req, res) => {
+  const client = await pool.connect();
+
   try {
+    await client.query("BEGIN");
 
     const { id } = req.params;
 
@@ -217,10 +235,11 @@ exports.updateMember = async (req, res) => {
       email,
       working_mode,
       city,
-      is_active
+      is_active,
+      role_type_id
     } = req.body;
 
-    const updateQuery = `
+    const result = await client.query(`
       UPDATE ems.users
       SET
         first_name = $1,
@@ -231,9 +250,7 @@ exports.updateMember = async (req, res) => {
         is_active = $6
       WHERE id = $7
       RETURNING *
-    `;
-
-    const result = await pool.query(updateQuery, [
+    `, [
       first_name,
       last_name,
       email,
@@ -243,6 +260,23 @@ exports.updateMember = async (req, res) => {
       id
     ]);
 
+    // ✅ update job title mapping
+
+    await client.query(`
+      DELETE FROM ems.team_members
+      WHERE user_id = $1
+    `, [id]);
+
+    if (role_type_id) {
+      await client.query(`
+        INSERT INTO ems.team_members
+        (user_id, role_type_id)
+        VALUES ($1,$2)
+      `, [id, role_type_id]);
+    }
+
+    await client.query("COMMIT");
+
     res.json({
       message: "Member updated successfully",
       data: result.rows[0]
@@ -250,12 +284,15 @@ exports.updateMember = async (req, res) => {
 
   } catch (error) {
 
+    await client.query("ROLLBACK");
     console.error(error);
 
     res.status(500).json({
       message: "Server Error"
     });
 
+  } finally {
+    client.release();
   }
 };
 

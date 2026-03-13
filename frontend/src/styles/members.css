@@ -562,3 +562,65 @@ select:focus {
   .filters { grid-template-columns: 1fr; }
   .stat-value { font-size: 32px; }
 }
+
+/* ── Three Dots Button ───────────────────────────────── */
+.btn-three-dots {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.btn-three-dots:hover {
+  background: #fef2f2;
+  color: #c81e3a;
+}
+
+/* ── Dropdown Menu ───────────────────────────────────── */
+.dots-dropdown {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  min-width: 180px;
+  padding: 6px;
+  animation: fadeInUp 0.15s ease;
+}
+
+/* ── Dropdown Options ────────────────────────────────── */
+.dots-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+  color: #374151;
+}
+
+.dots-option-edit:hover {
+  background: #fef2f2;
+  color: #c81e3a;
+}
+
+.dots-option-delete:hover {
+  background: #fef2f2;
+  color: #c81e3a;
+}
