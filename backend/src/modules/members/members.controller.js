@@ -13,10 +13,13 @@ exports.getEmployees = async (req, res) => {
     let index = 1;
 
     if (search) {
-      filters.push(`(u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index})`);
+      filters.push(`(u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index} OR u.username ILIKE $${index})`);
       values.push(`%${search}%`);
       index++;
     }
+
+    // always exclude admin account
+    filters.push(`u.username <> 'admin'`);
 
     if (workingMode && workingMode !== "All") {
       filters.push(`u.working_mode = $${index}`);
@@ -60,11 +63,13 @@ exports.getEmployees = async (req, res) => {
     const employeesQuery = `
       SELECT 
         u.id,
+        u.username,
         u.first_name,
         u.last_name,
         u.email,
         u.is_active,
         u.working_mode,
+        u.role,
 
         c.name AS city,
         p.name AS province,

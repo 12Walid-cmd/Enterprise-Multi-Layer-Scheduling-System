@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
+import axios from "axios";
 import api from "../api/api";
 import "../styles/members.css";
 
@@ -69,6 +70,10 @@ function Members() {
       : "badge badge-inactive";
 
   const [showModal, setShowModal] = useState(false);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [generatedCredentials, setGeneratedCredentials] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -88,6 +93,117 @@ function Members() {
       ...prev,
       [name]: type === "checkbox" ? checked : value
     }));
+  };
+
+  const handleAddMember = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setMessage({ type: '', text: '' });
+
+    try {
+      // Validate required fields
+      if (!formData.first_name || !formData.last_name || !formData.email) {
+        setMessage({
+          type: 'error',
+          text: 'Please fill in first name, last name, and email'
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const createMember = async (token) => axios.post(
+        'http://localhost:5000/api/admin/users',
+        {
+          email: formData.email,
+          firstName: formData.first_name,
+          lastName: formData.last_name
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      let accessToken = localStorage.getItem('accessToken');
+      let response;
+
+      try {
+        response = await createMember(accessToken);
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          const refreshToken = localStorage.getItem('refreshToken');
+          const refreshResponse = await axios.post(
+            'http://localhost:5000/api/auth/refresh',
+            { refreshToken },
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+
+          accessToken = refreshResponse.data.accessToken;
+          localStorage.setItem('accessToken', accessToken);
+          if (refreshResponse.data.refreshToken) {
+            localStorage.setItem('refreshToken', refreshResponse.data.refreshToken);
+          }
+
+          response = await createMember(accessToken);
+        } else {
+          throw error;
+        }
+      }
+
+      const { data } = response;
+
+      // axios throws for non-2xx responses, so if we reach here the user was created
+
+      // Show credentials modal
+      setGeneratedCredentials(data);
+      setShowCredentialsModal(true);
+      setShowModal(false);
+
+      // Reset form
+      setFormData({
+        first_name: '',
+        last_name: '',
+        email: '',
+        working_mode: 'LOCAL',
+        city: '',
+        province: '',
+        country: '',
+        is_active: true
+      });
+
+      // Reload members list
+      fetchMembers();
+
+      setMessage({
+        type: 'success',
+        text: 'Member created successfully! Share the credentials below with the new member.'
+      });
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        setMessage({
+          type: 'error',
+          text: 'Session expired. Please log in again.'
+        });
+        return;
+      }
+      setMessage({
+        type: 'error',
+        text: (error.response && error.response.data && error.response.data.message) || error.message || 'Failed to create member'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setMessage({
+        type: 'success',
+        text: 'Copied to clipboard!'
+      });
+    });
   };
 
   return (
@@ -140,7 +256,7 @@ function Members() {
           <input
             type="text"
             className="filter-input"
-            placeholder="Search employees..."
+            placeholder="Search employees, email, or username..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -162,9 +278,11 @@ function Members() {
 
         <div>
           <div className="filter-label">Location</div>
-          <select className="filter-select">
+          <select
+            className="filter-select"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
+          >
             <option>All Locations</option>
             <option>Calgary</option>
             <option>Vancouver</option>
@@ -174,9 +292,11 @@ function Members() {
 
         <div>
           <div className="filter-label">Status</div>
-          <select className="filter-select">
+          <select
+            className="filter-select"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
+          >
             <option>All Status</option>
             <option>Active</option>
             <option>Inactive</option>
@@ -209,6 +329,11 @@ function Members() {
                       <div className="employee-name">
                         {member.first_name} {member.last_name}
                       </div>
+                      {member.username && (
+                        <div className="employee-username">
+                          @{member.username}
+                        </div>
+                      )}
                       <div className="employee-email">
                         {member.email}
                       </div>
@@ -317,23 +442,38 @@ function Members() {
             </div>
           </div>
 
-          {showModal && (
-            <div className="modal-overlay">
-              <div className="modal-container">
+      </div>
 
-                {/* Header */}
-                <div className="modal-header">
-                  <h2>Add New Member</h2>
-                  <button
-                    className="modal-close"
-                    onClick={() => setShowModal(false)}
-                  >
-                    ×
-                  </button>
-                </div>
+      {showModal && (
+        <div className="modal-overlay">
+          <div className="modal-container">
 
-                {/* Body */}
-                <div className="modal-body">
+            {/* Header */}
+            <div className="modal-header">
+              <h2>Add New Member</h2>
+              <button
+                className="modal-close"
+                onClick={() => setShowModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Message Alert */}
+            {message.text && (
+              <div className={`alert alert-${message.type}`}>
+                {message.text}
+                <button
+                  className="alert-close"
+                  onClick={() => setMessage({ type: '', text: '' })}
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {/* Body */}
+            <form onSubmit={handleAddMember} className="modal-body">
 
                   {/* First + Last Name */}
                   <div className="form-row">
@@ -438,27 +578,111 @@ function Members() {
                     <span>Set employee as active</span>
                   </div>
 
-                </div>
-
                 {/* Footer */}
                 <div className="modal-footer">
                   <button
+                    type="button"
                     className="btn-secondary"
                     onClick={() => setShowModal(false)}
                   >
                     Cancel
                   </button>
 
-                  <button className="btn-primary">
-                    Add Employee
+                  <button
+                    type="submit"
+                    className="btn-primary"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Creating...' : 'Add Member'}
                   </button>
                 </div>
 
-              </div>
+                </form>
             </div>
-          )}
+          </div>
+        )}
 
-      </div>
+        {/* Credentials Modal */}
+        {showCredentialsModal && generatedCredentials && (
+          <div className="modal-overlay">
+            <div className="modal-container credentials-modal">
+              
+              {/* Header */}
+              <div className="modal-header">
+                <h2>✓ Member Created Successfully</h2>
+                <button
+                  className="modal-close"
+                  onClick={() => setShowCredentialsModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="modal-body credentials-body">
+                <div className="warning-box">
+                  <p>⚠️ <strong>Save these credentials securely.</strong> You will only see them once.</p>
+                </div>
+
+                <div className="credential-field">
+                  <label>Username:</label>
+                  <div className="credential-display">
+                    <span className="credential-value">{generatedCredentials.username}</span>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => copyToClipboard(generatedCredentials.username)}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div className="credential-field">
+                  <label>Temporary Password:</label>
+                  <div className="credential-display">
+                    <span className="credential-value password-value">
+                      {generatedCredentials.temporaryPassword}
+                    </span>
+                    <button
+                      type="button"
+                      className="copy-btn"
+                      onClick={() => copyToClipboard(generatedCredentials.temporaryPassword)}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div className="credential-field">
+                  <label>Email:</label>
+                  <p>{generatedCredentials.email}</p>
+                </div>
+
+                <div className="instructions-box">
+                  <h4>Next Steps:</h4>
+                  <ol>
+                    <li>Send the username and temporary password to <strong>{generatedCredentials.email}</strong> securely</li>
+                    <li>User logs in with these credentials on first login</li>
+                    <li>User will be able to set their own password</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setShowCredentialsModal(false)}
+                >
+                  Done
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
     </div>
   );
 }

@@ -1,13 +1,105 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/login.css";
 
-function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+const API = "http://localhost:5000";
+const SESSION_END_REASON_KEY = "sessionEndReason";
 
-  const handleLogin = (e) => {
+async function refreshAccessToken() {
+  const refreshToken = localStorage.getItem("refreshToken");
+  if (!refreshToken) throw new Error("No refresh token");
+
+  const res = await fetch(`${API}/api/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Refresh failed");
+
+  localStorage.setItem("accessToken", data.accessToken);
+  localStorage.setItem("refreshToken", data.refreshToken);
+  return data.accessToken;
+}
+
+export async function authedFetch(url, options = {}) {
+  let token = localStorage.getItem("accessToken");
+
+  const doFetch = async (t) =>
+    fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${t}`,
+      },
+    });
+
+  let res = await doFetch(token);
+
+  if (res.status === 401) {
+    token = await refreshAccessToken();
+    res = await doFetch(token);
+  }
+
+  return res;
+}
+
+function Login() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [msg, setMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const reason = sessionStorage.getItem(SESSION_END_REASON_KEY);
+    if (reason === "timeout") {
+      setMsg("Your session timed out due to inactivity. Please sign in again.");
+      sessionStorage.removeItem(SESSION_END_REASON_KEY);
+    }
+  }, []);
+
+  const handleLogin = async (e) => {
     e.preventDefault();
-    console.log("Mock login:", email, password);
+    setMsg("");
+    setIsLoading(true);
+
+    if (!username || !password) {
+      setMsg("Please enter your username and password.");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMsg(data.message || "Login failed.");
+        setIsLoading(false);
+        return;
+      }
+
+      // Store tokens and user info
+      localStorage.setItem("accessToken", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      setMsg("✓ Login successful! Redirecting...");
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+      setMsg("Cannot reach server. Please try again.");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -24,13 +116,15 @@ function Login() {
           <form onSubmit={handleLogin}>
 
             <div className="mb-3">
-              <label className="form-label">Email Address</label>
+              <label className="form-label">Username</label>
               <input
-                type="email"
+                type="text"
                 className="login-input"
-                placeholder="you@company.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                disabled={isLoading}
+                required
               />
             </div>
 
@@ -42,22 +136,33 @@ function Login() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
+                required
               />
             </div>
-              {/* Forgot Password */}
-        <div className="mb-4" style={{ textAlign: "right" }}>
-                <button
-                type="button"
-                className="forgot-password"
-                onClick={() => alert("Forgot password clicked!")}
-                >
-                Forgot password?
-                </button>
-        </div>
 
-            <button type="submit" className="login-button">
-              Sign In
+            {msg && (
+              <div style={{
+                marginBottom: '1rem',
+                padding: '0.875rem 1rem',
+                borderRadius: '6px',
+                backgroundColor: msg.includes('✓') || msg.includes('successful') ? '#d4edda' : '#f8d7da',
+                border: `1px solid ${msg.includes('✓') || msg.includes('successful') ? '#c3e6cb' : '#f5c6cb'}`,
+                color: msg.includes('✓') || msg.includes('successful') ? '#155724' : '#721c24',
+                fontSize: '0.9rem',
+                fontWeight: '500'
+              }}>
+                {msg}
+              </div>
+            )}
+
+            <button type="submit" className="login-button" disabled={isLoading}>
+              {isLoading ? "Signing In..." : "Sign In"}
             </button>
+
+            <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.85rem', color: '#666' }}>
+              <p>Contact your administrator if you need account assistance.</p>
+            </div>
 
           </form>
         </div>
