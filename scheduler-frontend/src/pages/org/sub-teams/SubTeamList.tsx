@@ -13,8 +13,7 @@ import { SubTeamsAPI } from "../../../api";
 import { useNavigate } from 'react-router-dom';
 import type { SubTeam } from "../../../types/org"; 
 
-
-export const SubTeamList = ({ teamId }: { teamId: string }) => {
+export default function SubTeamList({ teamId }: { teamId: string }) {
   const [subTeams, setSubTeams] = useState<SubTeam[]>([]);
   const navigate = useNavigate();
 
@@ -53,4 +52,4 @@ export const SubTeamList = ({ teamId }: { teamId: string }) => {
       </Stack>
     </Box>
   );
-};
+}

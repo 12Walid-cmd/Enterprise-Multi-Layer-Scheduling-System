@@ -30,12 +30,26 @@ import UsersList from "./pages/user/UsersList";
 import CreateUserPage from "./pages/user/CreateUserPage";
 import EditUserPage from "./pages/user/EditUserPage";
 import UserDetail from "./pages/user/UserDetail";
+import UserGlobalRolesPage from "./pages/user/[id]/UserGlobalRolesPage";
 
 // Sub-teams
-import { SubTeamList } from "./pages/org/sub-teams/SubTeamList";
-import { EditSubTeamPage } from "./pages/org/sub-teams/EditSubTeamPage";
-import { SubTeamDetail } from "./pages/org/sub-teams/SubTeamDetail";
-import { CreateSubTeamPage } from "./pages/org/sub-teams/CreateSubTeamPage";
+import SubTeamList from "./pages/org/sub-teams/SubTeamList";
+import EditSubTeamPage from "./pages/org/sub-teams/EditSubTeamPage";
+import SubTeamDetail from "./pages/org/sub-teams/SubTeamDetail";
+import CreateSubTeamPage from "./pages/org/sub-teams/CreateSubTeamPage";
+
+
+
+// Rotations
+import RotationsList from "./pages/rotation/RotationsList";
+import CreateRotationPage from "./pages/rotation/CreateRotationPage";
+import RotationDetail from "./pages/rotation/RotationDetail";
+import EditRotationPage from "./pages/rotation/EditRotationPage";
+import RotationMembersPage from "./pages/rotation/RotationMembersPage";
+
+// Schedule
+import ScheduleListPage from "./pages/schedule/ScheduleListPage";
+import SchedulePage from "./pages/schedule/SchedulePage";
 
 const SubTeamListWrapper = () => {
   const { teamId } = useParams();
@@ -54,11 +68,6 @@ export const router = createBrowserRouter([
       { path: "groups/:id", element: <GroupDetail /> },
       { path: "groups/:id/edit", element: <EditGroupPage /> },
 
-      // Teams
-      // { path: "teams", element: <TeamsList /> },
-      // { path: "teams/create", element: <CreateTeamPage /> },
-      // { path: "teams/:id", element: <TeamDetail /> },
-      // { path: "teams/:id/edit", element: <EditTeamPage /> },
 
       // Teams
       {
@@ -68,14 +77,12 @@ export const router = createBrowserRouter([
           { path: "create", element: <CreateTeamPage /> },
           { path: ":id", element: <TeamDetail /> },
           { path: ":id/edit", element: <EditTeamPage /> },
-
-          // Sub-teams
-          { path: ":teamId/sub-teams", element: <SubTeamListWrapper /> },
-          { path: ":teamId/sub-teams/create", element: <CreateSubTeamPage /> },
-
           // Sub-team 
           { path: "sub-teams/:id", element: <SubTeamDetail /> },
           { path: "sub-teams/:id/edit", element: <EditSubTeamPage /> },
+          // Sub-teams
+          { path: ":teamId/sub-teams", element: <SubTeamListWrapper /> },
+          { path: ":teamId/sub-teams/create", element: <CreateSubTeamPage /> },
         ],
       },
 
@@ -98,6 +105,20 @@ export const router = createBrowserRouter([
       { path: "users/create", element: <CreateUserPage /> },
       { path: "users/:id", element: <UserDetail /> },
       { path: "users/:id/edit", element: <EditUserPage /> },
+      { path: "users/:id/global-roles", element: <UserGlobalRolesPage /> },
+
+      // Rotations
+      { path: "rotations", element: <RotationsList /> },
+      { path: "rotations/create", element: <CreateRotationPage /> },
+      { path: "rotations/:id", element: <RotationDetail /> },
+      { path: "rotations/:id/edit", element: <EditRotationPage /> },
+
+      // Rotation Members
+      { path: "rotations/:id/members", element: <RotationMembersPage /> },
+
+      // Schedule
+      { path: '/schedule', element: <ScheduleListPage /> },
+      { path: '/schedule/:id', element: <SchedulePage /> },
     ],
   },
 ]);

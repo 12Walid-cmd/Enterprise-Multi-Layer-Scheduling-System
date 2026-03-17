@@ -43,6 +43,8 @@ export interface Team {
   created_at: Timestamp;
 
   team_members?: TeamMember[];
+  sub_team_members?: SubTeamMember[];
+
 }
 
 /** Root team = parent_team_id === null */
@@ -103,7 +105,25 @@ export interface AddTeamMemberDto {
   userId: string;
   teamRoleId: string;
 }
+/* ============================================================
+   3B. SUB-TEAM MEMBERS
+   ============================================================ */
 
+export interface SubTeamMember {
+  id: string;
+  sub_team_id: string;
+  user_id: string;
+  created_at: Timestamp;
+
+  users?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+export interface AddSubTeamMemberDto {
+  userId: string;
+}
 /* ============================================================
    4. TEAM ROLE TYPES
    ============================================================ */
@@ -162,12 +182,12 @@ export interface UserGlobalRole {
   global_role_id: string;
   created_at: Timestamp;
 
-  global_role_types?: GlobalRoleType;
+  global_roles?: GlobalRoleType;
 }
 
 export interface AssignUserGlobalRoleDto {
-  user_id: string;
-  global_role_id: string;
+  userId: string;
+  globalRoleId: string;
 }
 
 

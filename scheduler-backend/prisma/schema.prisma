@@ -7,312 +7,17 @@ datasource db {
   schemas  = ["ems"]
 }
 
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model assignments {
-  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  schedule_id       String          @db.Uuid
-  rotation_id       String          @db.Uuid
-  user_id           String          @db.Uuid
-  tier_id           String?         @db.Uuid
-  assigned_start    DateTime        @db.Timestamptz(6)
-  assigned_end      DateTime        @db.Timestamptz(6)
-  is_override       Boolean?        @default(false)
-  override_reason   String?
-  created_at        DateTime?       @default(now()) @db.Timestamptz(6)
-  assignment_status String          @default("ON_CALL") @db.VarChar(30)
-  rotations         rotations       @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  schedules         schedules       @relation(fields: [schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  rotation_tiers    rotation_tiers? @relation(fields: [tier_id], references: [id], onUpdate: NoAction)
-  users             users           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([rotation_id], map: "idx_assignments_rotation_id")
-  @@index([schedule_id], map: "idx_assignments_schedule_id")
-  @@index([tier_id], map: "idx_assignments_tier_id")
-  @@schema("ems")
-}
-
-model audit_logs {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  actor_id     String?   @db.Uuid
-  action       String    @db.VarChar(80)
-  entity_type  String    @db.VarChar(80)
-  entity_id    String?   @db.Uuid
-  before_state Json?
-  after_state  Json?
-  created_at   DateTime? @default(now()) @db.Timestamptz(6)
-  users        users?    @relation(fields: [actor_id], references: [id], onUpdate: NoAction)
-
-  @@index([actor_id], map: "idx_audit_logs_actor")
-  @@schema("ems")
-}
-
-model auth_identities {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id          String    @db.Uuid
-  provider         String    @db.VarChar(50)
-  provider_user_id String?   @db.VarChar(255)
-  password_hash    String?
-  created_at       DateTime? @default(now()) @db.Timestamptz(6)
-  users            users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([provider, provider_user_id])
-  @@unique([user_id, provider])
-  @@index([user_id], map: "idx_auth_identities_user_id")
-  @@schema("ems")
-}
-
-model conflicts {
-  id                                 String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  schedule_id                        String?    @db.Uuid
-  rotation_id                        String?    @db.Uuid
-  user_id                            String?    @db.Uuid
-  conflict_type                      String     @db.VarChar(50)
-  severity                           String     @default("MEDIUM") @db.VarChar(20)
-  details                            Json?
-  status                             String     @default("OPEN") @db.VarChar(20)
-  created_at                         DateTime?  @default(now()) @db.Timestamptz(6)
-  resolved_by                        String?    @db.Uuid
-  resolved_at                        DateTime?  @db.Timestamptz(6)
-  users_conflicts_resolved_byTousers users?     @relation("conflicts_resolved_byTousers", fields: [resolved_by], references: [id], onUpdate: NoAction)
-  rotations                          rotations? @relation(fields: [rotation_id], references: [id], onUpdate: NoAction)
-  schedules                          schedules? @relation(fields: [schedule_id], references: [id], onUpdate: NoAction)
-  users_conflicts_user_idTousers     users?     @relation("conflicts_user_idTousers", fields: [user_id], references: [id], onUpdate: NoAction)
-
-  @@index([resolved_by], map: "idx_conflicts_resolved_by")
-  @@index([rotation_id], map: "idx_conflicts_rotation_id")
-  @@index([schedule_id], map: "idx_conflicts_schedule_id")
-  @@index([user_id], map: "idx_conflicts_user_id")
-  @@schema("ems")
-}
-
-model coverage_gaps {
-  id               String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rotation_id      String          @db.Uuid
-  leave_request_id String?         @db.Uuid
-  gap_start        DateTime        @db.Date
-  gap_end          DateTime        @db.Date
-  is_filled        Boolean?        @default(false)
-  filled_by        String?         @db.Uuid
-  filled_at        DateTime?       @db.Timestamptz(6)
-  created_at       DateTime?       @default(now()) @db.Timestamptz(6)
-  users            users?          @relation(fields: [filled_by], references: [id], onUpdate: NoAction)
-  leave_requests   leave_requests? @relation(fields: [leave_request_id], references: [id], onUpdate: NoAction)
-  rotations        rotations       @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([leave_request_id], map: "idx_coverage_gaps_leave_request_id")
-  @@index([rotation_id], map: "idx_coverage_gaps_rotation_id")
-  @@schema("ems")
-}
-
 model groups {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name            String            @unique @db.VarChar(255)
-  description     String?
-  timezone        String?           @default("UTC") @db.VarChar(64)
-  is_active       Boolean?          @default(true)
-  created_at      DateTime?         @default(now()) @db.Timestamptz(6)
-  holidays        holidays[]
-  rotation_scopes rotation_scopes[]
-  rotations       rotations[]
-  teams           teams[]
-
-  @@schema("ems")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model holidays {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  group_id     String?   @db.Uuid
-  holiday_date DateTime  @db.Date
-  name         String    @db.VarChar(255)
-  created_by   String?   @db.Uuid
-  created_at   DateTime? @default(now()) @db.Timestamptz(6)
-  holiday_type String?   @default("OTHER") @db.VarChar(50)
-  users        users?    @relation(fields: [created_by], references: [id], onUpdate: NoAction)
-  groups       groups?   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([created_by], map: "idx_holidays_created_by")
-  @@index([group_id], map: "idx_holidays_group_id")
-  @@schema("ems")
-}
-
-model leave_approvals {
-  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  leave_request_id String         @db.Uuid
-  approver_id      String         @db.Uuid
-  approval_level   Int            @default(1)
-  decision         String         @db.VarChar(20)
-  decided_at       DateTime?      @default(now()) @db.Timestamptz(6)
-  comment          String?
-  users            users          @relation(fields: [approver_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  leave_requests   leave_requests @relation(fields: [leave_request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([leave_request_id, approver_id, approval_level])
-  @@index([approver_id], map: "idx_leave_approvals_approver_id")
-  @@index([leave_request_id], map: "idx_leave_approvals_leave_id")
-  @@schema("ems")
-}
-
-/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
-model leave_requests {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id         String            @db.Uuid
-  start_date      DateTime          @db.Date
-  end_date        DateTime          @db.Date
-  reason          String?
-  status          String            @default("PENDING") @db.VarChar(30)
-  requested_at    DateTime?         @default(now()) @db.Timestamptz(6)
-  leave_period    String            @default("FULL_DAY") @db.VarChar(20)
-  coverage_gaps   coverage_gaps[]
-  leave_approvals leave_approvals[]
-  users           users             @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([user_id], map: "idx_leave_requests_user_id")
-  @@schema("ems")
-}
-
-model notifications {
-  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id             String    @db.Uuid
-  message             String
-  type                String    @db.VarChar(50)
-  related_entity_type String?   @db.VarChar(80)
-  related_entity_id   String?   @db.Uuid
-  is_read             Boolean?  @default(false)
-  created_at          DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime? @default(now()) @updatedAt
-  users               users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([user_id], map: "idx_notifications_user_id")
-  @@schema("ems")
-}
-
-model rotation_members {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rotation_id    String    @db.Uuid
-  user_id        String    @db.Uuid
-  rotation_order Int
-  is_active      Boolean?  @default(true)
-  created_at     DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime? @default(now()) @updatedAt
-  rotations      rotations @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([rotation_id, user_id])
-  @@index([rotation_id], map: "idx_rotation_members_rotation_id")
-  @@index([user_id], map: "idx_rotation_members_user_id")
-  @@schema("ems")
-}
-
-model rotation_scopes {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rotation_id String    @db.Uuid
-  group_id    String?   @db.Uuid
-  team_id     String?   @db.Uuid
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime? @default(now()) @updatedAt
-  groups      groups?   @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  rotations   rotations @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  teams       teams?    @relation(fields: [team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([rotation_id, group_id, team_id])
-  @@index([group_id], map: "idx_rotation_scopes_group_id")
-  @@index([rotation_id], map: "idx_rotation_scopes_rotation_id")
-  @@index([team_id], map: "idx_rotation_scopes_team_id")
-  @@schema("ems")
-}
-
-model rotation_tier_members {
-  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tier_id        String         @db.Uuid
-  user_id        String         @db.Uuid
-  rotation_order Int
-  is_active      Boolean?       @default(true)
-  created_at     DateTime?      @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?      @default(now()) @updatedAt
-  rotation_tiers rotation_tiers @relation(fields: [tier_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users          users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([tier_id, user_id])
-  @@index([tier_id], map: "idx_rotation_tier_members_tier_id")
-  @@index([user_id], map: "idx_rotation_tier_members_user_id")
-  @@schema("ems")
-}
-
-model rotation_tiers {
-  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rotation_id           String                  @db.Uuid
-  tier_level            Int
-  name                  String                  @db.VarChar(100)
-  assignments           assignments[]
-  rotation_tier_members rotation_tier_members[]
-  rotations             rotations               @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([rotation_id, tier_level])
-  @@index([rotation_id], map: "idx_rotation_tiers_rotation_id")
-  @@schema("ems")
-}
-
-model rotations {
-  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String             @db.VarChar(255)
-  rotation_type        String             @db.VarChar(50)
-  group_id             String?            @db.Uuid
-  team_id              String?            @db.Uuid
-  cadence_type         String             @db.VarChar(50)
-  cadence_interval     Int                @default(1)
-  allow_overlap        Boolean?           @default(false)
-  min_assignees        Int?               @default(1)
-  allow_empty          Boolean?           @default(false)
-  spans_multiple_teams Boolean?           @default(false)
-  is_active            Boolean?           @default(true)
-  created_at           DateTime?          @default(now()) @db.Timestamptz(6)
-  assignments          assignments[]
-  conflicts            conflicts[]
-  coverage_gaps        coverage_gaps[]
-  rotation_members     rotation_members[]
-  rotation_scopes      rotation_scopes[]
-  rotation_tiers       rotation_tiers[]
-  groups               groups?            @relation(fields: [group_id], references: [id], onUpdate: NoAction)
-  teams                teams?             @relation(fields: [team_id], references: [id], onUpdate: NoAction)
-  schedules            schedules[]
-  staffing_rules       staffing_rules[]
-
-  @@index([group_id], map: "idx_rotations_group_id")
-  @@index([team_id], map: "idx_rotations_team_id")
-  @@schema("ems")
-}
-
-model schedules {
-  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rotation_id  String        @db.Uuid
-  window_start DateTime      @db.Date
-  window_end   DateTime      @db.Date
-  generated_at DateTime?     @default(now()) @db.Timestamptz(6)
-  generated_by String?       @db.Uuid
-  status       String        @default("DRAFT") @db.VarChar(30)
-  assignments  assignments[]
-  conflicts    conflicts[]
-  users        users?        @relation(fields: [generated_by], references: [id], onUpdate: NoAction)
-  rotations    rotations     @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([rotation_id, window_start, window_end])
-  @@index([generated_by], map: "idx_schedules_generated_by")
-  @@index([rotation_id], map: "idx_schedules_rotation_id")
-  @@schema("ems")
-}
-
-model staffing_rules {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rotation_id String    @db.Uuid
-  rule_type   String    @db.VarChar(50)
-  rule_config Json
+  name        String    @unique @db.VarChar(255)
+  description String?
+  timezone    String?   @default("UTC") @db.VarChar(64)
   is_active   Boolean?  @default(true)
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
   updated_at  DateTime? @default(now()) @updatedAt
-  rotations   rotations @relation(fields: [rotation_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([rotation_id], map: "idx_staffing_rules_rotation_id")
+  teams teams[]
+
   @@schema("ems")
 }
 
@@ -346,21 +51,20 @@ model global_role_types {
 }
 
 model teams {
-  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  group_id        String?           @db.Uuid
-  parent_team_id  String?           @db.Uuid
-  name            String            @db.VarChar(255)
-  description     String?
-  timezone        String?           @db.VarChar(64)
-  is_active       Boolean?          @default(true)
-  created_at      DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime?         @default(now()) @updatedAt
-  rotation_scopes rotation_scopes[]
-  rotations       rotations[]
-  team_members    team_members[]
-  groups          groups?           @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  teams           teams?            @relation("teamsToteams", fields: [parent_team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  other_teams     teams[]           @relation("teamsToteams")
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  group_id         String?            @db.Uuid
+  parent_team_id   String?            @db.Uuid
+  name             String             @db.VarChar(255)
+  description      String?
+  timezone         String?            @db.VarChar(64)
+  is_active        Boolean?           @default(true)
+  created_at       DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?          @default(now()) @updatedAt
+  team_members     team_members[]
+  groups           groups?            @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  teams            teams?             @relation("teamsToteams", fields: [parent_team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_teams      teams[]            @relation("teamsToteams")
+  sub_team_members sub_team_members[]
 
   @@unique([group_id, name])
   @@index([group_id], map: "idx_teams_group_id")
@@ -368,7 +72,18 @@ model teams {
   @@schema("ems")
 }
 
+model sub_team_members {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sub_team_id String   @db.Uuid
+  user_id     String   @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
 
+  users users @relation(fields: [user_id], references: [id])
+  teams teams @relation(fields: [sub_team_id], references: [id])
+
+  @@unique([sub_team_id, user_id], name: "sub_team_id_user_id")
+  @@schema("ems")
+}
 
 model user_roles {
   id             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -396,34 +111,113 @@ model team_role_types {
 }
 
 model users {
-  id                                     String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  first_name                             String                  @db.VarChar(100)
-  last_name                              String                  @db.VarChar(100)
-  email                                  String                  @unique @db.VarChar(255)
-  is_active                              Boolean                 @default(true)
-  created_at                             DateTime?               @default(now()) @db.Timestamptz(6)
-  updated_at                             DateTime?               @default(now()) @updatedAt
-  phone                                  String                  @db.VarChar(50)
-  timezone                               String                  @db.VarChar(100)
-  working_mode                           working_mode_enum       @default(LOCAL)
-  city                                   String?                 @db.VarChar(100)
-  province                               String?                 @db.VarChar(100)
-  country                                String?                 @db.VarChar(100)
-  assignments                            assignments[]
-  audit_logs                             audit_logs[]
-  auth_identities                        auth_identities[]
-  conflicts_conflicts_resolved_byTousers conflicts[]             @relation("conflicts_resolved_byTousers")
-  conflicts_conflicts_user_idTousers     conflicts[]             @relation("conflicts_user_idTousers")
-  coverage_gaps                          coverage_gaps[]
-  holidays                               holidays[]
-  leave_approvals                        leave_approvals[]
-  leave_requests                         leave_requests[]
-  notifications                          notifications[]
-  rotation_members                       rotation_members[]
-  rotation_tier_members                  rotation_tier_members[]
-  schedules                              schedules[]
-  team_members                           team_members[]
-  user_roles                             user_roles[]
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name   String            @db.VarChar(100)
+  last_name    String            @db.VarChar(100)
+  email        String            @unique @db.VarChar(255)
+  is_active    Boolean           @default(true)
+  created_at   DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?         @default(now()) @updatedAt
+  phone        String            @db.VarChar(50)
+  timezone     String            @db.VarChar(100)
+  working_mode working_mode_enum @default(LOCAL)
+  city         String?           @db.VarChar(100)
+  province     String?           @db.VarChar(100)
+  country      String?           @db.VarChar(100)
+
+  team_members        team_members[]
+  user_roles          user_roles[]
+  subTeamMembers      sub_team_members[]
+  rotationDefinitions rotation_definitions[]
+
+  @@schema("ems")
+}
+
+model rotation_definitions {
+  id   String @id @default(uuid())
+  name String
+  code String @unique
+
+  // TEAM / SUBTEAM / ROLE / DOMAIN / CROSS_TEAM
+  type RotationType
+
+  // DAILY / WEEKLY / BIWEEKLY / CUSTOM
+  cadence          RotationCadence
+  cadence_interval Int             @default(1)
+
+  allow_overlap Boolean @default(false)
+  min_assignees Int     @default(1)
+
+  // rotation （team / subteam / group / role / domain / none）
+  scope_type   RotationScope
+  scope_ref_id String? // team_id / group_id / role_id / domain_id / null
+
+  is_active Boolean @default(true)
+
+  owner_id String? @db.Uuid 
+  owner    users?  @relation(fields: [owner_id], references: [id])
+
+  description String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  rotation_members rotation_members[]
+  rotation_tiers   rotation_tiers[]
+
+  @@schema("ems")
+}
+
+model rotation_members {
+  id                     String @id @default(uuid())
+  rotation_definition_id String
+
+  // USER / TEAM / SUBTEAM / ROLE / DOMAIN / GROUP
+  member_type RotationMemberType
+
+  // user_id / team_id / subteam_id / role_id / domain_id / group_id
+  member_ref_id String
+
+  order_index Int     @default(0)
+  is_active   Boolean @default(true)
+
+  rotation_definitions rotation_definitions @relation(fields: [rotation_definition_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@schema("ems")
+}
+
+model rotation_tiers {
+  id                     String @id @default(uuid())
+  rotation_definition_id String
+  tier_level             Int
+  name                   String
+
+  rotation_definitions rotation_definitions @relation(fields: [rotation_definition_id], references: [id])
+
+  rotation_tier_members rotation_tier_members[]
+
+  @@unique([rotation_definition_id, tier_level])
+  @@schema("ems")
+}
+
+model rotation_tier_members {
+  id      String @id @default(uuid())
+  tier_id String
+
+  // USER / TEAM / SUBTEAM / ROLE / DOMAIN / GROUP
+  member_type   RotationMemberType
+  member_ref_id String
+
+  order_index Int     @default(0)
+  is_active   Boolean @default(true)
+
+  rotation_tiers rotation_tiers @relation(fields: [tier_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@schema("ems")
 }
@@ -432,6 +226,47 @@ enum working_mode_enum {
   LOCAL
   REMOTE
   HYBRID
+
+  @@schema("ems")
+}
+
+enum RotationType {
+  TEAM
+  SUBTEAM
+  ROLE
+  DOMAIN
+  CROSS_TEAM
+
+  @@schema("ems")
+}
+
+enum RotationCadence {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  CUSTOM
+
+  @@schema("ems")
+}
+
+enum RotationScope {
+  TEAM
+  SUBTEAM
+  GROUP
+  ROLE
+  DOMAIN
+  NONE
+
+  @@schema("ems")
+}
+
+enum RotationMemberType {
+  USER
+  TEAM
+  SUBTEAM
+  ROLE
+  DOMAIN
+  GROUP
 
   @@schema("ems")
 }

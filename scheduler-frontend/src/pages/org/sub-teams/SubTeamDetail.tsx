@@ -1,104 +1,128 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Box,
-  Typography,
-  Paper,
-  Stack,
   Button,
+  CircularProgress,
+  Paper,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-} from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
-import { SubTeamsAPI, TeamMembersAPI, UsersAPI } from "../../../api";
-import type { TeamMember } from '../../../types/org';
+  Typography,
+} from "@mui/material";
+import { useNavigate, useParams } from "react-router-dom";
+import { SubTeamsAPI, SubTeamMembersAPI, TeamMembersAPI } from "../../../api";
+import type { SubTeamMember, TeamMember } from "../../../types/org";
 
-export const SubTeamDetail = () => {
+export default function SubTeamDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [subTeam, setSubTeam] = useState<any>(null);
-  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [members, setMembers] = useState<SubTeamMember[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
-  
-  const [users, setUsers] = useState<any[]>([]);
   const [newMemberUserId, setNewMemberUserId] = useState("");
 
   const load = async () => {
     if (!id) return;
 
     const st = await SubTeamsAPI.getOne(id);
-    const members = await SubTeamsAPI.getMembers(id);
+    const members = await SubTeamMembersAPI.get(id);
     const teamMembers = await TeamMembersAPI.get(st.parent_team_id);
 
     setSubTeam(st);
     setMembers(members);
     setTeamMembers(teamMembers);
-  };
-
-  const addMember = async () => {
-    if (!newMemberUserId) return;
-
-    await SubTeamsAPI.addMember(id!, {
-      userId: newMemberUserId,
-    });
-
-    setNewMemberUserId("");
-    load();
+    setLoading(false);
   };
 
   useEffect(() => {
     load();
-    UsersAPI.getAll().then(setUsers);
   }, [id]);
 
-  if (!subTeam) {
-    return <Typography>Loading...</Typography>;
-  }
+  const handleAddMember = async () => {
+    if (!newMemberUserId) return;
+
+    await SubTeamMembersAPI.add(id!, { userId: newMemberUserId });
+    setNewMemberUserId("");
+    load();
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    await SubTeamMembersAPI.remove(id!, userId);
+    load();
+  };
+
+  if (loading)
+    return (
+      <Box display="flex" justifyContent="center" mt={10}>
+        <CircularProgress />
+      </Box>
+    );
+
+  if (!subTeam)
+    return (
+      <Box textAlign="center" mt={10}>
+        <Typography color="error">Sub-team not found.</Typography>
+      </Box>
+    );
 
   return (
-    <Box p={3}>
-      {/* Header */}
-      <Stack direction="row" justifyContent="space-between" mb={3}>
-        <Typography variant="h5">{subTeam.name}</Typography>
-        <Button
-          variant="outlined"
-          onClick={() => navigate(`/sub-teams/${id}/edit`)}
-        >
-          Edit
-        </Button>
-      </Stack>
+    <Box p={4}>
+      <Typography variant="h4" fontWeight="bold" mb={3}>
+        {subTeam.name}
+      </Typography>
 
-      {/* Description */}
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <Typography variant="subtitle1">Description</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {subTeam.description || 'No description'}
+      <Paper sx={{ p: 3 }}>
+        <Typography>
+          <strong>Description:</strong> {subTeam.description || "No description"}
         </Typography>
+
+        <Typography>
+          <strong>Members:</strong> {members.length}
+        </Typography>
+
+        <Box mt={3} display="flex" gap={2}>
+          <Button
+            variant="outlined"
+            onClick={() => navigate(`/teams/sub-teams/${id}/edit`)}
+          >
+            Edit Sub-team
+          </Button>
+        </Box>
       </Paper>
 
-      {/* Members */}
-      <Paper sx={{ p: 2 }}>
-        <Typography variant="subtitle1" mb={1}>Members</Typography>
+      {/* Members List */}
+      <Typography variant="h5" mt={4} mb={2}>
+        Sub-team Members
+      </Typography>
 
-        {members.map((m: any) => (
-          <Typography key={m.user_id}>
-            {m.users?.first_name} {m.users?.last_name}
-            {m.team_roles?.name ? ` — ${m.team_roles.name}` : " — No role"}
-          </Typography>
-        ))}
+      {members.length === 0 && <Typography>No members in this sub-team.</Typography>}
 
-        {members.length === 0 && (
-          <Typography variant="body2" color="text.secondary">
-            No members in this sub-team.
+      {members.map((m) => (
+        <Paper key={m.user_id} sx={{ p: 2, mb: 1 }}>
+          <Typography>
+            <strong>User:</strong> {m.users?.first_name} {m.users?.last_name}
           </Typography>
-        )}
-      </Paper>
+
+          <Button
+            color="error"
+            variant="outlined"
+            sx={{ mt: 1 }}
+            onClick={() => handleRemoveMember(m.user_id)}
+          >
+            Remove
+          </Button>
+        </Paper>
+      ))}
 
       {/* Add Member */}
-      <Typography variant="h6" mt={4}>Add Member</Typography>
+      <Typography variant="h6" mt={4}>
+        Add Member
+      </Typography>
 
       <FormControl fullWidth sx={{ mt: 2 }}>
         <InputLabel>User</InputLabel>
@@ -107,17 +131,18 @@ export const SubTeamDetail = () => {
           label="User"
           onChange={(e) => setNewMemberUserId(e.target.value)}
         >
-          {users.map((u) => (
-            <MenuItem key={u.id} value={u.id}>
-              {u.first_name + " " + u.last_name}
+          {teamMembers.map((tm) => (
+            <MenuItem key={tm.user_id} value={tm.user_id}>
+              {tm.users?.first_name} {tm.users?.last_name}
             </MenuItem>
           ))}
         </Select>
       </FormControl>
 
-      <Button variant="contained" sx={{ mt: 2 }} onClick={addMember}>
+      <Button variant="contained" sx={{ mt: 2 }} onClick={handleAddMember}>
         Add Member
       </Button>
+
     </Box>
   );
-};
+}

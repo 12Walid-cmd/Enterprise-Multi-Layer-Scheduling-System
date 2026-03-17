@@ -9,8 +9,10 @@ export default function TeamsList() {
 
   useEffect(() => {
     TeamsAPI.getAll().then((data) => {
-  setTeams(data.filter((t: any) => t.is_active));
-});
+      setTeams(
+        data.filter((t: any) => t.is_active && t.parent_team_id === null)
+      );
+    });
   }, []);
 
   return (

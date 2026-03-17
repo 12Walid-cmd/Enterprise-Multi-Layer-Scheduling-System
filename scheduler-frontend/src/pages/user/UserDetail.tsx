@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Box,
     Button,
@@ -19,7 +20,7 @@ const fetchUser = async (id: string) => {
 // ===== Component =====
 export default function UserDetail() {
     const { id } = useParams<{ id: string }>();
-
+    const navigate = useNavigate();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -76,34 +77,44 @@ export default function UserDetail() {
                     Basic Information
                 </Typography>
 
-                <DetailRow label="Name" value={user.name} />
+                <DetailRow label="First Name" value={user.first_name} />
+                <DetailRow label="Last Name" value={user.last_name} />
                 <DetailRow label="Email" value={user.email} />
-                <DetailRow label="Created At" value={formatDate(user.createdAt)} />
-                <DetailRow label="Updated At" value={formatDate(user.updatedAt)} />
+                <DetailRow label="Phone" value={user.phone} />
+                <DetailRow label="Timezone" value={user.timezone} />
+                <DetailRow label="Working Mode" value={user.working_mode} />
+                <DetailRow label="City" value={user.city ?? "-"} />
+                <DetailRow label="Province" value={user.province ?? "-"} />
+                <DetailRow label="Country" value={user.country ?? "-"} />
 
+                <DetailRow label="Created At" value={formatDate(user.created_at)} />
+                <DetailRow label="Updated At" value={formatDate(user.updated_at)} />
                 <Divider sx={{ my: 3 }} />
 
                 {/* Team Info */}
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Team
-                </Typography>
-
-                <DetailRow label="Team" value={user.team?.name || "-"} />
-
+                <Typography variant="h6" fontWeight="bold" gutterBottom> Team </Typography>
+                <DetailRow label="Team" value={user.team_members?.[0]?.teams?.name ?? "-"} />
                 <Divider sx={{ my: 3 }} />
+                {/* Team Role */}
+                <Typography variant="h6" fontWeight="bold" gutterBottom> Team Role </Typography>
+                <DetailRow label="Team Role" value={user.team_members?.[0]?.team_roles?.name ?? "-"} />
+                {/* Global Role */}
+                <Typography variant="h6" fontWeight="bold" gutterBottom> Global Role </Typography>
+                <DetailRow label="Global Role" value={user.user_roles?.[0]?.global_roles?.name ?? "-"} />
 
-                {/* Role Info */}
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                    Role
-                </Typography>
+                <Box mt={4} display="flex" gap={2}>
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => navigate(`/users/${id}/global-roles`)}
+                    >
+                        Manage Global Roles
+                    </Button>
 
-                <DetailRow label="Role" value={user.role?.name || "-"} />
-
-                <Box mt={4}>
                     <Button
                         variant="contained"
                         color="primary"
-                        onClick={() => (window.location.href = `/users/${id}/edit`)}
+                        onClick={() => navigate(`/users/${id}/edit`)}
                     >
                         Edit User
                     </Button>

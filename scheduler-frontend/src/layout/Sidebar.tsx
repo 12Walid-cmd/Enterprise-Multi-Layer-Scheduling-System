@@ -15,6 +15,8 @@ import GroupIcon from "@mui/icons-material/Group";
 import PeopleIcon from "@mui/icons-material/People";
 import ShieldIcon from "@mui/icons-material/Shield";
 import PersonIcon from "@mui/icons-material/Person";
+import AutorenewIcon from "@mui/icons-material/Autorenew";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";   
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 
@@ -25,6 +27,8 @@ const drawerWidth = 240;
 export default function Sidebar() {
   const [openOrg, setOpenOrg] = useState(false);
   const [openUser, setOpenUser] = useState(false);
+  const [openRotation, setOpenRotation] = useState(false);
+  const [openSchedule, setOpenSchedule] = useState(false); 
 
   return (
     <Drawer
@@ -45,13 +49,13 @@ export default function Sidebar() {
       <List>
 
         {/* ============================
-            Organization Management
+            ORGANIZATION
         ============================ */}
         <ListItemButton onClick={() => setOpenOrg(!openOrg)}>
           <ListItemIcon sx={{ color: "white" }}>
             <GroupsIcon />
           </ListItemIcon>
-          <ListItemText primary="Organization Management" />
+          <ListItemText primary="ORGANIZATION" />
           {openOrg ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
 
@@ -72,15 +76,6 @@ export default function Sidebar() {
               <ListItemText primary="Teams" />
             </ListItemButton>
 
-            {/* Sub-teams  */}
-            <ListItemButton component={NavLink} to="/teams" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <PeopleIcon />
-              </ListItemIcon>
-              <ListItemText primary="Sub-teams" />
-            </ListItemButton>
-
-
             <ListItemButton component={NavLink} to="/roles/team-types" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
                 <ShieldIcon />
@@ -99,20 +94,19 @@ export default function Sidebar() {
         </Collapse>
 
         {/* ============================
-            User Management
+            USER
         ============================ */}
         <ListItemButton onClick={() => setOpenUser(!openUser)}>
           <ListItemIcon sx={{ color: "white" }}>
             <PersonIcon />
           </ListItemIcon>
-          <ListItemText primary="User Management" />
+          <ListItemText primary="USER" />
           {openUser ? <ExpandLess /> : <ExpandMore />}
         </ListItemButton>
 
         <Collapse in={openUser} timeout="auto" unmountOnExit>
           <List component="div" disablePadding>
 
-            {/* Users List */}
             <ListItemButton component={NavLink} to="/users" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
                 <PeopleIcon />
@@ -120,12 +114,52 @@ export default function Sidebar() {
               <ListItemText primary="Users" />
             </ListItemButton>
 
-            {/* Create User */}
-            <ListItemButton component={NavLink} to="/users/create" sx={{ pl: 4 }}>
+          </List>
+        </Collapse>
+
+        {/* ============================
+            ROTATION
+        ============================ */}
+        <ListItemButton onClick={() => setOpenRotation(!openRotation)}>
+          <ListItemIcon sx={{ color: "white" }}>
+            <AutorenewIcon />
+          </ListItemIcon>
+          <ListItemText primary="ROTATION" />
+          {openRotation ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+
+        <Collapse in={openRotation} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+
+            <ListItemButton component={NavLink} to="/rotations" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
-                <PersonIcon />
+                <AutorenewIcon />
               </ListItemIcon>
-              <ListItemText primary="Create User" />
+              <ListItemText primary="Rotation Definitions" />
+            </ListItemButton>
+
+          </List>
+        </Collapse>
+
+        {/* ============================
+            SCHEDULE  
+        ============================ */}
+        <ListItemButton onClick={() => setOpenSchedule(!openSchedule)}>
+          <ListItemIcon sx={{ color: "white" }}>
+            <CalendarMonthIcon />
+          </ListItemIcon>
+          <ListItemText primary="SCHEDULE" />
+          {openSchedule ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+
+        <Collapse in={openSchedule} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+
+            <ListItemButton component={NavLink} to="/schedule" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <CalendarMonthIcon />
+              </ListItemIcon>
+              <ListItemText primary="Schedule View" />
             </ListItemButton>
 
           </List>

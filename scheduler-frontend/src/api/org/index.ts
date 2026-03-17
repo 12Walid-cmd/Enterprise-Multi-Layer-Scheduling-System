@@ -5,3 +5,4 @@ export * from "./teamRoleTypes.api";
 export * from "./globalRoleTypes.api";
 export * from "./userGlobalRoles.api";
 export * from "./subTeams.api";
+export * from "./subTeamMembers.api";

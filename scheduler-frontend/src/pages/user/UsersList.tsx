@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     Box,
     Button,
@@ -25,6 +26,7 @@ const fetchUsers = async (search: string) => {
 };
 
 export default function UsersList() {
+    const navigate = useNavigate();
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(false);
@@ -72,7 +74,7 @@ export default function UsersList() {
                 <Button
                     variant="contained"
                     color="primary"
-                    onClick={() => (window.location.href = "/users/create")}
+                    onClick={() => navigate("/users/create")}
                 >
                     Create User
                 </Button>

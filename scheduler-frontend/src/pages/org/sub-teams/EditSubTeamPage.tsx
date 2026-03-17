@@ -10,28 +10,24 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { SubTeamsAPI } from "../../../api";
 
-export const EditSubTeamPage = () => {
-    const { subTeamId } = useParams();
+export default function EditSubTeamPage() {
+    const { id: subTeamId } = useParams();
     const navigate = useNavigate();
 
     const [form, setForm] = useState({
         name: "",
         description: "",
         timezone: "",
-        // parent_team_id: "",
     });
-
 
     const load = async () => {
         if (!subTeamId) return;
         const st = await SubTeamsAPI.getOne(subTeamId);
 
-        console.log("--------------------------------------------Loaded SubTeam:", st);
         setForm({
             name: st.name,
             description: st.description ?? "",
             timezone: st.timezone ?? "",
-            // parent_team_id: st.parent_team_id,
         });
     };
 
@@ -51,11 +47,11 @@ export const EditSubTeamPage = () => {
             name: form.name,
             description: form.description,
             timezone: form.timezone,
-            // parent_team_id: form.parent_team_id,
         });
 
-        navigate(`/sub-teams/${subTeamId}`);
+        navigate(`/teams/sub-teams/${subTeamId}`);
     };
+
     return (
         <Box p={3}>
             <Typography variant="h5" mb={3}>
@@ -97,4 +93,4 @@ export const EditSubTeamPage = () => {
             </Paper>
         </Box>
     );
-};
+}

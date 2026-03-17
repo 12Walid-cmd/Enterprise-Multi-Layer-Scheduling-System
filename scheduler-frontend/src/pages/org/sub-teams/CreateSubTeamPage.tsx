@@ -14,7 +14,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { SubTeamsAPI } from "../../../api";
 
-export const CreateSubTeamPage = () => {
+export default function CreateSubTeamPage() {
     const { teamId } = useParams();
     const navigate = useNavigate();
 
@@ -61,7 +61,6 @@ export const CreateSubTeamPage = () => {
             <Paper sx={{ p: 3 }}>
                 <Stack spacing={3}>
 
-                    {/* Name */}
                     <TextField
                         label="Sub-team Name"
                         value={form.name}
@@ -71,7 +70,6 @@ export const CreateSubTeamPage = () => {
                         fullWidth
                     />
 
-                    {/* Description */}
                     <TextField
                         label="Description"
                         value={form.description}
@@ -81,7 +79,6 @@ export const CreateSubTeamPage = () => {
                         fullWidth
                     />
 
-                    {/* Timezone */}
                     <FormControl fullWidth>
                         <InputLabel>Timezone</InputLabel>
                         <Select
@@ -96,19 +93,12 @@ export const CreateSubTeamPage = () => {
                         </Select>
                     </FormControl>
 
-                    {/* Buttons */}
                     <Stack direction="row" spacing={2}>
-                        <Button
-                            variant="outlined"
-                            onClick={() => navigate(-1)}
-                        >
+                        <Button variant="outlined" onClick={() => navigate(-1)}>
                             Cancel
                         </Button>
 
-                        <Button
-                            variant="contained"
-                            onClick={handleSubmit}
-                        >
+                        <Button variant="contained" onClick={handleSubmit}>
                             Create
                         </Button>
                     </Stack>
@@ -117,4 +107,4 @@ export const CreateSubTeamPage = () => {
             </Paper>
         </Box>
     );
-};
+}
