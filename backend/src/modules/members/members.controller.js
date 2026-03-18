@@ -1,12 +1,16 @@
 const pool = require("../../config/db");
 
-exports.getEmployees = async (req, res) => {
+
+// ===============================
+// GET MEMBERS
+// ===============================
+exports.getMembers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    const { search, workingMode, status, location } = req.query;
+    const { search, jobTitle, status, location } = req.query;
 
     let filters = [];
     let values = [];
@@ -21,15 +25,15 @@ exports.getEmployees = async (req, res) => {
     // always exclude admin account
     filters.push(`u.username <> 'admin'`);
 
-    if (workingMode && workingMode !== "All") {
-      filters.push(`u.working_mode = $${index}`);
-      values.push(workingMode.toUpperCase());
+    if (jobTitle && jobTitle !== "All") {
+      filters.push(`rt.id = $${index}`);
+      values.push(jobTitle);
       index++;
     }
 
     if (status && status !== "All") {
       filters.push(`u.is_active = $${index}`);
-      values.push(status === "Active");
+      values.push(status === "true");
       index++;
     }
 
@@ -47,19 +51,25 @@ exports.getEmployees = async (req, res) => {
 
     const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
 
-    // Total count with filters
+    // ===============================
+    // TOTAL COUNT
+    // ===============================
     const totalQuery = `
       SELECT COUNT(DISTINCT u.id)
       FROM ems.users u
       LEFT JOIN ems.cities c ON u.city_id = c.id
       LEFT JOIN ems.provinces p ON c.province_id = p.id
       LEFT JOIN ems.countries co ON p.country_id = co.id
+      LEFT JOIN ems.team_members tm ON u.id = tm.user_id
+      LEFT JOIN ems.role_types rt ON tm.role_type_id = rt.id
       ${whereClause}
     `;
     const totalResult = await pool.query(totalQuery, values);
     const total = parseInt(totalResult.rows[0].count);
 
-    // Employees with team count
+    // ===============================
+    // MEMBERS DATA
+    // ===============================
     const employeesQuery = `
       SELECT 
         u.id,
@@ -67,23 +77,39 @@ exports.getEmployees = async (req, res) => {
         u.first_name,
         u.last_name,
         u.email,
-        u.is_active,
         u.working_mode,
         u.role,
+        u.is_active,
 
+        (array_agg(rt.id ORDER BY rt.name))[1] AS role_type_id,
+        STRING_AGG(DISTINCT rt.name, ', ') AS job_title,
+
+        u.city_id,
         c.name AS city,
+
+        p.id AS province_id,
         p.name AS province,
+
+        co.id AS country_id,
         co.name AS country,
 
         COUNT(DISTINCT tm.team_id) AS team_count
 
       FROM ems.users u
+      LEFT JOIN ems.team_members tm ON u.id = tm.user_id
+      LEFT JOIN ems.role_types rt ON tm.role_type_id = rt.id
       LEFT JOIN ems.cities c ON u.city_id = c.id
       LEFT JOIN ems.provinces p ON c.province_id = p.id
       LEFT JOIN ems.countries co ON p.country_id = co.id
-      LEFT JOIN ems.team_members tm ON u.id = tm.user_id
       ${whereClause}
-      GROUP BY u.id, c.name, p.name, co.name
+      GROUP BY
+        u.id,
+        u.city_id,
+        c.name,
+        p.id,
+        p.name,
+        co.id,
+        co.name
       ORDER BY u.created_at DESC
       LIMIT $${index} OFFSET $${index + 1}
     `;
@@ -101,6 +127,7 @@ exports.getEmployees = async (req, res) => {
         COUNT(*) FILTER (WHERE is_active = false) AS inactive,
         COUNT(*) FILTER (WHERE working_mode = 'REMOTE') AS remote
       FROM ems.users
+      WHERE username <> 'admin'
     `;
     const statsResult = await pool.query(statsQuery);
 
@@ -119,4 +146,191 @@ exports.getEmployees = async (req, res) => {
     console.error(error);
     res.status(500).json({ message: "Server Error" });
   }
+}; 
+
+// ===============================
+// CREATE NEW MEMBER
+// ===============================
+exports.createMember = async (req, res) => {
+
+  const client = await pool.connect();
+  try {
+
+    await client.query("BEGIN");
+    const {
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      role_type_id,
+      is_active
+    } = req.body;
+
+    // Insert user
+    const insertQuery = `
+      INSERT INTO ems.users
+      (
+        first_name,
+        last_name,
+        email,
+        working_mode,
+        city_id,
+        is_active
+      )
+      VALUES ($1,$2,$3,$4,$5,$6)
+      RETURNING *
+    `;
+
+    const result = await client.query(insertQuery, [
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      is_active
+    ]);
+
+
+    const userId = result.rows[0].id;
+  
+
+    if (role_type_id) {
+      await client.query(`
+        INSERT INTO ems.team_members (user_id, role_type_id)
+        VALUES ($1,$2)
+      `, [userId, role_type_id]);
+    }
+   
+    await client.query("COMMIT");
+
+    res.status(201).json({
+      message: "Member created successfully",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    if (error.code === "23505") {
+      return res.status(400).json({
+        message: "Email already exists"
+      });
+    }
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+  } finally {
+    client.release();
+  }
+}; 
+
+// ===============================
+// UPDATE MEMBER
+// ===============================
+exports.updateMember = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const { id } = req.params;
+
+    const {
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      is_active,
+      role_type_id
+    } = req.body;
+
+    const result = await client.query(`
+      UPDATE ems.users
+      SET
+        first_name = $1,
+        last_name = $2,
+        email = $3,
+        working_mode = $4,
+        city_id = $5,
+        is_active = $6
+      WHERE id = $7
+      RETURNING *
+    `, [
+      first_name,
+      last_name,
+      email,
+      working_mode,
+      city,
+      is_active,
+      id
+    ]);
+
+    // ✅ update job title mapping
+
+    await client.query(`
+      DELETE FROM ems.team_members
+      WHERE user_id = $1
+    `, [id]);
+
+    if (role_type_id) {
+      await client.query(`
+        INSERT INTO ems.team_members
+        (user_id, role_type_id)
+        VALUES ($1,$2)
+      `, [id, role_type_id]);
+    }
+
+    await client.query("COMMIT");
+
+    res.json({
+      message: "Member updated successfully",
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+
+    await client.query("ROLLBACK");
+    console.error(error);
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  } finally {
+    client.release();
+  }
+};
+
+// ===============================
+// DELETE MEMBER
+// ===============================
+exports.deleteMember = async (req, res) => {
+
+  try {
+
+    const { id } = req.params;
+
+    await pool.query(`
+      DELETE FROM ems.users
+      WHERE id = $1
+    `, [id]);
+
+    res.json({
+      message: "Member deleted successfully"
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Server Error"
+    });
+
+  }
+
 };

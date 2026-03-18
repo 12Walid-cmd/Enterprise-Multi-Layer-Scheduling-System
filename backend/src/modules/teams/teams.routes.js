@@ -7,5 +7,6 @@ const requireRole = require('../../middleware/requireRole');
 router.get('/', requireAuth, controller.getTeams);
 router.post('/', requireAuth, requireRole('team_lead', 'rotation_owner', 'administrator'), controller.createTeam);
 router.post('/:teamId/members', requireAuth, requireRole('team_lead', 'rotation_owner', 'administrator'), controller.addTeamMember);
+router.get('/:id/members', requireAuth, controller.getTeamMembers);
 
 module.exports = router;

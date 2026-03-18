@@ -236,7 +236,9 @@ router.get(
   requireAuth,
   requireRole('administrator'),
   asyncHandler(async (req, res) => {
-    const { limit = 50, offset = 0, search } = req.query;
+    const { limit = 200, offset = 0, search } = req.query;
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 200, 1), 1000);
+    const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
     const searchParam = search ? `%${search}%` : null;
 
     // always exclude the built-in admin user from list
@@ -252,15 +254,15 @@ router.get(
     }
 
     query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    params.push(limit, offset);
+    params.push(parsedLimit, parsedOffset);
 
     const result = await pool.query(query, params);
 
     return res.json({
       users: result.rows,
       count: result.rows.length,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: parsedLimit,
+      offset: parsedOffset,
     });
   })
 );
@@ -292,27 +294,27 @@ router.get(
     const whereParams = [];
 
     if (action) {
-      whereParts.push(`action = $${whereParams.length + 1}`);
+      whereParts.push(`al.action = $${whereParams.length + 1}`);
       whereParams.push(action);
     }
 
     if (actorId) {
-      whereParts.push(`actor_id = $${whereParams.length + 1}`);
+      whereParts.push(`al.actor_id = $${whereParams.length + 1}`);
       whereParams.push(actorId);
     }
 
     if (entityType) {
-      whereParts.push(`entity_type = $${whereParams.length + 1}`);
+      whereParts.push(`al.entity_type = $${whereParams.length + 1}`);
       whereParams.push(entityType);
     }
 
     if (startDate) {
-      whereParts.push(`created_at >= $${whereParams.length + 1}`);
+      whereParts.push(`al.created_at >= $${whereParams.length + 1}`);
       whereParams.push(startDate);
     }
 
     if (endDate) {
-      whereParts.push(`created_at <= $${whereParams.length + 1}`);
+      whereParts.push(`al.created_at <= $${whereParams.length + 1}`);
       whereParams.push(endDate);
     }
 
@@ -320,16 +322,30 @@ router.get(
 
     const countQuery = `
       SELECT COUNT(*)::int AS total
-      FROM ems.audit_logs
+      FROM ems.audit_logs al
+      LEFT JOIN ems.users u ON u.id = al.actor_id
       ${whereClause}
     `;
     const countResult = await pool.query(countQuery, whereParams);
 
     const logsQuery = `
-      SELECT id, actor_id, action, entity_type, entity_id, before_state, after_state, created_at
-      FROM ems.audit_logs
+      SELECT
+        al.id,
+        al.actor_id,
+        u.username   AS actor_username,
+        u.email      AS actor_email,
+        u.first_name AS actor_first_name,
+        u.last_name  AS actor_last_name,
+        al.action,
+        al.entity_type,
+        al.entity_id,
+        al.before_state,
+        al.after_state,
+        al.created_at
+      FROM ems.audit_logs al
+      LEFT JOIN ems.users u ON u.id = al.actor_id
       ${whereClause}
-      ORDER BY created_at DESC
+      ORDER BY al.created_at DESC
       LIMIT $${whereParams.length + 1}
       OFFSET $${whereParams.length + 2}
     `;
@@ -484,10 +500,36 @@ router.post(
     const temporaryPassword = generateSecurePassword();
     const passwordHash = await argon2.hash(temporaryPassword, PASSWORD_HASH_OPTIONS);
 
-    // Update password
-    await pool.query(
+    // Update existing LOCAL identity if present.
+    const updateIdentityResult = await pool.query(
       'UPDATE ems.auth_identities SET password_hash = $1 WHERE user_id = $2 AND provider = $3',
       [passwordHash, userId, 'LOCAL']
+    );
+
+    // Some legacy/seed users exist in ems.users without a LOCAL auth identity.
+    // For those users, create LOCAL credentials during admin reset.
+    let createdLocalIdentity = false;
+    if (updateIdentityResult.rowCount === 0) {
+      await pool.query(
+        `
+        INSERT INTO ems.auth_identities (user_id, provider, password_hash, created_at)
+        VALUES ($1, $2, $3, now())
+        `,
+        [userId, 'LOCAL', passwordHash]
+      );
+      createdLocalIdentity = true;
+    }
+
+    // Unlock account and clear failed attempts after admin reset.
+    await pool.query(
+      `
+      UPDATE ems.users
+      SET failed_login_attempts = 0,
+          locked_until = NULL,
+          last_failed_login_at = NULL
+      WHERE id = $1
+      `,
+      [userId]
     );
 
     // Log password reset
@@ -499,6 +541,7 @@ router.post(
       afterState: {
         temporaryPassword: '[REDACTED]',
         resettedBy: adminId,
+        createdLocalIdentity,
       },
     });
 
@@ -573,6 +616,17 @@ router.patch(
       });
     }
 
+    const existing = await pool.query(
+      "SELECT role FROM ems.users WHERE id = $1 AND username <> 'admin'",
+      [userId]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const previousRole = existing.rows[0].role;
+
     const result = await pool.query(
       'UPDATE ems.users SET role = $1 WHERE id = $2 AND username <> \'admin\' RETURNING id, email, username, role',
       [role, userId]
@@ -587,6 +641,7 @@ router.patch(
       action: 'USER_ROLE_UPDATED',
       entityType: 'user',
       entityId: userId,
+      beforeState: { role: previousRole },
       afterState: { role },
     });
 

@@ -40,7 +40,8 @@ app.use('/api/auth', authRoutes);
 // Admin Routes (protected by requireAuth middleware)
 app.use('/api/admin', adminRoutes);
 
-// Other API Routes
+// API Routes
+app.use('/api', routes);
 app.use('/api/v1', routes);
 
 // Root Test

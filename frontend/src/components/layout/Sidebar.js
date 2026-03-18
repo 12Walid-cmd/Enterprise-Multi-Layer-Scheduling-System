@@ -4,6 +4,8 @@ import { NavLink } from "react-router-dom";
 function Sidebar() {
   const [userRole, setUserRole] = useState(null);
 
+  const canAccessMembers = ["administrator", "rotation_owner", "team_lead"].includes(userRole);
+
   useEffect(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user") || "{}");
@@ -23,37 +25,39 @@ function Sidebar() {
     >
 
       <NavLink to="/" className="nav-link">
-        🏠 Dashboard
+        Dashboard
       </NavLink>
 
-      <NavLink to="/members" className="nav-link">
-        👤 Members
-      </NavLink>
+      {canAccessMembers && (
+        <NavLink to="/members" className="nav-link">
+          Members
+        </NavLink>
+      )}
 
       <NavLink to="/teams" className="nav-link">
-        👥 Teams
+        Teams
       </NavLink>
 
       <NavLink to="/rotations" className="nav-link">
-        🔄 Rotations
+        Rotations
       </NavLink>
 
       <NavLink to="/schedule" className="nav-link">
-        📅 Schedules
+        Schedules
       </NavLink>
 
       <NavLink to="/holidays" className="nav-link">
-        🎉 Holidays
+        Holidays
       </NavLink>
 
       {userRole === 'administrator' && (
         <NavLink to="/users" className="nav-link">
-          👨‍💼 User Management
+          User Management
         </NavLink>
       )}
 
       <NavLink to="/settings" className="nav-link">
-        ⚙️ Settings
+        Settings
       </NavLink>
     </div>
   );

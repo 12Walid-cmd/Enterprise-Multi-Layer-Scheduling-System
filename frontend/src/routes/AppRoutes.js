@@ -31,12 +31,18 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
-function RoleRoute({ role, children }) {
+function RoleRoute({ role, roles, children }) {
   if (!hasAuthSession()) {
     return <Navigate to="/login" replace />;
   }
   const user = getCurrentUser();
-  if (user.role !== role) {
+  const allowedRoles = Array.isArray(roles)
+    ? roles
+    : role
+      ? [role]
+      : [];
+
+  if (!allowedRoles.includes(user.role)) {
     return <Navigate to="/" replace />;
   }
   return children;
@@ -53,7 +59,14 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+      <Route
+        path="/members"
+        element={
+          <RoleRoute roles={["administrator", "rotation_owner", "team_lead"]}>
+            <Members />
+          </RoleRoute>
+        }
+      />
       <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
       <Route path="/teams" element={<ProtectedRoute><Teams /></ProtectedRoute>} />
       <Route path="/rotations" element={<ProtectedRoute><Rotations /></ProtectedRoute>} />
