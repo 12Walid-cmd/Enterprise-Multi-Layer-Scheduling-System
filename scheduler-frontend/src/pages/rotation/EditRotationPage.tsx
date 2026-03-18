@@ -35,6 +35,10 @@ interface EditRotationForm {
     owner_id?: string | null;
     description?: string | null;
     is_active: boolean;
+
+    start_date: string;          // required
+    end_date?: string | null;    // optional
+
 }
 
 export default function EditRotationPage() {
@@ -78,6 +82,10 @@ export default function EditRotationPage() {
             owner_id: data.owner_id ?? null,
             description: data.description ?? "",
             is_active: data.is_active,
+
+            start_date: data.start_date.substring(0, 10),
+            end_date: data.end_date ? data.end_date.substring(0, 10) : null,
+
         });
 
         setLoading(false);
@@ -90,8 +98,13 @@ export default function EditRotationPage() {
     const onSubmit = async (data: EditRotationForm) => {
         if (!id) return;
 
-        await RotationAPI.update(id, data);
+        const payload = {
+            ...data,
+            start_date: new Date(data.start_date).toISOString(),
+            end_date: data.end_date ? new Date(data.end_date).toISOString() : null,
+        };
 
+        await RotationAPI.update(id, payload);
         navigate(`/rotations/${id}`);
     };
 
@@ -238,6 +251,32 @@ export default function EditRotationPage() {
                                 </MenuItem>
                             ))}
                         </TextField>
+
+                        {/* Start Date */}
+                        <TextField
+                            label="Start Date"
+                            type="date"
+                            fullWidth
+                            slotProps={{
+                                inputLabel: { shrink: true },
+                            }}
+                            {...register("start_date", { required: "Start date is required" })}
+                            error={!!errors.start_date}
+                            helperText={errors.start_date?.message}
+                        />
+
+                        {/* End Date */}
+                        <TextField
+                            label="End Date"
+                            type="date"
+                            fullWidth
+                            slotProps={{
+                                inputLabel: { shrink: true },
+                            }}
+                            {...register("end_date")}
+                            error={!!errors.end_date}
+                            helperText={errors.end_date?.message}
+                        />
 
                         {/* Description */}
                         <TextField

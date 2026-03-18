@@ -1,11 +1,28 @@
-import { IsString, IsEnum, IsOptional, IsBoolean, IsInt } from "class-validator";
-import { RotationType, RotationCadence, RotationScope } from "@prisma/client";
+import {
+    IsString,
+    IsNotEmpty,
+    IsOptional,
+    IsBoolean,
+    IsInt,
+    Min,
+    IsEnum,
+    IsUUID,
+    IsDate,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+    RotationType,
+    RotationCadence,
+    RotationScope,
+} from '@prisma/client';
 
 export class CreateRotationDto {
     @IsString()
+    @IsNotEmpty()
     name: string;
 
     @IsString()
+    @IsNotEmpty()
     code: string;
 
     @IsEnum(RotationType)
@@ -14,37 +31,47 @@ export class CreateRotationDto {
     @IsEnum(RotationCadence)
     cadence: RotationCadence;
 
-    @IsInt()
     @IsOptional()
+    @IsInt()
+    @Min(1)
     cadence_interval?: number = 1;
 
-    @IsBoolean()
     @IsOptional()
+    @IsBoolean()
     allow_overlap?: boolean = false;
 
-    @IsInt()
     @IsOptional()
+    @IsInt()
+    @Min(1)
     min_assignees?: number = 1;
 
     @IsEnum(RotationScope)
     scope_type: RotationScope;
 
-    @IsString()
     @IsOptional()
+    @IsString()
     scope_ref_id?: string;
 
+    @IsDate()
+    @Type(() => Date)
+    start_date: Date;
 
-    @IsString()
     @IsOptional()
+    @IsDate()
+    @Type(() => Date)
+    end_date?: Date;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @IsOptional()
+    @IsUUID()
     owner_id?: string;
 
 
     @IsBoolean()
     @IsOptional()
     is_active?: boolean = true;
-
-    @IsOptional()
-    @IsString()
-    description?: string | null;
 
 }

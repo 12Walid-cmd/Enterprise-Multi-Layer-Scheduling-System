@@ -1,41 +1,37 @@
-import { Injectable } from '@nestjs/common';
+// schedule.service.ts
 
-import { CadenceCalculator } from './engine/cadence-calculator';
-import { RotationEngine } from './engine/rotation-engine';
-import { LeaveBlocker } from './engine/leave-blocker';
-import { RulesApplier } from './engine/rules-applier';
-import { ConflictChecker } from './engine/conflict-checker';
-import { CalendarBuilder } from './calendar/calendar-builder';
+import { Injectable } from '@nestjs/common';
+import { RotationLoader } from './schedule.rotation-loader';
+import { CalendarService } from './schedule.calendar.service';
+import { ScheduleEngine } from './schedule.engine';
+import { SchedulePersister } from './schedule.persister';
 
 @Injectable()
 export class ScheduleService {
   constructor(
-    private readonly cadence: CadenceCalculator,
-    private readonly rotationEngine: RotationEngine,
-    private readonly leaveBlocker: LeaveBlocker,
-    private readonly rules: RulesApplier,
-    private readonly conflicts: ConflictChecker,
-    private readonly calendarBuilder: CalendarBuilder,
-
+    private readonly rotationLoader: RotationLoader,
+    private readonly calendar: CalendarService,
+    private readonly engine: ScheduleEngine,
+    private readonly persister: SchedulePersister,
   ) {}
 
+  async generateForRotation(rotationId: string, generatedByUserId: string) {
+    // 1. Load rotation definition
+    const rotation = await this.rotationLoader.loadRotation(rotationId);
 
-  async generate(rotationId: string, from: Date, to: Date) {
-    const dates = await this.cadence.generate(rotationId, from, to);
+    // 2. Build A3 schedule context (holidays + leave + user-level holidays)
+    const context = await this.calendar.buildContext(rotation);
 
-    let schedule = await this.rotationEngine.assign(rotationId, dates);
+    // 3. Determine schedule range
+    const startDate = rotation.startDate;
+    const endDate = rotation.endDate ?? new Date(startDate.getFullYear(), 11, 31);
 
-    schedule = await this.leaveBlocker.apply(schedule);
+    // 4. Generate schedule
+    const assignments = await this.engine.generate(rotation, context, startDate, endDate);
 
-    schedule = await this.rules.apply(schedule);
+    // 5. Persist results + audit + conflicts
+    await this.persister.persist(rotation, assignments, []);
 
-    const finalSchedule = await this.conflicts.check(schedule);
-
-    return {
-      rotationId,
-      from,
-      to,
-      days: finalSchedule,
-    };
+    return { count: assignments.length };
   }
 }

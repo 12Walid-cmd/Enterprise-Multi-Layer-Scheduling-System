@@ -1,5 +1,9 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaService } from '../prisma/prisma.service';
+
+import { OrgService } from './org.service';
+
 
 // Groups
 import { GroupsController } from './groups/groups.controller';
@@ -32,6 +36,13 @@ import { SubTeamService } from './sub-teams/sub-team.service';
 import { SubTeamMembersController } from './members/sub-team-members.controller';
 import { SubTeamMembersService } from './members/sub-team-members.service';
 
+
+
+import { DomainsService } from './domains/domains.service';
+import { DomainTeamsService } from './domain-teams/domain-teams.service';
+import { DomainsController } from './domains/domains.controller';
+import { DomainTeamsController } from './domain-teams/domain-teams.controller';
+
 @Module({
   imports: [PrismaModule],
   controllers: [
@@ -42,9 +53,13 @@ import { SubTeamMembersService } from './members/sub-team-members.service';
     GlobalRoleTypesController,   
     UserRolesController, 
     SubTeamController,
-    SubTeamMembersController,    
+    SubTeamMembersController, 
+    DomainsController,
+    DomainTeamsController,
+   
   ],
   providers: [
+    PrismaService,
     GroupsService,
     TeamsService,
     MembersService,
@@ -52,7 +67,11 @@ import { SubTeamMembersService } from './members/sub-team-members.service';
     GlobalRoleTypesService,      
     UserRolesService,
     SubTeamService,   
-    SubTeamMembersService,         
+    SubTeamMembersService,  
+    DomainsService,
+    DomainTeamsService,
+       
   ],
+  exports: [OrgService],
 })
 export class OrgModule {}

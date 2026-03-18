@@ -21,16 +21,25 @@ export class RotationsService {
             data: {
                 name: dto.name,
                 code: dto.code,
+
                 type: dto.type as RotationType,
                 cadence: dto.cadence as RotationCadence,
                 cadence_interval: dto.cadence_interval ?? 1,
+
                 allow_overlap: dto.allow_overlap ?? false,
                 min_assignees: dto.min_assignees ?? 1,
+
                 scope_type: dto.scope_type as RotationScope,
                 scope_ref_id: dto.scope_ref_id ?? null,
+
+                start_date: dto.start_date,
+                end_date: dto.end_date ?? null,
+
                 owner_id: dto.owner_id ?? null,
                 description: dto.description ?? null,
+
                 is_active: dto.is_active ?? true,
+
             },
         });
     }
@@ -93,8 +102,12 @@ export class RotationsService {
                 ...(dto.scope_ref_id !== undefined && {
                     scope_ref_id: dto.scope_ref_id,
                 }),
-                ...(dto.owner_id !== undefined && { owner_id: dto.owner_id }),          
-                ...(dto.description !== undefined && { description: dto.description }), 
+
+                ...(dto.start_date !== undefined && { start_date: dto.start_date }),
+                ...(dto.end_date !== undefined && { end_date: dto.end_date }),
+
+                ...(dto.owner_id !== undefined && { owner_id: dto.owner_id }),
+                ...(dto.description !== undefined && { description: dto.description }),
                 ...(dto.is_active !== undefined && { is_active: dto.is_active }),
             },
         });
