@@ -152,22 +152,38 @@ exports.addRotationMember = async (req, res) => {
       }
 
       res.status(201).json({ message: 'Members added successfully' });
-    } else if (type === 'team' && teamId) {
-      // Get the current max rotation_order
+      } else if (type === 'team' && teamId) {
+      // Fetch all members of the team
+      const teamMembers = await pool.query(
+       `SELECT tm.user_id 
+       FROM ems.team_members tm
+       WHERE tm.team_id = $1`,
+      [teamId]
+      );
+
+      if (teamMembers.rows.length === 0) {
+      return res.status(400).json({ error: 'This team has no members to add' });
+      }
+
+      // Get current max rotation_order
       const maxOrderResult = await pool.query(
-        'SELECT COALESCE(MAX(rotation_order), 0) as max_order FROM ems.rotation_members WHERE rotation_id = $1',
-        [rotationId]
+      'SELECT COALESCE(MAX(rotation_order), 0) as max_order FROM ems.rotation_members WHERE rotation_id = $1',
+      [rotationId]
       );
-      const nextOrder = maxOrderResult.rows[0].max_order + 1;
+  let currentOrder = maxOrderResult.rows[0].max_order;
 
-      await pool.query(
-        `INSERT INTO ems.rotation_members (id, rotation_id, team_id, member_type, rotation_order)
-         VALUES ($1, $2, $3, 'team', $4)`,
-        [uuidv4(), rotationId, teamId, nextOrder]
-      );
+  // Insert each team member individually
+  for (const member of teamMembers.rows) {
+    currentOrder++;
+    await pool.query(
+      `INSERT INTO ems.rotation_members (id, rotation_id, user_id, member_type, rotation_order)
+       VALUES ($1, $2, $3, 'individual', $4)`,
+      [uuidv4(), rotationId, member.user_id, currentOrder]
+    );
+  }
 
-      res.status(201).json({ message: 'Team added successfully' });
-    } else {
+  res.status(201).json({ message: 'Team members added successfully' });
+  } else {
       res.status(400).json({ error: 'Invalid request' });
     }
   } catch (err) {
