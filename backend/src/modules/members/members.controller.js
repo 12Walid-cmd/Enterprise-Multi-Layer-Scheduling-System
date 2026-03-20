@@ -23,27 +23,40 @@ exports.getMembers = async (req, res) => {
     }
     
     if (jobTitle && jobTitle !== "All") {
-      filters.push(`rt.id = $${index}`);
-      values.push(jobTitle);
-      index++;
+      const ids = jobTitle
+        .split(",")
+        .map(id => id.trim())
+        .filter(Boolean);
+
+      if (ids.length) {
+        filters.push(`
+          u.id IN (
+            SELECT user_id FROM ems.team_members
+            WHERE role_type_id = ANY($${index}::uuid[])
+          )
+        `);
+        values.push(ids);
+        index++;
+      }
     }
 
     if (status && status !== "All") {
-      filters.push(`u.is_active = $${index}`);
-      values.push(status === "true");
-      index++;
+      const bools = status.split(",").map(s => s.trim() === "true");
+      if (bools.length === 1) {
+        filters.push(`u.is_active = $${index}`);
+        values.push(bools[0]);
+        index++;
+      }
+      // if both selected, no filter needed (same as All)
     }
 
     if (location && location !== "All") {
-      filters.push(`
-        (
-          c.name ILIKE $${index} OR
-          p.name ILIKE $${index} OR
-          co.name ILIKE $${index}
-        )
-      `);
-      values.push(`%${location}%`);
-      index++;
+      const names = location.split(",").map(n => n.trim()).filter(Boolean);
+      if (names.length) {
+        filters.push(`c.name = ANY($${index}::text[])`);
+        values.push(names);
+        index++;
+      }
     }
 
     const whereClause = filters.length ? `WHERE ${filters.join(" AND ")}` : "";
