@@ -633,3 +633,76 @@
   .sch-header-btns { flex-wrap: wrap; gap: 8px; }
   .sch-page-title { font-size: 24px; }
 }
+
+/* ── Loading / Error ─────────────────────────────────── */
+.sch-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 60vh;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+}
+
+.sch-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(255,255,255,0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.sch-error {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60vh;
+  justify-content: center;
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+}
+
+.sch-error button {
+  padding: 8px 18px;
+  background: #fff;
+  color: #c81e3a;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sch-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: #9ca3af;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+}
+
+/* ── Severity badges in conflicts ────────────────────── */
+.sch-sev-badge {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.sch-sev-high   { background: linear-gradient(135deg,#dc2626,#991b1b); color:#fff; }
+.sch-sev-medium { background: linear-gradient(135deg,#f59e0b,#d97706); color:#fff; }
+.sch-sev-low    { background: #f3f4f6; color: #6b7280; }
+
+/* ── US holiday column ───────────────────────────────── */
+.sch-th-d.hus { background: rgba(239,246,255,0.25); }
+.sch-dc.hus   { background: #eff6ff; }

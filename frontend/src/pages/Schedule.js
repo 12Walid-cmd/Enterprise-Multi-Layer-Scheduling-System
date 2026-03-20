@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import api from "../api/api";
 import "../styles/schedules.css";
 
 const MONTHS = [
@@ -6,108 +7,275 @@ const MONTHS = [
   "July","August","September","October","November","December"
 ];
 
-const HEADER_DATES = [
-  { d:15, month:"March 2026",  wk:true },
-  { d:16, month:"March 2026",  wk:true },
-  { d:17, month:"March 2026",  today:true },
-  { d:18, month:"March 2026" },
-  { d:19, month:"March 2026" },
-  { d:20, month:"March 2026" },
-  { d:21, month:"March 2026" },
-  { d:30, month:"March 2026",  hca:true },
-  { d:31, month:"March 2026" },
-  { d:1,  month:"April 2026" },
-  { d:2,  month:"April 2026" },
-  { d:3,  month:"April 2026" },
-  { d:4,  month:"April 2026",  wk:true },
-  { d:5,  month:"April 2026",  wk:true },
-];
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const GROUPS = [
-  {
-    label: "CDO FDN Subsurface and Land",
-    rows: [
-      { rotation:"CDO FDN Subsurface", initials:"DS", name:"Dan Saulnier",
-        cells:[null,null,{t:"cmt",l:"MT"},{t:"cmt",l:"MT"},{t:"cmt",l:"MT"},null,null,null,null,null,null,null,null,null] },
-      { rotation:"CDO FDN Subsurface", initials:"AH", name:"Alan Howatt",
-        cells:[null,null,null,{t:"cv",l:"V"},null,{t:"cmt",l:"MT"},{t:"cmt",l:"MT"},null,null,null,null,null,null,null] },
-      { rotation:"CDO FDN Subsurface", initials:"TV", name:"Travis Torraville",
-        cells:[null,null,null,null,{t:"ces",l:"ES"},{t:"ces",l:"ES"},{t:"cv",l:"V"},null,{t:"cmt",l:"MT"},null,null,null,null,null] },
-    ]
-  },
-  {
-    label: "CDO FDN Business Services",
-    rows: [
-      { rotation:"CDO FDN Business", initials:"RD", name:"Ricky Dalton",
-        cells:[null,null,{t:"cv",l:"V"},{t:"cv",l:"V"},{t:"cv",l:"V"},{t:"ccd",l:"CD"},{t:"ccd",l:"CD"},null,null,null,null,null,null,null] },
-      { rotation:"CDO FDN Business", initials:"DJ", name:"David Judson",
-        cells:[null,null,{t:"ccd",l:"CD"},{t:"ccd",l:"CD"},null,{t:"cmt",l:"MT"},{t:"cmt",l:"MT"},null,null,null,null,null,null,null] },
-    ]
-  },
-  {
-    label: "ServiceNow",
-    rows: [
-      { rotation:"ServiceNow", initials:"KR", name:"Karthik R.",
-        cells:[null,null,{t:"cv",l:"V"},{t:"cv",l:"V"},{t:"gap",l:"GAP"},{t:"cit",l:"IT"},{t:"cit",l:"IT"},null,{t:"cit",l:"IT"},null,null,null,null,null] },
-      { rotation:"ServiceNow", initials:"TD", name:"Tim Darrach",
-        cells:[null,null,{t:"cmt2",l:"mt"},{t:"cmt2",l:"mt"},{t:"cit",l:"IT"},{t:"cit",l:"IT"},null,null,null,null,null,null,null,null] },
-    ]
-  },
-  {
-    label: "IT Apps",
-    rows: [
-      { rotation:"IT Apps", initials:"RA", name:"Rishi Akella",
-        cells:[null,null,{t:"cv",l:"V"},{t:"cv",l:"V"},{t:"cv",l:"V"},null,{t:"cpv",l:"PV"},null,null,null,null,null,null,null] },
-    ]
-  },
-];
-
-const TOTALS = [0,0,4,4,3,2,2,"—",1,0,0,0,0,0];
-
-const LEGEND = [
-  { t:"cv",   l:"V",  text:"Vacation" },
-  { t:"abs",  l:"A",  text:"Absence" },
-  { t:"cit",  l:"IT", text:"24/7 SPOC IT" },
-  { t:"ccd",  l:"CD", text:"CDO Stewards" },
-  { t:"ces",  l:"ES", text:"CDO Escalation" },
-  { t:"cmt",  l:"MT", text:"Mountain time" },
-  { t:"cmt2", l:"mt", text:"Morning vacation" },
-  { t:"cpv",  l:"PV", text:"Pending vacation" },
-  { t:"csd",  l:"SD", text:"Service Desk" },
-];
-
-function Chip({ t, l }) {
-  if (t === "gap") return <span className="sch-badge-gap">GAP</span>;
-  return <div className={`sch-chip ${t}`}>{l}</div>;
+function getDatesInRange(startStr, endStr) {
+  const dates = [];
+  const cur = new Date(startStr);
+  const end = new Date(endStr);
+  while (cur <= end) {
+    dates.push(cur.toISOString().split("T")[0]);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
 }
 
+function isWeekend(dateStr) {
+  const d = new Date(dateStr);
+  return d.getDay() === 0 || d.getDay() === 6;
+}
+
+function dayLabel(dateStr)      { return new Date(dateStr).getDate(); }
+function monthYearLabel(dateStr){ const d = new Date(dateStr); return `${MONTHS[d.getMonth()]} ${d.getFullYear()}`; }
+function todayStr()             { return new Date().toISOString().split("T")[0]; }
+function getInitials(f, l)      { return `${f?.[0]||""}${l?.[0]||""}`.toUpperCase(); }
+function dateInRange(d, s, e)   { return d >= s.split("T")[0] && d <= e.split("T")[0]; }
+
+function getChipForAssignment(a) {
+  const type = (a.rotation_type || "").toUpperCase().replace(/-/g,"_");
+  if (type === "ON_CALL")                      return { cls:"cit",  label:"IT" };
+  if (type === "MOUNTAIN" || type === "MOUNTAIN_SHIFT") return { cls:"cmt",  label:"MT" };
+  if (type === "ESCALATION")                   return { cls:"ces",  label:"ES" };
+  if (type === "STEWARDS" || type === "CDO_STEWARDS")  return { cls:"ccd",  label:"CD" };
+  if (type === "SERVICE_DESK")                 return { cls:"csd",  label:"SD" };
+  const name = a.rotation_name || "RO";
+  return { cls:"cit", label: name.substring(0,2).toUpperCase() };
+}
+
+function getChipForLeave(lr) {
+  if (lr.status === "PENDING")         return { cls:"cpv", label:"PV" };
+  if (lr.leave_period === "MORNING")   return { cls:"cmt2",label:"mt" };
+  return { cls:"cv", label:"V" };
+}
+
+function Chip({ cls, label, title }) {
+  return <div className={`sch-chip ${cls}`} title={title}>{label}</div>;
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Schedules() {
-  const [currentDate, setCurrentDate] = useState({ month: 2, year: 2026 });
-  const [view, setView]               = useState("Month");
-  const [search, setSearch]           = useState("");
-  const [teamFilter, setTeamFilter]   = useState("All Teams");
-  const [typeFilter, setTypeFilter]   = useState("All Types");
-  const [showFilter, setShowFilter]   = useState("All assignments");
 
-  const prevMonth = () =>
-    setCurrentDate(p => p.month === 0 ? { month:11, year:p.year-1 } : { month:p.month-1, year:p.year });
-  const nextMonth = () =>
-    setCurrentDate(p => p.month === 11 ? { month:0, year:p.year+1 } : { month:p.month+1, year:p.year });
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
 
-  const monthLabel = `${MONTHS[currentDate.month]} ${currentDate.year}`;
+  const [currentDate, setCurrentDate] = useState({
+    month: new Date().getMonth(),
+    year:  new Date().getFullYear()
+  });
+  const [view, setView]             = useState("Month");
+  const [search, setSearch]         = useState("");
+  const [teamFilter, setTeamFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
+  const [showFilter, setShowFilter] = useState("All assignments");
 
-  // Build colspan spans for top header
-  const monthSpans = HEADER_DATES.reduce((acc, d) => {
+  // Helper — get Monday of a given date
+const getMondayOf = (date) => {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun, 1=Mon...
+  const diff = day === 0 ? -6 : 1 - day; // go back to Monday
+  d.setDate(d.getDate() + diff);
+  return d;
+};
+
+const getWindow = useCallback(() => {
+  const monday = getMondayOf(new Date(currentDate.year, currentDate.month, new Date().getDate()));
+
+  if (view === "Week") {
+    const start = new Date(monday);
+    const end   = new Date(monday);
+    end.setDate(end.getDate() + 6); // Mon–Sun
+    return {
+      start: start.toISOString().split("T")[0],
+      end:   end.toISOString().split("T")[0]
+    };
+  }
+
+  if (view === "2-Week") {
+    const start = new Date(monday);
+    const end   = new Date(monday);
+    end.setDate(end.getDate() + 13); // 2 full weeks Mon–Sun
+    return {
+      start: start.toISOString().split("T")[0],
+      end:   end.toISOString().split("T")[0]
+    };
+  }
+
+  // Month — start from Monday of first week of month
+  const firstOfMonth = new Date(currentDate.year, currentDate.month, 1);
+  const start = getMondayOf(firstOfMonth);
+  const end   = new Date(currentDate.year, currentDate.month + 1, 0); // last day of month
+  return {
+    start: start.toISOString().split("T")[0],
+    end:   end.toISOString().split("T")[0]
+  };
+
+}, [currentDate, view]);
+
+  const fetchSchedules = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { start, end } = getWindow();
+      const res = await api.get("/schedules", {
+        params: {
+          startDate:    start,
+          endDate:      end,
+          search:       search    || undefined,
+          teamId:       teamFilter !== "All" ? teamFilter : undefined,
+          rotationType: typeFilter !== "All" ? typeFilter : undefined,
+        }
+      });
+      setData(res.data);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load schedule data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [getWindow, search, teamFilter, typeFilter]);
+
+  useEffect(() => { fetchSchedules(); }, [fetchSchedules]);
+
+  const prevPeriod = () => {
+    if (view === "Month") {
+      setCurrentDate(p =>
+        p.month === 0 ? { month: 11, year: p.year - 1 } : { month: p.month - 1, year: p.year }
+      );
+    } else {
+      // Go back 1 week (7 days) from current monday
+      const monday = getMondayOf(new Date(currentDate.year, currentDate.month, new Date().getDate()));
+      monday.setDate(monday.getDate() - 7);
+      setCurrentDate({ month: monday.getMonth(), year: monday.getFullYear() });
+    }
+  };
+
+  const nextPeriod = () => {
+    if (view === "Month") {
+      setCurrentDate(p =>
+        p.month === 11 ? { month: 0, year: p.year + 1 } : { month: p.month + 1, year: p.year }
+      );
+    } else {
+      const monday = getMondayOf(new Date(currentDate.year, currentDate.month, new Date().getDate()));
+      monday.setDate(monday.getDate() + 7);
+      setCurrentDate({ month: monday.getMonth(), year: monday.getFullYear() });
+    }
+  };
+
+  // ── Date columns ──────────────────────────────────────────────────────────
+  const { start: winStart, end: winEnd } = getWindow();
+  const allDates  = getDatesInRange(winStart, winEnd);
+  const today     = todayStr();
+
+  // Maps
+  const holidayMap = {};
+  (data?.holidays || []).forEach(h => { holidayMap[h.holiday_date] = h; });
+
+  const gapMap = {};
+  (data?.coverageGaps || []).forEach(g => {
+    getDatesInRange(g.gap_start, g.gap_end).forEach(d => {
+      if (!gapMap[d]) gapMap[d] = [];
+      gapMap[d].push(g.rotation_id);
+    });
+  });
+
+  const leaveByUser = {};
+  (data?.leaveRequests || []).forEach(lr => {
+    if (!leaveByUser[lr.user_id]) leaveByUser[lr.user_id] = [];
+    leaveByUser[lr.user_id].push(lr);
+  });
+
+  // OOO totals per date
+  const oooPerDate = {};
+  allDates.forEach(d => { oooPerDate[d] = 0; });
+  (data?.leaveRequests || []).filter(lr => lr.status === "APPROVED").forEach(lr => {
+    getDatesInRange(lr.start_date, lr.end_date).forEach(d => {
+      if (oooPerDate[d] !== undefined) oooPerDate[d]++;
+    });
+  });
+
+  // ── Group assignments: group -> rotation -> user ──────────────────────────
+  const grouped = {};
+  (data?.assignments || []).forEach(a => {
+    const grp  = a.group_name || "Ungrouped";
+    const rot  = a.rotation_name || "Unknown Rotation";
+    const uid  = a.user_id;
+    if (!grouped[grp])           grouped[grp] = {};
+    if (!grouped[grp][rot])      grouped[grp][rot] = {};
+    if (!grouped[grp][rot][uid]) {
+      grouped[grp][rot][uid] = {
+        userId:       uid,
+        firstName:    a.first_name,
+        lastName:     a.last_name,
+        rotationType: a.rotation_type,
+        assignments:  []
+      };
+    }
+    grouped[grp][rot][uid].assignments.push(a);
+  });
+
+  // Month spans
+  const monthSpans = allDates.reduce((acc, d) => {
+    const lbl  = monthYearLabel(d);
     const last = acc[acc.length - 1];
-    if (last && last.month === d.month) { last.count++; }
-    else acc.push({ month: d.month, count: 1, border: acc.length > 0 });
+    if (last && last.month === lbl) { last.count++; }
+    else acc.push({ month: lbl, count: 1, border: acc.length > 0 });
     return acc;
   }, []);
+
+  // Row filter
+  const filterRow = (userRow) => {
+    if (showFilter === "Vacations only")
+      return (leaveByUser[userRow.userId] || []).length > 0;
+    if (showFilter === "On-call only") {
+      const t = (userRow.rotationType || "").toUpperCase().replace(/-/g,"_");
+      return t === "ON_CALL";
+    }
+    return true;
+  };
+
+  const renderCell = (userRow, dateStr) => {
+    const chips = [];
+    userRow.assignments.forEach(a => {
+      if (dateInRange(dateStr, a.assigned_start, a.assigned_end)) {
+        const { cls, label } = getChipForAssignment(a);
+        chips.push(<Chip key={a.assignment_id} cls={cls} label={label} title={a.rotation_name} />);
+      }
+    });
+    (leaveByUser[userRow.userId] || []).forEach(lr => {
+      if (dateStr >= lr.start_date && dateStr <= lr.end_date) {
+        const { cls, label } = getChipForLeave(lr);
+        chips.push(<Chip key={lr.id} cls={cls} label={label} title={lr.status === "PENDING" ? "Pending vacation" : "Vacation"} />);
+      }
+    });
+    return chips;
+  };
+
+  const stats = data?.stats || {};
+
+  // ── Loading / Error ───────────────────────────────────────────────────────
+  if (loading) return (
+    <div className="schedules-container">
+      <div className="sch-loading">
+        <div className="sch-spinner" />
+        <span>Loading schedules...</span>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="schedules-container">
+      <div className="sch-error">
+        {error}
+        <button onClick={fetchSchedules}>Retry</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="schedules-container">
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="sch-page-header">
         <div>
           <div className="sch-page-title">Schedules</div>
@@ -115,58 +283,66 @@ export default function Schedules() {
         </div>
         <div className="sch-header-btns">
           <button className="sch-btn-outline">↓ Export CSV</button>
-          <button className="sch-btn-white">⚡ Generate Schedule</button>
+          <button className="sch-btn-white" onClick={fetchSchedules}>↻ Refresh</button>
           <button className="sch-btn-white">+ Add Assignment</button>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* ── Stats ── */}
       <div className="sch-stats-row">
         <div className="sch-stat-card">
-          <div className="sch-stat-lbl">Out of office (Mar)</div>
-          <div className="sch-stat-val">56</div>
-          <div className="sch-stat-sub">↑ 4 more than Feb</div>
+          <div className="sch-stat-lbl">Out of office ({MONTHS[currentDate.month].substring(0,3)})</div>
+          <div className="sch-stat-val">{stats.ooo_count || 0}</div>
+          <div className="sch-stat-sub">Approved leaves</div>
         </div>
         <div className="sch-stat-card">
           <div className="sch-stat-lbl">On call today</div>
-          <div className="sch-stat-val">3</div>
-          <div className="sch-stat-sub">IT · CD · ES active</div>
+          <div className="sch-stat-val">{stats.on_call_today || 0}</div>
+          <div className="sch-stat-sub">Active assignments</div>
         </div>
         <div className="sch-stat-card">
           <div className="sch-stat-lbl">Coverage gaps</div>
-          <div className="sch-stat-val danger">2</div>
-          <div className="sch-stat-sub warn">Needs attention</div>
+          <div className={`sch-stat-val${parseInt(stats.coverage_gaps) > 0 ? " danger" : ""}`}>
+            {stats.coverage_gaps || 0}
+          </div>
+          <div className={`sch-stat-sub${parseInt(stats.coverage_gaps) > 0 ? " warn" : ""}`}>
+            {parseInt(stats.coverage_gaps) > 0 ? "Needs attention" : "All covered"}
+          </div>
         </div>
         <div className="sch-stat-card">
           <div className="sch-stat-lbl">Pending approvals</div>
-          <div className="sch-stat-val">5</div>
+          <div className="sch-stat-val">{stats.pending_approvals || 0}</div>
           <div className="sch-stat-sub">Vacation requests</div>
         </div>
       </div>
 
-      {/* Controls */}
+      {/* ── Controls ── */}
       <div className="sch-controls-card">
         <div className="sch-ctrl" style={{ flex: 2 }}>
           <label>Search member</label>
-          <input type="text" placeholder="Search by name..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input
+            type="text"
+            placeholder="Search by name..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
         <div className="sch-ctrl">
           <label>Team</label>
           <select value={teamFilter} onChange={e => setTeamFilter(e.target.value)}>
-            <option>All Teams</option>
-            <option>CDO FDN Subsurface</option>
-            <option>CDO FDN Business</option>
-            <option>ServiceNow</option>
-            <option>IT Apps</option>
+            <option value="All">All Teams</option>
+            {(data?.teams || []).map(t => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
           </select>
         </div>
         <div className="sch-ctrl">
           <label>Rotation type</label>
           <select value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-            <option>All Types</option>
-            <option>On-Call</option>
-            <option>Mountain Shift</option>
-            <option>Analyst</option>
+            <option value="All">All Types</option>
+            {(data?.rotationTypes || []).map(rt => (
+              <option key={rt} value={rt}>{rt}</option>
+            ))}
           </select>
         </div>
         <div className="sch-ctrl">
@@ -175,13 +351,12 @@ export default function Schedules() {
             <option>All assignments</option>
             <option>Vacations only</option>
             <option>On-call only</option>
-            <option>Conflicts only</option>
           </select>
         </div>
         <div className="sch-nav-grp">
-          <button className="sch-nav-b" onClick={prevMonth}>←</button>
-          <span className="sch-month-lbl">{monthLabel}</span>
-          <button className="sch-nav-b" onClick={nextMonth}>→</button>
+          <button className="sch-nav-b" onClick={prevPeriod}>←</button>
+          <span className="sch-month-lbl">{MONTHS[currentDate.month]} {currentDate.year}</span>
+          <button className="sch-nav-b" onClick={nextPeriod}>→</button>
         </div>
         <div className="sch-view-tog">
           {["Month","2-Week","Week"].map(v => (
@@ -190,7 +365,7 @@ export default function Schedules() {
         </div>
       </div>
 
-      {/* Body */}
+      {/* ── Body ── */}
       <div className="sch-body-row">
 
         {/* Grid */}
@@ -202,47 +377,72 @@ export default function Schedules() {
                   <th className="sch-th-rot" rowSpan={2}>Team / Rotation</th>
                   <th className="sch-th-nm"  rowSpan={2}>Member</th>
                   {monthSpans.map((ms, i) => (
-                    <th key={i} className={`sch-th-mo${ms.border ? " b" : ""}`} colSpan={ms.count}>{ms.month}</th>
+                    <th key={i} className={`sch-th-mo${ms.border?" b":""}`} colSpan={ms.count}>{ms.month}</th>
                   ))}
                 </tr>
                 <tr>
-                  {HEADER_DATES.map((d, i) => (
-                    <th key={i} className={["sch-th-d", d.wk?"wk":"", d.today?"td":"", d.hca?"hca":""].filter(Boolean).join(" ")}>{d.d}</th>
-                  ))}
+                  {allDates.map((d, i) => {
+                    const hol = holidayMap[d];
+                    return (
+                      <th key={i} title={hol ? hol.name : ""}
+                        className={["sch-th-d",
+                          isWeekend(d)?"wk":"",
+                          d===today?"td":"",
+                          hol?.holiday_type==="CANADIAN"?"hca":"",
+                          hol?.holiday_type==="US"?"hus":"",
+                        ].filter(Boolean).join(" ")}
+                      >{dayLabel(d)}</th>
+                    );
+                  })}
                 </tr>
               </thead>
+
               <tbody>
-                {GROUPS.map((grp, gi) => {
-                  const rows = grp.rows.filter(r =>
-                    !search || r.name.toLowerCase().includes(search.toLowerCase())
-                  );
-                  if (!rows.length) return null;
-                  return (
-                    <React.Fragment key={gi}>
-                      <tr className="sch-gr"><td colSpan={16}>{grp.label}</td></tr>
-                      {rows.map((row, ri) => (
-                        <tr key={ri} className="sch-data-row">
-                          <td className="sch-rc">{row.rotation}</td>
-                          <td className="sch-nc">
-                            <div className="sch-nw">
-                              <div className="sch-av">{row.initials}</div>
-                              <span className="sch-nt">{row.name}</span>
-                            </div>
-                          </td>
-                          {HEADER_DATES.map((hd, ci) => (
-                            <td key={ci} className={["sch-dc", hd.wk?"wk":"", hd.hca?"hca":"", row.cells[ci]?.t==="gap"?"gap-cell":""].filter(Boolean).join(" ")}>
-                              {row.cells[ci] && <Chip t={row.cells[ci].t} l={row.cells[ci].l} />}
+                {Object.keys(grouped).length === 0
+                  ? <tr><td colSpan={allDates.length+2} className="sch-empty">No schedule data found for this period.</td></tr>
+                  : Object.entries(grouped).map(([groupName, rotations]) => (
+                    <React.Fragment key={groupName}>
+                      <tr className="sch-gr"><td colSpan={allDates.length+2}>{groupName}</td></tr>
+                      {Object.entries(rotations).map(([rotName, users]) =>
+                        Object.values(users).filter(filterRow).map((userRow, ri) => (
+                          <tr key={`${userRow.userId}-${rotName}`} className="sch-data-row">
+                            <td className="sch-rc">{ri === 0 ? rotName : ""}</td>
+                            <td className="sch-nc">
+                              <div className="sch-nw">
+                                <div className="sch-av">{getInitials(userRow.firstName, userRow.lastName)}</div>
+                                <span className="sch-nt">{userRow.firstName} {userRow.lastName}</span>
+                              </div>
                             </td>
-                          ))}
-                        </tr>
-                      ))}
+                            {allDates.map((d, ci) => {
+                              const hol    = holidayMap[d];
+                              const isGap  = gapMap[d]?.includes(userRow.assignments[0]?.rotation_id);
+                              const chips  = renderCell(userRow, d);
+                              return (
+                                <td key={ci} className={["sch-dc",
+                                  isWeekend(d)?"wk":"",
+                                  hol?.holiday_type==="CANADIAN"?"hca":"",
+                                  hol?.holiday_type==="US"?"hus":"",
+                                  isGap?"gap-cell":"",
+                                ].filter(Boolean).join(" ")}>
+                                  {isGap && chips.length === 0
+                                    ? <span className="sch-badge-gap">GAP</span>
+                                    : chips
+                                  }
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))
+                      )}
                     </React.Fragment>
-                  );
-                })}
+                  ))
+                }
+
+                {/* Totals row */}
                 <tr className="sch-tot">
                   <td className="sch-tl" colSpan={2}>Total out of office / day</td>
-                  {TOTALS.map((t, i) => (
-                    <td key={i} className={typeof t === "number" && t >= 4 ? "hi" : ""}>{t}</td>
+                  {allDates.map((d, i) => (
+                    <td key={i} className={oooPerDate[d] >= 4 ? "hi" : ""}>{oooPerDate[d] || 0}</td>
                   ))}
                 </tr>
               </tbody>
@@ -255,39 +455,58 @@ export default function Schedules() {
 
           <div className="sch-sc">
             <div className="sch-sc-title">Legend</div>
-            {LEGEND.map((l, i) => (
+            {[
+              {cls:"cv",   l:"V",  text:"Vacation"},
+              {cls:"cpv",  l:"PV", text:"Pending vacation"},
+              {cls:"cit",  l:"IT", text:"On-Call / SPOC"},
+              {cls:"ccd",  l:"CD", text:"CDO Stewards"},
+              {cls:"ces",  l:"ES", text:"Escalation"},
+              {cls:"cmt",  l:"MT", text:"Mountain time"},
+              {cls:"cmt2", l:"mt", text:"Morning vacation"},
+              {cls:"csd",  l:"SD", text:"Service Desk"},
+            ].map((l,i) => (
               <div key={i} className="sch-li">
-                <div className={`sch-lc ${l.t}`}>{l.l}</div>
-                {l.text}
+                <div className={`sch-lc ${l.cls}`}>{l.l}</div>{l.text}
               </div>
             ))}
             <div className="sch-leg-divider" />
-            <div className="sch-li"><div className="sch-ls" style={{ background:"#fef3e2" }} />Canadian holiday</div>
-            <div className="sch-li"><div className="sch-ls" style={{ background:"#eff6ff" }} />US holiday</div>
-            <div className="sch-li"><div className="sch-ls" style={{ background:"#f9f9f9" }} />Weekend</div>
-            <div className="sch-li"><div className="sch-ls" style={{ background:"#fef2f2", outline:"1px solid #fca5a5" }} />Coverage gap</div>
+            <div className="sch-li"><div className="sch-ls" style={{background:"#fef3e2"}}/>Canadian holiday</div>
+            <div className="sch-li"><div className="sch-ls" style={{background:"#eff6ff"}}/>US holiday</div>
+            <div className="sch-li"><div className="sch-ls" style={{background:"#f9f9f9"}}/>Weekend</div>
+            <div className="sch-li"><div className="sch-ls" style={{background:"#fef2f2",outline:"1px solid #fca5a5"}}/>Coverage gap</div>
           </div>
 
           <div className="sch-sc">
             <div className="sch-sc-title">Summary</div>
             {[
-              { l:"OOO this month",   v:"56" },
-              { l:"On call today",    v:"3" },
-              { l:"Coverage gaps",    v:"2", cls:"danger" },
-              { l:"Pending PV",       v:"5", cls:"warn" },
-              { l:"Active rotations", v:"6" },
-            ].map((s, i) => (
+              {l:"OOO this month",   v:stats.ooo_count        ||0},
+              {l:"On call today",    v:stats.on_call_today     ||0},
+              {l:"Coverage gaps",    v:stats.coverage_gaps     ||0, cls: parseInt(stats.coverage_gaps)    >0?"danger":""},
+              {l:"Pending PV",       v:stats.pending_approvals ||0, cls: parseInt(stats.pending_approvals)>0?"warn":""},
+              {l:"Active rotations", v:stats.active_rotations  ||0},
+            ].map((s,i) => (
               <div key={i} className="sch-si">
                 <span className="sch-sl">{s.l}</span>
-                <span className={`sch-sv${s.cls ? " "+s.cls : ""}`}>{s.v}</span>
+                <span className={`sch-sv${s.cls?" "+s.cls:""}`}>{s.v}</span>
               </div>
             ))}
           </div>
 
           <div className="sch-cc">
-            <div className="sch-ct">⚠ Conflicts</div>
-            <div className="sch-ci"><span className="sch-cn">Karthik R.</span><br />Coverage gap Mar 19</div>
-            <div className="sch-ci"><span className="sch-cn">Platforms</span><br />Understaffed Mar 30</div>
+            <div className="sch-ct">⚠ Conflicts ({data?.conflicts?.length || 0})</div>
+            {(data?.conflicts||[]).length === 0
+              ? <div className="sch-ci" style={{color:"#6b7280"}}>No open conflicts</div>
+              : (data?.conflicts||[]).map(c => (
+                <div key={c.id} className="sch-ci">
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"2px"}}>
+                    <span className="sch-cn">{c.first_name} {c.last_name}</span>
+                    <span className={`sch-sev-badge sch-sev-${(c.severity||"").toLowerCase()}`}>{c.severity}</span>
+                  </div>
+                  <span style={{fontSize:"11px",color:"#9ca3af"}}>{c.conflict_type}</span><br/>
+                  <span style={{fontSize:"12px"}}>{c.rotation_name}</span>
+                </div>
+              ))
+            }
           </div>
 
         </div>

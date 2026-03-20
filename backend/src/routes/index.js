@@ -11,5 +11,5 @@ router.use('/dashboard', require('../modules/dashboard/dashboard.routes'));
 router.use("/members", require("../modules/members/members.routes"));
 router.use("/location", require("../modules/location/location.routes"));
 router.use("/roles", require("../modules/roles/roles.routes"));
-
+router.use("/schedules", require("../modules/schedules/schedules.routes"));
 module.exports = router;

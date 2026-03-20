@@ -51,3 +51,17 @@ exports.getCities = async (req, res) => {
   }
 }; 
 
+exports.getAllCities = async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT DISTINCT c.id, c.name
+      FROM ems.cities c
+      INNER JOIN ems.users u ON u.city_id = c.id
+      ORDER BY c.name
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Error fetching cities" });
+  }
+};
