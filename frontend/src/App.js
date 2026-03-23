@@ -2,14 +2,16 @@ import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import AppRoutes from "./routes/AppRoutes";
+import { ToastProvider } from "./context/ToastContext";
 
 function App() {
-
   return (
     <BrowserRouter>
-      <Layout>
-        <AppRoutes />
-      </Layout>
+      <ToastProvider>
+        <Layout>
+          <AppRoutes />
+        </Layout>
+      </ToastProvider>
     </BrowserRouter>
   );
 }

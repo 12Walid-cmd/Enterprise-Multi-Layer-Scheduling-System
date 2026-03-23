@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../api/api";
 import "../styles/rotations.css";
-import { createPortal } from 'react-dom';
+import { useToastContext } from '../context/ToastContext';
 import {
   DndContext,
   closestCenter,
@@ -17,24 +17,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// Toast Component
-function Toast({ toasts, removeToast }) {
-  return (
-    <div className="toast-container" style={{ zIndex: 2147483647, position: 'fixed', top: '24px', right: '24px' }}>
-      {toasts.map(toast => (
-        <div key={toast.id} className={`toast toast-${toast.type}`}>
-          <span className="toast-icon">
-            {toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}
-          </span>
-          <span className="toast-message">{toast.message}</span>
-          <button className="toast-close" onClick={() => removeToast(toast.id)}>×</button>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-//Confirm Dialog
+// Confirm Dialog Component
 function ConfirmDialog({ confirm, onConfirm, onCancel }) {
   if (!confirm) return null;
   return (
@@ -110,14 +93,8 @@ function SortableMemberItem({ member, onRemove, index }) {
 function Rotations() {
   const [activeTab, setActiveTab] = useState('rotations');
 
-  // Toast state
-  const [toasts, setToasts] = useState([]);
-  const showToast = (message, type = 'success') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
-  };
-  const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
+  // Toast from global context
+  const { showToast } = useToastContext();
 
   // Confirm dialog state
   const [confirm, setConfirm] = useState(null);
@@ -519,7 +496,7 @@ function Rotations() {
       setSelectedUsers([]);
       setSelectedTeam("");
       setTeamPreviewMembers([]);
-      showToast(`Successfully added ${addMemberMode === "individual" ? selectedUsers.length + " member(s)" : "team"}!`);
+      showToast(`Successfully added ${addMemberMode === "individual" ? selectedUsers.length + " member(s)" : "team members"}!`);
     } catch (error) {
       console.error("Error adding members:", error);
       showToast(error.response?.data?.error || "Failed to add members", "error");
@@ -598,94 +575,57 @@ function Rotations() {
         <>
           <div className="filters-bar" onClick={(e) => e.stopPropagation()}>
             <div className="fb-top-row">
-
               <div className="fb-search-wrap">
-                <input
-                  type="text"
-                  className="fb-search"
-                  placeholder="Search rotations..."
-                  value={filters.search}
-                  onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                />
-                {filters.search && (
-                  <button className="fb-clear-x" onClick={() => setFilters({ ...filters, search: '' })}>×</button>
-                )}
+                <input type="text" className="fb-search" placeholder="Search rotations..." value={filters.search} onChange={(e) => setFilters({ ...filters, search: e.target.value })} />
+                {filters.search && (<button className="fb-clear-x" onClick={() => setFilters({ ...filters, search: '' })}>×</button>)}
               </div>
-
               <div className="fb-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
                 <div className="fb-drop-label">Rotation Type</div>
-                <button
-                  className={`fb-drop-btn${selectedTypes.length ? ' active' : ''}`}
-                  onClick={() => { setTypeDropOpen(p => !p); setTeamDropOpen(false); setStatusDropOpen(false); }}
-                >
+                <button className={`fb-drop-btn${selectedTypes.length ? ' active' : ''}`} onClick={() => { setTypeDropOpen(p => !p); setTeamDropOpen(false); setStatusDropOpen(false); }}>
                   {selectedTypes.length ? `Rotation Type (${selectedTypes.length})` : 'All Types'}
                   <span className="fb-chevron">{typeDropOpen ? '▴' : '▾'}</span>
                 </button>
                 {typeDropOpen && (
                   <div className="fb-drop-panel">
                     <label className="fb-option fb-option-all">
-                      <input
-                        type="checkbox"
-                        checked={selectedTypes.length === availableRotationTypes.length && availableRotationTypes.length > 0}
-                        onChange={() => setSelectedTypes(selectedTypes.length === availableRotationTypes.length ? [] : availableRotationTypes.map(t => t.name))}
-                      />
+                      <input type="checkbox" checked={selectedTypes.length === availableRotationTypes.length && availableRotationTypes.length > 0} onChange={() => setSelectedTypes(selectedTypes.length === availableRotationTypes.length ? [] : availableRotationTypes.map(t => t.name))} />
                       <span>Select All</span>
                     </label>
                     <div className="fb-divider" />
                     {availableRotationTypes.map(type => (
                       <label key={type.id} className="fb-option">
-                        <input
-                          type="checkbox"
-                          checked={selectedTypes.includes(type.name)}
-                          onChange={() => setSelectedTypes(prev => prev.includes(type.name) ? prev.filter(t => t !== type.name) : [...prev, type.name])}
-                        />
+                        <input type="checkbox" checked={selectedTypes.includes(type.name)} onChange={() => setSelectedTypes(prev => prev.includes(type.name) ? prev.filter(t => t !== type.name) : [...prev, type.name])} />
                         <span>{type.name}</span>
                       </label>
                     ))}
                   </div>
                 )}
               </div>
-
               <div className="fb-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
                 <div className="fb-drop-label">Team</div>
-                <button
-                  className={`fb-drop-btn${selectedTeams.length ? ' active' : ''}`}
-                  onClick={() => { setTeamDropOpen(p => !p); setTypeDropOpen(false); setStatusDropOpen(false); }}
-                >
+                <button className={`fb-drop-btn${selectedTeams.length ? ' active' : ''}`} onClick={() => { setTeamDropOpen(p => !p); setTypeDropOpen(false); setStatusDropOpen(false); }}>
                   {selectedTeams.length ? `Team (${selectedTeams.length})` : 'All Teams'}
                   <span className="fb-chevron">{teamDropOpen ? '▴' : '▾'}</span>
                 </button>
                 {teamDropOpen && (
                   <div className="fb-drop-panel">
                     <label className="fb-option fb-option-all">
-                      <input
-                        type="checkbox"
-                        checked={selectedTeams.length === availableTeams.length && availableTeams.length > 0}
-                        onChange={() => setSelectedTeams(selectedTeams.length === availableTeams.length ? [] : availableTeams.map(t => t.name))}
-                      />
+                      <input type="checkbox" checked={selectedTeams.length === availableTeams.length && availableTeams.length > 0} onChange={() => setSelectedTeams(selectedTeams.length === availableTeams.length ? [] : availableTeams.map(t => t.name))} />
                       <span>Select All</span>
                     </label>
                     <div className="fb-divider" />
                     {availableTeams.map(team => (
                       <label key={team.id} className="fb-option">
-                        <input
-                          type="checkbox"
-                          checked={selectedTeams.includes(team.name)}
-                          onChange={() => setSelectedTeams(prev => prev.includes(team.name) ? prev.filter(t => t !== team.name) : [...prev, team.name])}
-                        />
+                        <input type="checkbox" checked={selectedTeams.includes(team.name)} onChange={() => setSelectedTeams(prev => prev.includes(team.name) ? prev.filter(t => t !== team.name) : [...prev, team.name])} />
                         <span>{team.name}</span>
                       </label>
                     ))}
                   </div>
                 )}
               </div>
-
               <div className="fb-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
                 <div className="fb-drop-label">Status</div>
-                <button
-                  className={`fb-drop-btn${selectedStatuses.length ? ' active' : ''}`}
-                  onClick={() => { setStatusDropOpen(p => !p); setTypeDropOpen(false); setTeamDropOpen(false); }}
-                >
+                <button className={`fb-drop-btn${selectedStatuses.length ? ' active' : ''}`} onClick={() => { setStatusDropOpen(p => !p); setTypeDropOpen(false); setTeamDropOpen(false); }}>
                   {selectedStatuses.length ? `Status (${selectedStatuses.length})` : 'All Status'}
                   <span className="fb-chevron">{statusDropOpen ? '▴' : '▾'}</span>
                 </button>
@@ -693,58 +633,23 @@ function Rotations() {
                   <div className="fb-drop-panel">
                     {[{ val: 'Active', label: '✅ Active' }, { val: 'Inactive', label: '⭕ Inactive' }].map(s => (
                       <label key={s.val} className="fb-option">
-                        <input
-                          type="checkbox"
-                          checked={selectedStatuses.includes(s.val)}
-                          onChange={() => setSelectedStatuses(prev => prev.includes(s.val) ? prev.filter(v => v !== s.val) : [...prev, s.val])}
-                        />
+                        <input type="checkbox" checked={selectedStatuses.includes(s.val)} onChange={() => setSelectedStatuses(prev => prev.includes(s.val) ? prev.filter(v => v !== s.val) : [...prev, s.val])} />
                         <span>{s.label}</span>
                       </label>
                     ))}
                   </div>
                 )}
               </div>
-
             </div>
-
             {isFiltersActive && (
               <div className="fb-bottom-row">
                 <div className="fb-chips">
-                  {selectedTypes.map(name => (
-                    <span key={name} className="fb-chip">
-                      <span className="fb-chip-cat">Type</span>
-                      {name}
-                      <button onClick={() => setSelectedTypes(prev => prev.filter(t => t !== name))}>×</button>
-                    </span>
-                  ))}
-                  {selectedTeams.map(name => (
-                    <span key={name} className="fb-chip">
-                      <span className="fb-chip-cat">Team</span>
-                      {name}
-                      <button onClick={() => setSelectedTeams(prev => prev.filter(t => t !== name))}>×</button>
-                    </span>
-                  ))}
-                  {selectedStatuses.map(val => (
-                    <span key={val} className="fb-chip">
-                      <span className="fb-chip-cat">Status</span>
-                      {val}
-                      <button onClick={() => setSelectedStatuses(prev => prev.filter(v => v !== val))}>×</button>
-                    </span>
-                  ))}
-                  {filters.search && (
-                    <span className="fb-chip">
-                      <span className="fb-chip-cat">Search</span>
-                      {filters.search}
-                      <button onClick={() => setFilters({ ...filters, search: '' })}>×</button>
-                    </span>
-                  )}
+                  {selectedTypes.map(name => (<span key={name} className="fb-chip"><span className="fb-chip-cat">Type</span>{name}<button onClick={() => setSelectedTypes(prev => prev.filter(t => t !== name))}>×</button></span>))}
+                  {selectedTeams.map(name => (<span key={name} className="fb-chip"><span className="fb-chip-cat">Team</span>{name}<button onClick={() => setSelectedTeams(prev => prev.filter(t => t !== name))}>×</button></span>))}
+                  {selectedStatuses.map(val => (<span key={val} className="fb-chip"><span className="fb-chip-cat">Status</span>{val}<button onClick={() => setSelectedStatuses(prev => prev.filter(v => v !== val))}>×</button></span>))}
+                  {filters.search && (<span className="fb-chip"><span className="fb-chip-cat">Search</span>{filters.search}<button onClick={() => setFilters({ ...filters, search: '' })}>×</button></span>)}
                 </div>
-                <button
-                  className="fb-clear-all"
-                  onClick={() => { setSelectedTypes([]); setSelectedTeams([]); setSelectedStatuses([]); setFilters({ search: '' }); }}
-                >
-                  ✕ Clear All
-                </button>
+                <button className="fb-clear-all" onClick={() => { setSelectedTypes([]); setSelectedTeams([]); setSelectedStatuses([]); setFilters({ search: '' }); }}>✕ Clear All</button>
               </div>
             )}
           </div>
@@ -754,9 +659,7 @@ function Rotations() {
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px' }}>
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔍</div>
                 <h3 style={{ color: '#6b7280', marginBottom: '8px', fontSize: '18px' }}>No rotations found</h3>
-                <p style={{ color: '#9ca3af' }}>
-                  {isFiltersActive ? 'Try adjusting your filters' : 'Create your first rotation to get started'}
-                </p>
+                <p style={{ color: '#9ca3af' }}>{isFiltersActive ? 'Try adjusting your filters' : 'Create your first rotation to get started'}</p>
               </div>
             ) : (
               getFilteredRotations().map((rotation) => (
@@ -770,31 +673,19 @@ function Rotations() {
                       <div className="rotation-menu" onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === rotation.id ? null : rotation.id); }}>⋮</div>
                       {openMenuId === rotation.id && (
                         <div className="rotation-dropdown-menu">
-                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); handleToggleRotationStatus(rotation); }}>
-                            {rotation.is_active ? 'Deactivate Rotation' : 'Activate Rotation'}
-                          </button>
-                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); showToast("Edit coming soon!", "info"); setOpenMenuId(null); }}>
-                            Edit Rotation
-                          </button>
-                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); handleSaveAsTemplate(rotation); }}>
-                            Save as Template
-                          </button>
+                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); handleToggleRotationStatus(rotation); }}>{rotation.is_active ? 'Deactivate Rotation' : 'Activate Rotation'}</button>
+                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); showToast("Edit coming soon!", "info"); setOpenMenuId(null); }}>Edit Rotation</button>
+                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); handleSaveAsTemplate(rotation); }}>Save as Template</button>
                         </div>
                       )}
                     </div>
                   </div>
-
                   <div className="rotation-details">
-                    {rotation.group_name && (
-                      <div className="detail-row"><span className="detail-icon">🏢</span><span>{rotation.group_name}</span></div>
-                    )}
-                    {rotation.team_name && (
-                      <div className="detail-row"><span className="detail-icon">👥</span><span>{rotation.team_name}</span></div>
-                    )}
+                    {rotation.group_name && (<div className="detail-row"><span className="detail-icon">🏢</span><span>{rotation.group_name}</span></div>)}
+                    {rotation.team_name && (<div className="detail-row"><span className="detail-icon">👥</span><span>{rotation.team_name}</span></div>)}
                     <div className="detail-row">
                       <span className="detail-icon">📆</span>
-                      <span>
-                        Every {rotation.cadence_interval}{' '}
+                      <span>Every {rotation.cadence_interval}{' '}
                         {rotation.cadence_type === 'DAILY' ? (rotation.cadence_interval === 1 ? 'day' : 'days') :
                           rotation.cadence_type === 'WEEKLY' ? (rotation.cadence_interval === 1 ? 'week' : 'weeks') :
                             rotation.cadence_type === 'BI_WEEKLY' ? (rotation.cadence_interval === 1 ? 'bi-week' : 'bi-weeks') :
@@ -804,19 +695,12 @@ function Rotations() {
                     </div>
                     <div className="detail-row"><span className="detail-icon">👤</span><span>Min {rotation.min_assignees} assignee(s)</span></div>
                     <div className="detail-row">
-                      <span className={`status-badge ${rotation.is_active ? "status-active" : "status-inactive"}`}>
-                        {rotation.is_active ? "ACTIVE" : "INACTIVE"}
-                      </span>
+                      <span className={`status-badge ${rotation.is_active ? "status-active" : "status-inactive"}`}>{rotation.is_active ? "ACTIVE" : "INACTIVE"}</span>
                     </div>
                   </div>
-
                   <div className="rotation-actions">
-                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); showToast("View Details coming soon!", "info"); }}>
-                      View Details
-                    </button>
-                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleManageMembers(rotation); }}>
-                      Manage Members
-                    </button>
+                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); showToast("View Details coming soon!", "info"); }}>View Details</button>
+                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleManageMembers(rotation); }}>Manage Members</button>
                   </div>
                 </div>
               ))
@@ -834,11 +718,9 @@ function Rotations() {
               <p className="template-library-subtitle" style={{ fontSize: '14px', margin: '4px 0 0 0' }}>Save rotations and reuse them quickly</p>
             </div>
             <button className="primary-button" onClick={() => { setEditingTemplate(null); setTemplateForm({ name: '', rotation_type: '', cadence_type: '', cadence_interval: 1, min_assignees: 1, is_private: false }); setShowTemplateModal(true); }}>
-              <span className="btn-icon">＋</span>
-              New Template
+              <span className="btn-icon">＋</span>New Template
             </button>
           </div>
-
           {templatesLoading ? (
             <p style={{ color: '#6b7280', textAlign: 'center', paddingTop: '40px' }}>Loading templates...</p>
           ) : templates.length === 0 ? (
@@ -856,15 +738,12 @@ function Rotations() {
                       <div className="rotation-title">{template.name}</div>
                       <div className="rotation-type">{template.rotation_type} • {template.cadence_type}</div>
                     </div>
-                    {template.is_private && (
-                      <span style={{ fontSize: '11px', background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '999px', fontWeight: '500' }}>🔒 Private</span>
-                    )}
+                    {template.is_private && (<span style={{ fontSize: '11px', background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: '999px', fontWeight: '500' }}>🔒 Private</span>)}
                   </div>
                   <div className="rotation-details">
                     <div className="detail-row">
                       <span className="detail-icon">📆</span>
-                      <span>
-                        Every {template.cadence_interval}{' '}
+                      <span>Every {template.cadence_interval}{' '}
                         {template.cadence_type === 'DAILY' ? (template.cadence_interval === 1 ? 'day' : 'days') :
                           template.cadence_type === 'WEEKLY' ? (template.cadence_interval === 1 ? 'week' : 'weeks') :
                             template.cadence_type === 'BI_WEEKLY' ? (template.cadence_interval === 1 ? 'bi-week' : 'bi-weeks') :
@@ -877,9 +756,7 @@ function Rotations() {
                   <div className="rotation-actions">
                     <button className="action-btn" onClick={() => handleUseTemplate(template)}>▶ Use</button>
                     <button className="action-btn" onClick={() => handleOpenEditTemplate(template)}>✏️ Edit</button>
-                    <button className="action-btn" onClick={() => handleTogglePrivate(template)}>
-                      {template.is_private ? '🌐 Make Public' : '🔒 Make Private'}
-                    </button>
+                    <button className="action-btn" onClick={() => handleTogglePrivate(template)}>{template.is_private ? '🌐 Make Public' : '🔒 Make Private'}</button>
                     <button className="action-btn" style={{ color: '#ef4444' }} onClick={() => handleDeleteTemplate(template.id)}>🗑 Delete</button>
                   </div>
                 </div>
@@ -945,9 +822,7 @@ function Rotations() {
             </div>
             <div className="create-modal-footer">
               <button className="secondary-button" onClick={() => setShowModal(false)} disabled={isSubmitting}>Cancel</button>
-              <button className="primary-button" onClick={handleCreateRotation} disabled={isSubmitting}>
-                {isSubmitting ? 'Creating...' : 'Create Rotation'}
-              </button>
+              <button className="primary-button" onClick={handleCreateRotation} disabled={isSubmitting}>{isSubmitting ? 'Creating...' : 'Create Rotation'}</button>
             </div>
           </div>
         </div>
@@ -998,9 +873,7 @@ function Rotations() {
             </div>
             <div className="create-modal-footer">
               <button className="secondary-button" onClick={() => setShowTemplateModal(false)} disabled={isSubmitting}>Cancel</button>
-              <button className="primary-button" onClick={handleSubmitTemplate} disabled={isSubmitting}>
-                {isSubmitting ? 'Saving...' : editingTemplate ? 'Update Template' : 'Save Template'}
-              </button>
+              <button className="primary-button" onClick={handleSubmitTemplate} disabled={isSubmitting}>{isSubmitting ? 'Saving...' : editingTemplate ? 'Update Template' : 'Save Template'}</button>
             </div>
           </div>
         </div>
@@ -1037,26 +910,19 @@ function Rotations() {
                   </DndContext>
                 )}
               </div>
-
               <div className="add-members-area" style={{ display: 'flex', gap: '16px' }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 className="members-section-title">Add Members</h3>
                   <div className="member-mode-toggle">
-                    <button className={`mode-toggle-btn ${addMemberMode === "individual" ? "active" : ""}`} onClick={() => { setAddMemberMode("individual"); setSearchQuery(""); setTeamPreviewMembers([]); }}>
-                      👤 Add Individuals
-                    </button>
-                    <button className={`mode-toggle-btn ${addMemberMode === "team" ? "active" : ""}`} onClick={() => { setAddMemberMode("team"); setSearchQuery(""); setTeamPreviewMembers([]); }}>
-                      👥 Add Entire Team
-                    </button>
+                    <button className={`mode-toggle-btn ${addMemberMode === "individual" ? "active" : ""}`} onClick={() => { setAddMemberMode("individual"); setSearchQuery(""); setTeamPreviewMembers([]); }}>👤 Add Individuals</button>
+                    <button className={`mode-toggle-btn ${addMemberMode === "team" ? "active" : ""}`} onClick={() => { setAddMemberMode("team"); setSearchQuery(""); setTeamPreviewMembers([]); }}>👥 Add Entire Team</button>
                   </div>
                   <div className="member-search-wrapper">
                     <input type="text" placeholder={addMemberMode === "individual" ? "Search users..." : "Search teams..."} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="member-search-input" />
                   </div>
                   <div className="member-selection-list">
                     {addMemberMode === "individual" ? (
-                      filteredUsers.length === 0 ? (
-                        <p className="no-members-text">No users available</p>
-                      ) : (
+                      filteredUsers.length === 0 ? (<p className="no-members-text">No users available</p>) : (
                         filteredUsers.map(user => (
                           <div key={user.id} className={`member-select-item ${selectedUsers.includes(user.id) ? "selected" : ""}`} onClick={() => toggleUserSelection(user.id)}>
                             <input type="checkbox" checked={selectedUsers.includes(user.id)} onChange={() => {}} className="member-select-checkbox" />
@@ -1069,9 +935,7 @@ function Rotations() {
                         ))
                       )
                     ) : (
-                      filteredTeams.length === 0 ? (
-                        <p className="no-members-text">No teams available</p>
-                      ) : (
+                      filteredTeams.length === 0 ? (<p className="no-members-text">No teams available</p>) : (
                         filteredTeams.map(team => (
                           <div key={team.id} className={`member-select-item ${selectedTeam === team.id ? "selected" : ""}`} onClick={() => setSelectedTeam(selectedTeam === team.id ? "" : team.id)}>
                             <input type="radio" name="team" checked={selectedTeam === team.id} onChange={() => {}} className="member-select-radio" />
@@ -1084,15 +948,10 @@ function Rotations() {
                       )
                     )}
                   </div>
-                  <button
-                    className="add-members-btn"
-                    onClick={handleAddMembers}
-                    disabled={(addMemberMode === "individual" && selectedUsers.length === 0) || (addMemberMode === "team" && !selectedTeam)}
-                  >
+                  <button className="add-members-btn" onClick={handleAddMembers} disabled={(addMemberMode === "individual" && selectedUsers.length === 0) || (addMemberMode === "team" && !selectedTeam)}>
                     {addMemberMode === "individual" ? `Add ${selectedUsers.length} Member${selectedUsers.length !== 1 ? "s" : ""}` : "Add Team"}
                   </button>
                 </div>
-
                 {addMemberMode === "team" && (
                   <div style={{ width: '260px', flexShrink: 0, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '380px', overflowY: 'auto' }}>
                     <div style={{ fontWeight: '600', fontSize: '14px', color: '#374151', marginBottom: '4px' }}>
@@ -1107,16 +966,10 @@ function Rotations() {
                     ) : (
                       teamPreviewMembers.map(member => (
                         <div key={member.user_id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', background: 'white', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
-                          <div className="member-avatar-circle" style={{ flexShrink: 0, fontSize: '12px', width: '32px', height: '32px' }}>
-                            {member.first_name?.[0]}{member.last_name?.[0]}
-                          </div>
+                          <div className="member-avatar-circle" style={{ flexShrink: 0, fontSize: '12px', width: '32px', height: '32px' }}>{member.first_name?.[0]}{member.last_name?.[0]}</div>
                           <div style={{ minWidth: 0 }}>
-                            <div style={{ fontSize: '13px', fontWeight: '500', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {member.first_name} {member.last_name}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                              {member.role_name || member.email}
-                            </div>
+                            <div style={{ fontSize: '13px', fontWeight: '500', color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.first_name} {member.last_name}</div>
+                            <div style={{ fontSize: '11px', color: '#6b7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.role_name || member.email}</div>
                           </div>
                         </div>
                       ))
@@ -1132,15 +985,10 @@ function Rotations() {
         </div>
       )}
 
-      {/* Confirm and Toast rendered last so they sit on top of everything */}
+      {/* Confirm dialog stays local */}
       <ConfirmDialog confirm={confirm} onConfirm={handleConfirm} onCancel={handleCancel} />
-      {createPortal(
-      <Toast toasts={toasts} removeToast={removeToast} />,
-      document.body
-      )}
 
     </div>
-    
   );
 }
 
