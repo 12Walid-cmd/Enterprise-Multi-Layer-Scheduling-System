@@ -631,7 +631,7 @@ function Rotations() {
                 </button>
                 {statusDropOpen && (
                   <div className="fb-drop-panel">
-                    {[{ val: 'Active', label: '✅ Active' }, { val: 'Inactive', label: '⭕ Inactive' }].map(s => (
+                    {[{ val: 'Active', label: 'Active' }, { val: 'Inactive', label: 'Inactive' }].map(s => (
                       <label key={s.val} className="fb-option">
                         <input type="checkbox" checked={selectedStatuses.includes(s.val)} onChange={() => setSelectedStatuses(prev => prev.includes(s.val) ? prev.filter(v => v !== s.val) : [...prev, s.val])} />
                         <span>{s.label}</span>

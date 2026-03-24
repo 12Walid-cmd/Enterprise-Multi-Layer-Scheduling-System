@@ -430,7 +430,7 @@ function Members() {
               </button>
               {statusDropOpen && (
                 <div className="fb-drop-panel">
-                  {[{ val:"true", label:"✅ Active" }, { val:"false", label:"⭕ Inactive" }].map(s => (
+                  {[{ val:"true", label:"Active" }, { val:"false", label:"Inactive" }].map(s => (
                     <label key={s.val} className="fb-option">
                       <input
                         type="checkbox"

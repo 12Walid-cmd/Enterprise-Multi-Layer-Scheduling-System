@@ -124,6 +124,8 @@
   flex-direction: column;
   gap: 0;
   animation: fadeInUp 0.5s ease 0.05s both;
+  position: relative;  
+  z-index: 200;     
 }
 
 .fb-top-row {
@@ -177,7 +179,7 @@
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
   min-width: 100%; background: #fff;
   border: 1px solid var(--gray-200); border-radius: 10px;
-  box-shadow: 0 8px 28px rgba(82,54,171,0.13); z-index: 300;
+  box-shadow: 0 8px 28px rgba(82,54,171,0.13); z-index: 9999;
   padding: 6px; max-height: 220px; overflow-y: auto;
   animation: dropFadeIn 0.15s ease;
 }
