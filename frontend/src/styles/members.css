@@ -28,21 +28,17 @@
   font-family: 'DM Sans', -apple-system, sans-serif;
 }
 
-/* ── Page Header ─────────────────────────────────────── */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   margin-bottom: 32px;
 }
 
 .page-title-section { display: flex; flex-direction: column; }
 
 .page-title {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 32px;
-  font-weight: 700 !important;
-  color: #ffffff;
   margin: 0 0 6px;
   letter-spacing: -0.5px;
 }
@@ -52,16 +48,19 @@
   font-size: 14px;
   color: rgba(255,255,255,0.72) !important;
   margin: 0;
+  color: #f3f4f6;
+  font-size: 14px;
 }
 
-/* ── Add Member Button ───────────────────────────────── */
 .add-employee-btn {
   background: #ffffff;
   color: var(--cgi-purple);
   border: none;
   padding: 12px 24px;
+  border: none;
   border-radius: 8px;
-  font-family: 'DM Sans', sans-serif;
+  background: #ffffff;
+  color: #c81e3a;
   font-size: 14px;
   font-weight: 700;
   display: flex;
@@ -75,7 +74,6 @@
 
 .btn-icon { font-size: 16px; font-weight: 700; }
 
-/* ── Stats Row ───────────────────────────────────────── */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -95,7 +93,8 @@
 .stat-card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.18); }
 
 .stat-label {
-  font-family: 'DM Sans', sans-serif;
+  margin-bottom: 10px;
+  color: #111827;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
@@ -105,7 +104,6 @@
 }
 
 .stat-value {
-  font-family: 'DM Sans', sans-serif;
   font-size: 42px;
   font-weight: 700;
   color: #ffffff;

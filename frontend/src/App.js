@@ -1,5 +1,5 @@
-import React from "react";
-import { BrowserRouter } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter, useLocation, useNavigate } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import AppRoutes from "./routes/AppRoutes";
 import { ToastProvider } from "./context/ToastContext";
