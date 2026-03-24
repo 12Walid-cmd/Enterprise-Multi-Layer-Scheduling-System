@@ -1,47 +1,59 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
 import { DomainsService } from './domains.service';
+import { CreateDomainDto } from './dto/create-domain.dto';
+import { UpdateDomainDto } from './dto/update-domain.dto';
+import { AddTeamToDomainDto } from './dto/add-team-to-domain.dto';
+import { AddUserToDomainTeamDto } from './dto/add-user-to-domain-team.dto';
+import { DomainUserDto } from './dto/domain-user.dto';
 
 @Controller('domains')
 export class DomainsController {
-  constructor(private readonly domainsService: DomainsService) {}
+  constructor(private readonly domainService: DomainsService) { }
 
-  // Get all domains
-  @Get()
-  async findAll() {
-    return this.domainsService.findAll();
-  }
-
-  // Get one domain by id
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.domainsService.findOne(id);
-  }
-
-  // Create a new domain
   @Post()
-  async create(
-    @Body()
-    body: {
-      name: string;
-      description?: string;
-      exclusive?: boolean;
-    },
-  ) {
-    return this.domainsService.create(body);
+  create(@Body() dto: CreateDomainDto) {
+    return this.domainService.create(dto);
   }
 
-  // Update an existing domain
+  @Get()
+  findAll() {
+    return this.domainService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.domainService.findOne(id);
+  }
+
   @Patch(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() body: any,
-  ) {
-    return this.domainsService.update(id, body);
+  update(@Param('id') id: string, @Body() dto: UpdateDomainDto) {
+    return this.domainService.update(id, dto);
   }
 
-  // Delete a domain
   @Delete(':id')
-  async delete(@Param('id') id: string) {
-    return this.domainsService.delete(id);
+  remove(@Param('id') id: string) {
+    return this.domainService.remove(id);
   }
+
+  @Post(':domainId/users')
+  addUserToDomain(
+    @Param('domainId') domainId: string,
+    @Body() dto: { user_id: string }
+  ) {
+    return this.domainService.addUserToDomain(domainId, dto.user_id);
+  }
+
+  @Delete(':domainId/users/:userId')
+  removeUserFromDomain(
+    @Param('domainId') domainId: string,
+    @Param('userId') userId: string
+  ) {
+    return this.domainService.removeUserFromDomain(domainId, userId);
+  }
+
+  @Get(':domainId/users')
+  getUsers(@Param('domainId') domainId: string): Promise<DomainUserDto[]> {
+    return this.domainService.getUsers(domainId);
+  }
+
 }

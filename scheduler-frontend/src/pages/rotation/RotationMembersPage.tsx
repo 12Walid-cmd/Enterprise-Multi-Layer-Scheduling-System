@@ -9,13 +9,18 @@ import {
   Typography,
 } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
+
 import { useNavigate, useParams } from "react-router-dom";
 
-import type { RotationMember } from "../../types/rotation";
-import { RotationAPI } from "../../api";
-
+import { RotationAPI, UsersAPI } from "../../api";
+import type { RotationDefinition, RotationMember } from "../../types/rotation";
+type RotationMemberWithUser = RotationMember & {
+  user_name?: string;
+  user_email?: string;
+};
 // dnd-kit
 import {
   DndContext,
@@ -31,17 +36,20 @@ import {
 } from "@dnd-kit/sortable";
 
 import SortableMemberRow from "./components/SortableMemberRow";
-import AddMemberDialog from "./components/AddMemberDialog";
+import AddMemberDialog from "./components/member/AddMemberDialog";
+import EditMemberDialog from "./components/member/EditMemberDialog";
 
 export default function RotationMembersPage() {
   const navigate = useNavigate();
   const { id } = useParams();
 
-  const [members, setMembers] = useState<RotationMember[]>([]);
+  const [rotation, setRotation] = useState<RotationDefinition | null>(null);
+const [members, setMembers] = useState<RotationMemberWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [editMember, setEditMember] = useState<RotationMemberWithUser | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -49,26 +57,46 @@ export default function RotationMembersPage() {
     })
   );
 
-  const fetchMembers = async () => {
+  const loadData = async () => {
     try {
       if (!id) return;
       setLoading(true);
-      const res = await RotationAPI.getMembers(id);
-      setMembers(res);
+      setError(null);
+
+      const [rotationData, memberData, allUsers] = await Promise.all([
+        RotationAPI.getOne(id),
+        RotationAPI.getMembers(id),
+        UsersAPI.getAll(),   
+      ]);
+      
+      const membersWithUserInfo = memberData.map((m) => {
+        let user = null;
+        if (m.member_type === "USER") {
+          user = allUsers.find((u) => u.id === m.member_ref_id);
+        }
+        return {
+          ...m,
+          user_name: user ? `${user.first_name} ${user.last_name}` : "Unknown User",
+          user_email: user?.email ?? "",
+        };
+      });
+
+      setRotation(rotationData);
+      setMembers(membersWithUserInfo);
     } catch (err: any) {
-      setError(err?.message ?? "Failed to load members");
+      setError(err?.message ?? "Failed to load rotation members");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMembers();
+    loadData();
   }, [id]);
 
   const handleDelete = async (memberId: string) => {
     await RotationAPI.removeMember(memberId);
-    fetchMembers();
+    loadData();
   };
 
   const handleDragEnd = async (event: any) => {
@@ -100,11 +128,13 @@ export default function RotationMembersPage() {
     );
   }
 
-  if (error) {
+  if (error || !rotation) {
     return (
-      <Typography color="error" textAlign="center" mt={3}>
-        {error}
-      </Typography>
+      <Box p={3}>
+        <Typography color="error" textAlign="center" mt={3}>
+          {error ?? "Rotation not found"}
+        </Typography>
+      </Box>
     );
   }
 
@@ -112,11 +142,15 @@ export default function RotationMembersPage() {
     <Box p={3}>
       {/* Header */}
       <Stack direction="row" alignItems="center" spacing={2} mb={3}>
-        <IconButton onClick={() => navigate(-1)}>
-          <ArrowBackIcon />
-        </IconButton>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate(`/rotations/${rotation.id}`)}
+        >
+          Back
+        </Button>
+
         <Typography variant="h5" fontWeight={600}>
-          Rotation Members
+          Rotation Members — {rotation.name}
         </Typography>
 
         <Box flexGrow={1} />
@@ -158,16 +192,33 @@ export default function RotationMembersPage() {
                         backgroundColor: "#fafafa",
                       }}
                     >
-                      <Typography>
-                        {m.member_type}: {m.member_ref_id}
-                      </Typography>
+                      <Box>
+                        <Typography fontWeight={500}>
+                          {m.display_name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {m.member_type} — {m.user_name} ({m.user_email})
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Weight: {m.weight} — {m.is_active ? "Active" : "Inactive"}
+                        </Typography>
+                      </Box>
 
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDelete(m.id)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <Stack direction="row" spacing={1}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setEditMember(m)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+
+                        <IconButton
+                          color="error"
+                          onClick={() => handleDelete(m.id)}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Stack>
                     </Box>
                   </SortableMemberRow>
                 ))}
@@ -181,9 +232,18 @@ export default function RotationMembersPage() {
       <AddMemberDialog
         open={openAddDialog}
         onClose={() => setOpenAddDialog(false)}
-        rotationId={id!}
-        onAdded={fetchMembers}
+        rotation={rotation}
+        onAdded={loadData}
       />
+
+      {/* Edit Member Dialog */}
+      {editMember && (
+        <EditMemberDialog
+          member={editMember}
+          onClose={() => setEditMember(null)}
+          onSaved={loadData}
+        />
+      )}
     </Box>
   );
 }

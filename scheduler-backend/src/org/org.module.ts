@@ -29,8 +29,8 @@ import { UserRolesController } from './roles/user-roles.controller';
 import { UserRolesService } from './roles/user-roles.service';
 
 // Sub-teams
-import { SubTeamController } from './sub-teams/sub-team.controller';
-import { SubTeamService } from './sub-teams/sub-team.service';
+import { SubTeamController } from './teams/sub-team.controller';
+import { SubTeamService } from './teams/sub-team.service';
 
 // Sub-team Members
 import { SubTeamMembersController } from './members/sub-team-members.controller';
@@ -39,9 +39,9 @@ import { SubTeamMembersService } from './members/sub-team-members.service';
 
 
 import { DomainsService } from './domains/domains.service';
-import { DomainTeamsService } from './domain-teams/domain-teams.service';
+import { DomainTeamsService } from './domains/domain-teams.service';
 import { DomainsController } from './domains/domains.controller';
-import { DomainTeamsController } from './domain-teams/domain-teams.controller';
+import { DomainTeamsController } from './domains/domain-teams.controller';
 
 @Module({
   imports: [PrismaModule],
@@ -60,6 +60,7 @@ import { DomainTeamsController } from './domain-teams/domain-teams.controller';
   ],
   providers: [
     PrismaService,
+    OrgService,
     GroupsService,
     TeamsService,
     MembersService,

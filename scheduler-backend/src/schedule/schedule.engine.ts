@@ -3,10 +3,11 @@
 import { Injectable } from '@nestjs/common';
 import { LoadedRotation, DailyAssignment, ScheduleContext } from './schedule.types';
 import { ConstraintPipeline } from './schedule.constraint.pipeline';
+import { RuleEngineService } from './rule.engine.service';
 
 @Injectable()
 export class ScheduleEngine {
-  constructor(private readonly pipeline: ConstraintPipeline) {}
+  constructor(private readonly pipeline: ConstraintPipeline) { }
 
   /**
    * Generate schedule for a rotation between startDate and endDate.
@@ -17,12 +18,32 @@ export class ScheduleEngine {
     startDate: Date,
     endDate: Date,
   ): Promise<DailyAssignment[]> {
+    const ruleEngine = new RuleEngineService(rotation.rules);
+    context.ruleEngine = ruleEngine;
     const assignments: DailyAssignment[] = [];
 
     const cur = new Date(startDate);
 
     while (cur <= endDate) {
       const date = new Date(cur);
+
+      // SKIP_WEEKENDS
+      if (ruleEngine.has("SKIP_WEEKENDS") && (date.getDay() === 0 || date.getDay() === 6)) {
+        cur.setDate(cur.getDate() + 1);
+        continue;
+      }
+
+      // SKIP_HOLIDAYS
+      if (ruleEngine.has("SKIP_HOLIDAYS") &&
+        context.holidays.some(h => h.toDateString() === date.toDateString())) {
+        cur.setDate(cur.getDate() + 1);
+        continue;
+      }
+      // // forever skip holidays (scope-level)
+      // if (context.holidays.some(h => h.toDateString() === date.toDateString())) {
+      //   cur.setDate(cur.getDate() + 1);
+      //   continue;
+      // }
 
       // skip before effectiveDate
       if (date < rotation.effectiveDate) {
@@ -36,17 +57,9 @@ export class ScheduleEngine {
         continue;
       }
 
-      // skip holidays (scope-level)
-      if (context.holidays.some(h => h.toDateString() === date.toDateString())) {
-        cur.setDate(cur.getDate() + 1);
-        continue;
-      }
-
       // generate assignments for this day
       const dayAssignments = await this.assignForDay(rotation, context, date, assignments);
-
       assignments.push(...dayAssignments);
-
       cur.setDate(cur.getDate() + 1);
     }
 
@@ -91,28 +104,50 @@ export class ScheduleEngine {
     date: Date,
     allAssignments: DailyAssignment[],
   ): Promise<DailyAssignment[]> {
-    const results: DailyAssignment[] = [];
+    const ruleEngine = context.ruleEngine!;
+    let pool = this.expandWeightedPool(members);
 
-    // Weighted RR: expand members by weight
-    const weightedPool = this.expandWeightedPool(members);
+    // SKIP_INACTIVE
+    if (ruleEngine.has("SKIP_INACTIVE")) {
+      pool = pool.filter(m => m.isActive);
+    }
+
+    // SEQUENTIAL
+    if (ruleEngine.has("SEQUENTIAL")) {
+      pool.sort((a, b) => a.orderIndex - b.orderIndex);
+    }
+
+    // RANDOMIZED
+    if (ruleEngine.has("RANDOMIZED")) {
+      pool = shuffle(pool);
+    }
+
+    // ROUND_ROBIN
+    if (ruleEngine.has("ROUND_ROBIN")) {
+      context.lastAssigned ??= {};
+      context.lastAssigned[rotation.id] ??= {};
+      context.lastAssigned[rotation.id][tierLevel] ??= 0;
+
+      const last = context.lastAssigned[rotation.id][tierLevel];
+      pool = rotate(pool, last);
+      context.lastAssigned[rotation.id][tierLevel] = last + 1;
+
+    }
+
+
+    const min = ruleEngine.payload("MIN_STAFF")?.min ?? rotation.minAssignees;
+    const max = ruleEngine.payload("MAX_STAFF")?.max ?? rotation.maxAssignees;
+    const results: DailyAssignment[] = [];
 
     let assignedCount = 0;
 
-    for (const member of weightedPool) {
-      if (assignedCount >= rotation.maxAssignees) break;
+    for (const member of pool) {
+      if (assignedCount >= max) break;
 
       const userId = await this.resolveUser(member);
-
       if (!userId) continue;
 
-      const ok = this.pipeline.validate(
-        userId,
-        date,
-        rotation,
-        context,
-        allAssignments,
-      );
-
+      const ok = this.pipeline.validate(userId, date, rotation, context, allAssignments);
       if (!ok) continue;
 
       results.push({
@@ -124,7 +159,7 @@ export class ScheduleEngine {
 
       assignedCount++;
 
-      if (assignedCount >= rotation.minAssignees) break;
+      if (assignedCount >= min) break;
     }
 
     return results;
@@ -135,7 +170,6 @@ export class ScheduleEngine {
    */
   private expandWeightedPool(members: any[]): any[] {
     const pool: any[] = [];
-
     for (const m of members) {
       for (let i = 0; i < m.weight; i++) {
         pool.push(m);
@@ -197,4 +231,18 @@ export class ScheduleEngine {
     // TODO: implement with prisma.team_members
     return null;
   }
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  return arr
+    .map(v => ({ v, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ v }) => v);
+}
+
+function rotate<T>(arr: T[], n: number): T[] {
+  const len = arr.length;
+  if (len === 0) return arr;
+  const shift = n % len;
+  return [...arr.slice(shift), ...arr.slice(0, shift)];
 }

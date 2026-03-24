@@ -6,6 +6,7 @@ import {
   RotationCadence,
   RotationMemberType,
 } from '@prisma/client';
+import { RuleEngineService } from './rule.engine.service';
 
 export {
   RotationType,
@@ -20,8 +21,8 @@ export {
  * - Could be: user / team / subteam / domain-team / global-role / team-role
  */
 export interface RotationTierMember {
-  id: string; // user_id OR team_id OR domain_team_id OR global_role_id OR team_role_id
-  type: RotationMemberType;
+  id: string;          // user_id
+  type: string;        // USER / TEAM / ROLE
   weight: number;
   orderIndex: number;
   isActive: boolean;
@@ -36,6 +37,13 @@ export interface RotationTier {
   members: RotationTierMember[];
 }
 
+
+export interface LoadedRotationRule {
+  id: string;
+  type: string;     // RotationRuleType
+  payload: any;     // rule_payload
+  enabled?: boolean;
+}
 /**
  * LoadedRotation
  * - Fully expanded rotation definition loaded from DB
@@ -68,6 +76,8 @@ export interface LoadedRotation {
   ownerId: string | null;
 
   tiers: RotationTier[];
+  rules: LoadedRotationRule[];
+
 }
 
 /**
@@ -88,6 +98,8 @@ export interface ScheduleContext {
   holidays: Date[]; // scope-level holidays (global + group + team + subteam + domain + domain-team + role)
   leaveByUserId: Map<string, Date[]>; // user leave
   userHolidayMap: Map<string, Date[]>; // user-level holidays (derived from org structure)
+  lastAssigned: Record<string, Record<number, number>>; // rotationId -> tierLevel -> last assigned index in that tier (for round-robin)
+  ruleEngine?: RuleEngineService; // add ruleEngine to context,use ConstraintPipeline to inject it into constraints
 }
 
 /**
@@ -105,3 +117,5 @@ export interface Constraint {
     currentAssignments: DailyAssignment[],
   ): boolean;
 }
+
+export const CONSTRAINTS = 'CONSTRAINTS';

@@ -1,4 +1,12 @@
-import { Box, Typography, Paper, Stack, Tooltip } from '@mui/material';
+import {
+  Box,
+  Paper,
+  Typography,
+  Stack,
+  Tooltip,
+  useTheme,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
 import type { TimelineItem } from '../../../types/schedule';
 
 interface Props {
@@ -6,32 +14,90 @@ interface Props {
   onItemClick?: (item: TimelineItem) => void;
 }
 
+const tierColors: Record<number, string> = {
+  1: '#4FC3F7',
+  2: '#7C4DFF',
+  3: '#FFB300',
+};
+
+const Bar = styled('div')({
+  position: 'absolute',
+  height: '100%',
+  borderRadius: 6,
+  cursor: 'pointer',
+  transition: 'all 0.15s ease',
+  '&:hover': {
+    filter: 'brightness(1.15)',
+    transform: 'scale(1.02)',
+  },
+});
+
 export default function TimelineView({ items, onItemClick }: Props) {
+  const theme = useTheme();
+
   const grouped = groupByUser(items);
 
-  const allDates = items.flatMap((i) => [new Date(i.start), new Date(i.end)]);
+  const allDates = items.flatMap((i) => [
+    new Date(i.start),
+    new Date(i.end),
+  ]);
+
   const minDate = new Date(Math.min(...allDates.map((d) => d.getTime())));
   const maxDate = new Date(Math.max(...allDates.map((d) => d.getTime())));
   const totalDays = diffDays(minDate, maxDate);
 
+  const today = stripTime(new Date());
+  const todayOffset = diffDays(minDate, today);
+
   return (
     <Box sx={{ width: '100%', height: '100%', overflowY: 'auto' }}>
-      <Stack spacing={2}>
+      <Stack spacing={3}>
+        {/* Header */}
+        <Box>
+          <Typography variant="subtitle1" color="text.secondary">
+            Date Range: {formatDate(minDate)} – {formatDate(maxDate)}
+          </Typography>
+        </Box>
+
         {Object.entries(grouped).map(([userId, userItems]) => (
           <Paper
             key={userId}
             sx={{
-              p: 1.5,
-              bgcolor: '#111',
-              border: '1px solid #333',
-              borderRadius: 2,
+              p: 2,
+              bgcolor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: 3,
             }}
           >
-            <Typography variant="subtitle1" mb={1}>
-              {userId}
+            <Typography variant="subtitle1" mb={1} fontWeight={600}>
+              {userItems[0].userName}
             </Typography>
 
-            <Box sx={{ position: 'relative', height: 32, bgcolor: '#222', borderRadius: 1 }}>
+            <Box
+              sx={{
+                position: 'relative',
+                height: 36,
+                bgcolor: theme.palette.action.hover,
+                borderRadius: 2,
+                overflow: 'hidden',
+              }}
+            >
+              {/* Today marker */}
+              {todayOffset >= 0 && todayOffset <= totalDays && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    left: `${(todayOffset / totalDays) * 100}%`,
+                    top: 0,
+                    bottom: 0,
+                    width: '2px',
+                    bgcolor: theme.palette.error.main,
+                    opacity: 0.8,
+                  }}
+                />
+              )}
+
+              {/* Bars */}
               {userItems.map((item, idx) => {
                 const start = new Date(item.start);
                 const end = new Date(item.end);
@@ -48,33 +114,44 @@ export default function TimelineView({ items, onItemClick }: Props) {
                 return (
                   <Tooltip
                     key={idx}
+                    arrow
+                    placement="top"
                     title={
-                      <Box>
-                        <Typography variant="body2">
-                          {start.toISOString().slice(0, 10)} → {end.toISOString().slice(0, 10)}
+                      <Box p={1}>
+                        <Typography variant="subtitle2" fontWeight={600}>
+                          {formatDate(start)} – {formatDate(end)}
                         </Typography>
+
+                        <Typography variant="body2">
+                          Tier Level: {item.tier}
+                        </Typography>
+
                         {hasConflict && (
-                          <Typography color="error">冲突: {item.conflictFlags.join(', ')}</Typography>
+                          <Typography variant="body2" color="error">
+                            Conflicts: {item.conflictFlags.join(', ')}
+                          </Typography>
                         )}
+
                         {hasViolation && (
-                          <Typography color="warning.main">
-                            违规: {item.ruleViolations.join(', ')}
+                          <Typography variant="body2" color="warning.main">
+                            Rule Violations: {item.ruleViolations.join(', ')}
                           </Typography>
                         )}
                       </Box>
                     }
                   >
-                    <Box
+                    <Bar
                       onClick={() => onItemClick?.(item)}
-                      sx={{
-                        position: 'absolute',
+                      style={{
                         left: `${leftPercent}%`,
                         width: `${widthPercent}%`,
-                        height: '100%',
-                        bgcolor: hasConflict ? '#ff5252' : '#1976d2',
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        border: hasViolation ? '2px dashed yellow' : 'none',
+                        backgroundColor: tierColors[item.tier] ?? '#555',
+                        border: hasViolation
+                          ? `2px dashed ${theme.palette.warning.main}`
+                          : 'none',
+                        boxShadow: hasConflict
+                          ? `0 0 8px ${theme.palette.error.main}`
+                          : `0 0 4px ${theme.palette.action.disabled}`,
                       }}
                     />
                   </Tooltip>
@@ -88,6 +165,8 @@ export default function TimelineView({ items, onItemClick }: Props) {
   );
 }
 
+/* ----------------- utils ----------------- */
+
 function groupByUser(items: TimelineItem[]) {
   const map: Record<string, TimelineItem[]> = {};
   for (const item of items) {
@@ -98,6 +177,14 @@ function groupByUser(items: TimelineItem[]) {
 }
 
 function diffDays(a: Date, b: Date) {
-  const ms = Math.abs(a.getTime() - b.getTime());
+  const ms = Math.abs(stripTime(a).getTime() - stripTime(b).getTime());
   return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
+function stripTime(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function formatDate(d: Date) {
+  return d.toISOString().slice(0, 10);
 }

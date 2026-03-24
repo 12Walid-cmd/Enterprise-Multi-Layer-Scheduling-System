@@ -38,6 +38,22 @@ import EditSubTeamPage from "./pages/org/sub-teams/EditSubTeamPage";
 import SubTeamDetail from "./pages/org/sub-teams/SubTeamDetail";
 import CreateSubTeamPage from "./pages/org/sub-teams/CreateSubTeamPage";
 
+// Domains
+import DomainList from "./pages/org/domains/DomainList";
+import DomainDetailPage from "./pages/org/domains/DomainDetailPage";
+import EditDomainPage from "./pages/org/domains/EditDomainPage";
+import CreateDomainPage from "./pages/org/domains/CreateDomainPage";
+
+// Domain-Team
+import DomainTeamDetail from "./pages/org/domain-teams/DomainTeamDetail";
+// import AddUserToDomainTeamPage from "./pages/org/domain-teams/AddUserToDomainPage";
+import AddUserToDomainPage from "./pages/org/domains/AddUserToDomainPage";
+import AddTeamToDomainPage from "./pages/org/domains/AddTeamToDomainPage";
+// inport EditDomainTeamPage from "./pages/org/domain-teams/EditDomainTeamPage";
+import CreateDomainTeamPage from "./pages/org/domain-teams/CreateDomainTeamPage";
+import DomainTeamList from "./pages/org/domain-teams/DomainTeamsList";
+
+
 
 
 // Rotations
@@ -46,10 +62,15 @@ import CreateRotationPage from "./pages/rotation/CreateRotationPage";
 import RotationDetail from "./pages/rotation/RotationDetail";
 import EditRotationPage from "./pages/rotation/EditRotationPage";
 import RotationMembersPage from "./pages/rotation/RotationMembersPage";
+import RotationTiersPage from "./pages/rotation/RotationTiersPage";
+
 
 // Schedule
 import ScheduleListPage from "./pages/schedule/ScheduleListPage";
 import SchedulePage from "./pages/schedule/SchedulePage";
+import RotationRulesPage from "./pages/rotation/RotationRulesPage";
+
+
 
 const SubTeamListWrapper = () => {
   const { teamId } = useParams();
@@ -85,7 +106,19 @@ export const router = createBrowserRouter([
           { path: ":teamId/sub-teams/create", element: <CreateSubTeamPage /> },
         ],
       },
+      // Domains
+      { path: "domains", element: <DomainList /> },
+      { path: "domains/create", element: <CreateDomainPage /> },
+      { path: "domains/:id", element: <DomainDetailPage /> },
+      { path: "domains/:id/edit", element: <EditDomainPage /> },
 
+      // Domain-Team
+      { path: "domains/:id/teams", element: <DomainTeamList /> },
+      { path: "domains/:id/teams/create", element: <CreateDomainTeamPage /> },
+      { path: "domains/:id/teams/:teamId", element: <DomainTeamDetail /> },
+      // { path: "domains/:id/teams/:teamId/edit", element: <EditDomainTeamPage /> },
+      { path: "domains/:domainId/add-user", element: <AddUserToDomainPage /> },
+      { path: "domains/:id/add-team", element: <AddTeamToDomainPage /> },
 
 
       // Team Role Types
@@ -115,6 +148,10 @@ export const router = createBrowserRouter([
 
       // Rotation Members
       { path: "rotations/:id/members", element: <RotationMembersPage /> },
+      // Rotation Tiers
+      { path: "rotations/:id/tiers", element: <RotationTiersPage /> },
+      // Rotation Rules
+      { path: "rotations/:id/rules", element: <RotationRulesPage /> },
 
       // Schedule
       { path: '/schedule', element: <ScheduleListPage /> },

@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Box, Typography, Paper, List, ListItemButton, ListItemText } from '@mui/material';
-import { getRotations } from '../../api/rotation/rotations.api';
-import type { Rotation } from '../../types/rotation';
+import { RotationAPI } from '../../api';
+import type { RotationDefinition } from '../../types/rotation';
 import { Link } from 'react-router-dom';
 
 export default function ScheduleListPage() {
-  const [rotations, setRotations] = useState<Rotation[]>([]);
+  const [rotations, setRotations] = useState<RotationDefinition[]>([]);
 
   useEffect(() => {
-    getRotations().then(setRotations);
+    RotationAPI.getAll().then(setRotations);
   }, []);
 
   return (
     <Box p={3}>
       <Typography variant="h4" mb={2}>
-        排班视图
+        Schedule Overview
       </Typography>
 
       <Paper sx={{ p: 2 }}>
@@ -25,7 +25,7 @@ export default function ScheduleListPage() {
               component={Link}
               to={`/schedule/${r.id}`}
             >
-              <ListItemText primary={r.name} />
+              <ListItemText primary={r.name} secondary={`Rotation ID: ${r.id}`} />
             </ListItemButton>
           ))}
         </List>

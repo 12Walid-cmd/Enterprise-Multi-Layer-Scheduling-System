@@ -17,6 +17,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { RotationAPI, UsersAPI } from "../../api";
 import type { RotationDefinition } from "../../types/rotation";
 import ScopeSelector from "./components/ScopeSelector";
+import { Controller } from "react-hook-form";
+
+
 
 const ROTATION_TYPES = ["TEAM", "SUBTEAM", "ROLE", "DOMAIN", "CROSS_TEAM"] as const;
 const CADENCE_TYPES = ["DAILY", "WEEKLY", "BIWEEKLY", "CUSTOM"] as const;
@@ -55,6 +58,7 @@ export default function EditRotationPage() {
         watch,
         reset,
         setValue,
+        control,
         formState: { errors, isSubmitting },
     } = useForm<EditRotationForm>();
 
@@ -87,6 +91,7 @@ export default function EditRotationPage() {
             end_date: data.end_date ? data.end_date.substring(0, 10) : null,
 
         });
+
 
         setLoading(false);
     };
@@ -145,36 +150,30 @@ export default function EditRotationPage() {
                         /> */}
 
                         {/* Rotation Type */}
-                        <TextField
-                            select
-                            label="Rotation Type"
-                            fullWidth
-                            {...register("type", { required: "Type is required" })}
-                            error={!!errors.type}
-                            helperText={errors.type?.message}
-                        >
-                            {ROTATION_TYPES.map((t) => (
-                                <MenuItem key={t} value={t}>
-                                    {t}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        <Controller
+                            name="type"
+                            control={control}
+                            render={({ field }) => (
+                                <TextField select label="Rotation Type" fullWidth {...field}>
+                                    {ROTATION_TYPES.map((t) => (
+                                        <MenuItem key={t} value={t}>{t}</MenuItem>
+                                    ))}
+                                </TextField>
+                            )}
+                        />
 
                         {/* Cadence */}
-                        <TextField
-                            select
-                            label="Cadence"
-                            fullWidth
-                            {...register("cadence", { required: "Cadence is required" })}
-                            error={!!errors.cadence}
-                            helperText={errors.cadence?.message}
-                        >
-                            {CADENCE_TYPES.map((c) => (
-                                <MenuItem key={c} value={c}>
-                                    {c}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        <Controller
+                            name="cadence"
+                            control={control}
+                            render={({ field }) => (
+                                <TextField select label="Cadence" fullWidth {...field}>
+                                    {CADENCE_TYPES.map((c) => (
+                                        <MenuItem key={c} value={c}>{c}</MenuItem>
+                                    ))}
+                                </TextField>
+                            )}
+                        />
 
                         {/* Cadence Interval */}
                         {cadence === "CUSTOM" && (
@@ -216,20 +215,26 @@ export default function EditRotationPage() {
                         />
 
                         {/* Scope Type */}
-                        <TextField
-                            select
-                            label="Scope Type"
-                            fullWidth
-                            {...register("scope_type", { required: "Scope type is required" })}
-                            error={!!errors.scope_type}
-                            helperText={errors.scope_type?.message}
-                        >
-                            {SCOPE_TYPES.map((s) => (
-                                <MenuItem key={s} value={s}>
-                                    {s}
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        <Controller
+                            name="scope_type"
+                            control={control}
+                            rules={{ required: "Scope type is required" }}
+                            render={({ field }) => (
+                                <TextField
+                                    select
+                                    label="Scope Type"
+                                    fullWidth
+                                    {...field}
+                                    error={!!errors.scope_type}
+                                    helperText={errors.scope_type?.message}
+                                >
+                                    {SCOPE_TYPES.map((s) => (
+                                        <MenuItem key={s} value={s}>{s}</MenuItem>
+                                    ))}
+                                </TextField>
+                            )}
+                        />
+
 
                         {/* Scope Selector */}
                         <ScopeSelector
@@ -239,18 +244,19 @@ export default function EditRotationPage() {
                         />
 
                         {/* Rotation Owner */}
-                        <TextField
-                            select
-                            label="Rotation Owner"
-                            fullWidth
-                            {...register("owner_id")}
-                        >
-                            {users.map((u) => (
-                                <MenuItem key={u.id} value={u.id}>
-                                    {u.first_name} {u.last_name} ({u.email})
-                                </MenuItem>
-                            ))}
-                        </TextField>
+                        <Controller
+                            name="owner_id"
+                            control={control}
+                            render={({ field }) => (
+                                <TextField select label="Rotation Owner" fullWidth {...field}>
+                                    {users.map((u) => (
+                                        <MenuItem key={u.id} value={u.id}>
+                                            {u.first_name} {u.last_name} ({u.email})
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                            )}
+                        />
 
                         {/* Start Date */}
                         <TextField

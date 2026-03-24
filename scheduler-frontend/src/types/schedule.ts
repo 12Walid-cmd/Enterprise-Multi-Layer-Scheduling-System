@@ -7,15 +7,24 @@ export interface CalendarEvent {
   assignees: string[];
   conflictFlags: string[];
   ruleViolations: string[];
+  tier: number;               
+  overrideFlags: string[];
 }
 
 export interface TimelineItem {
   userId: string;
+  userName: string;     
   rotationId: string;
-  start: string; // ISO string
-  end: string;   // ISO string
+
+  start: string;        // ISO string
+  end: string;          // ISO string
+
+  tier: number;
+
   conflictFlags: string[];
   ruleViolations: string[];
+
+  color?: string;       
 }
 
 export interface ConflictCheckedDay {
@@ -32,6 +41,7 @@ export interface DailyProjection {
   totalAssignees: number;
   conflicts: number;
   violations: number;
+  capacity: number;
 }
 
 export interface WeeklyProjection {
@@ -40,6 +50,7 @@ export interface WeeklyProjection {
   totalAssignees: number;
   conflicts: number;
   violations: number;
+  capacity: number;
 }
 
 export interface MonthlyProjection {
@@ -47,9 +58,11 @@ export interface MonthlyProjection {
   totalAssignees: number;
   conflicts: number;
   violations: number;
+  capacity: number;
 }
 
 export interface ScheduleResponse {
+  name: string;
   rotationId: string;
   from: string;
   to: string;

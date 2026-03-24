@@ -6,16 +6,19 @@ import {
   Delete,
   Param,
   Body,
+  Req,
 } from '@nestjs/common';
 import { RotationsService } from './rotations.service';
 import { CreateRotationDto } from './dto/create-rotation.dto';
 import { UpdateRotationDto } from './dto/update-rotation.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { ReorderMembersDto } from './dto/reorder-members.dto';
+import { UpdateMemberDto } from './dto/update-member.dto';
+import { ScheduleService } from '../schedule/schedule.service';
 
 @Controller('rotations')
 export class RotationsController {
-  constructor(private readonly service: RotationsService) {}
+  constructor(private readonly service: RotationsService, private readonly scheduleService: ScheduleService,) { }
 
   // ============================
   // Rotation Definitions
@@ -71,5 +74,31 @@ export class RotationsController {
   @Delete('members/:memberId')
   removeMember(@Param('memberId') memberId: string) {
     return this.service.removeMember(memberId);
+  }
+
+  @Patch('members/:memberId')
+  updateMember(
+    @Param('memberId') memberId: string,
+    @Body() dto: UpdateMemberDto,
+  ) {
+    return this.service.updateMember(memberId, dto);
+  }
+
+// ============================
+// Schedule Generation
+// ============================
+
+  @Post(':id/schedule/generate')
+  async generateSchedule(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.id ?? null;
+    return this.scheduleService.generateForRotation(id, userId);
+  }
+
+  @Get(':id/schedule')
+  async getSchedule(@Param('id') id: string) {
+    return this.service.getSchedule(id);
   }
 }

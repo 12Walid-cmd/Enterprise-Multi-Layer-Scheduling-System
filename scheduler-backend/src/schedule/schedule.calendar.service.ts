@@ -24,6 +24,8 @@ export class CalendarService {
       holidays: scopeHolidayDates,
       leaveByUserId,
       userHolidayMap,
+      lastAssigned: {},
+      ruleEngine: undefined,
     };
   }
 

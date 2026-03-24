@@ -70,6 +70,7 @@ model users {
   rotationDefinitions rotation_definitions[]
   fairnessMetrics     fairness_metrics[]
   leaveRequests       leave_requests[]
+  domainUsers         domain_users[]
 
   @@schema("ems")
 }
@@ -214,7 +215,8 @@ model domains {
   holidays     holidays[]
 
   // Optional: logical association to groups (if needed)
-  groups groups[]
+  groups      groups[]
+  domainUsers domain_users[]
 
   @@schema("ems")
 }
@@ -236,8 +238,20 @@ model domain_teams {
   @@schema("ems")
 }
 
+model domain_users {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  domain_id String @db.Uuid
+  user_id   String @db.Uuid
+
+  domain domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  user   users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([domain_id, user_id])
+  @@schema("ems")
+}
+
 model rotation_definitions {
-  id   String @id @default(uuid())
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name String
   code String @unique
 
@@ -254,13 +268,13 @@ model rotation_definitions {
   allow_overlap Boolean       @default(false)
   // Minimum number of assignees required per slot
   min_assignees Int           @default(1)
-  max_assignees Int          @default(1)
+  max_assignees Int           @default(1)
   // Organizational scope of this rotation:
   // TEAM / SUBTEAM / GROUP / ROLE / DOMAIN / DOMAIN_TEAM / NONE
   scope_type    RotationScope
   // Reference id for the scope:
   // team_id / group_id / role_id / domain_id / domain_team_id / null
-  scope_ref_id  String?
+  scope_ref_id  String?       @db.Uuid
 
   // Rotation scheduling core
   // Rotation starts from this date
@@ -295,8 +309,8 @@ model rotation_definitions {
 }
 
 model rotation_members {
-  id                     String @id @default(uuid())
-  rotation_definition_id String
+  id                     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_definition_id String @db.Uuid
 
   // Member type: USER / TEAM / SUBTEAM / ROLE / DOMAIN / DOMAIN_TEAM / GROUP
   member_type RotationMemberType
@@ -305,7 +319,7 @@ model rotation_members {
 
   // Reference id for the member:
   // user_id / team_id / subteam_id / role_id / domain_id / domain_team_id / group_id
-  member_ref_id String
+  member_ref_id String @db.Uuid
 
   // Order index within the rotation sequence
   order_index Int     @default(0)
@@ -320,8 +334,8 @@ model rotation_members {
 }
 
 model rotation_tiers {
-  id                     String @id @default(uuid())
-  rotation_definition_id String
+  id                     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_definition_id String @db.Uuid
   // Tier level (e.g., 1 = primary, 2 = secondary, etc.)
   tier_level             Int
   name                   String
@@ -335,8 +349,8 @@ model rotation_tiers {
 }
 
 model rotation_tier_members {
-  id      String @id @default(uuid())
-  tier_id String
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tier_id String @db.Uuid
 
   // Member type: USER / TEAM / SUBTEAM / ROLE / DOMAIN / DOMAIN_TEAM / GROUP
   member_type RotationMemberType
@@ -344,7 +358,7 @@ model rotation_tier_members {
   weight        Int    @default(1)
   // Reference id for the member:
   // user_id / team_id / subteam_id / role_id / domain_id / domain_team_id / group_id
-  member_ref_id String
+  member_ref_id String @db.Uuid
 
   // Order index within the tier sequence
   order_index Int     @default(0)
@@ -435,7 +449,7 @@ enum RotationMemberType {
 }
 
 model schedule_results {
-  id            String   @id @default(uuid())
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   date          DateTime
   rotation_id   String   @db.Uuid
   tier_level    Int
@@ -455,7 +469,7 @@ model schedule_results {
 }
 
 model schedule_overrides {
-  id            String   @id @default(uuid())
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   schedule_id   String   @db.Uuid
   overridden_by String   @db.Uuid
   overridden_at DateTime @default(now())
@@ -469,7 +483,7 @@ model schedule_overrides {
 }
 
 model conflict_resolution {
-  id            String   @id @default(uuid())
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   schedule_id   String   @db.Uuid
   conflict_type String
   resolved_by   String   @db.Uuid
@@ -483,7 +497,7 @@ model conflict_resolution {
 }
 
 model fairness_metrics {
-  id          String   @id @default(uuid())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id     String   @db.Uuid
   rotation_id String   @db.Uuid
   date        DateTime
@@ -499,7 +513,7 @@ model fairness_metrics {
 }
 
 model holidays {
-  id             String   @id @default(uuid())
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   date           DateTime
   name           String
   // Scope-level holiday targets
@@ -534,7 +548,7 @@ model holidays {
 }
 
 model leave_requests {
-  id         String      @id @default(uuid())
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id    String      @db.Uuid
   start_date DateTime
   end_date   DateTime
@@ -559,7 +573,7 @@ enum LeaveStatus {
 }
 
 model leave_approvals {
-  id          String      @id @default(uuid())
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   leave_id    String      @db.Uuid
   approved_by String      @db.Uuid
   approved_at DateTime    @default(now())
@@ -572,11 +586,11 @@ model leave_approvals {
 }
 
 model audit_logs {
-  id          String   @id @default(uuid())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id     String?  @db.Uuid
   action      String
   entity_type String
-  entity_id   String
+  entity_id   String   @db.Uuid
   timestamp   DateTime @default(now())
   details     Json?
 
@@ -585,7 +599,7 @@ model audit_logs {
 }
 
 model rotation_exceptions {
-  id            String   @id @default(uuid())
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   rotation_id   String   @db.Uuid
   date          DateTime
   skip          Boolean  @default(false)
@@ -599,7 +613,7 @@ model rotation_exceptions {
 }
 
 model rbac_roles {
-  id         String   @id @default(uuid())
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code       String   @unique
   name       String
   created_at DateTime @default(now())
@@ -611,7 +625,7 @@ model rbac_roles {
 }
 
 model role_assignments {
-  id      String @id @default(uuid())
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id String @db.Uuid
   role_id String @db.Uuid
 
@@ -623,7 +637,7 @@ model role_assignments {
 }
 
 model role_permissions {
-  id         String @id @default(uuid())
+  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   role_id    String @db.Uuid
   permission String
 
@@ -633,9 +647,9 @@ model role_permissions {
 }
 
 model schedule_views {
-  id           String        @id @default(uuid())
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   scope_type   RotationScope
-  scope_ref_id String?
+  scope_ref_id String?       @db.Uuid
   date         DateTime
   data         Json // aggregated schedule for that scope & date
   generated_at DateTime      @default(now())
@@ -645,10 +659,11 @@ model schedule_views {
 }
 
 model rotation_rules {
-  id           String   @id @default(uuid())
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   rotation_id  String   @db.Uuid
-  rule_type    String // e.g., MIN_STAFF, MAX_STAFF, SKIP_WEEKENDS, CUSTOM_CADENCE
+  rule_type    RotationRuleType // e.g., MIN_STAFF, MAX_STAFF, SKIP_WEEKENDS, CUSTOM_CADENCE
   rule_payload Json // flexible JSON payload
+  enabled      Boolean  @default(true)
   created_at   DateTime @default(now())
 
   rotation rotation_definitions @relation(fields: [rotation_id], references: [id])
@@ -656,8 +671,48 @@ model rotation_rules {
   @@schema("ems")
 }
 
+enum RotationRuleType {
+  // Constraint rules
+  MIN_STAFF
+  MAX_STAFF
+  NO_OVERLAP
+  ALLOW_OVERLAP
+  NO_DOUBLE_BOOKING
+  SKIP_WEEKENDS
+  SKIP_HOLIDAYS
+  COVERAGE_WINDOW
+  TIME_RANGE_BLOCK
+  BLOCK_DURING_LEAVE
+  BLOCK_DURING_PENDING_LEAVE
+  REQUIRE_TIER_COVERAGE
+  REQUIRE_DOMAIN_COVERAGE
+  REQUIRE_TEAM_COVERAGE
+  CUSTOM_CONSTRAINT
+
+  // Generation rules
+  BLOCK_LENGTH
+  SEQUENTIAL
+  WEIGHTED
+  ROUND_ROBIN
+  RANDOMIZED
+  SKIP_INACTIVE
+  SKIP_ON_LEAVE
+  PRIORITIZE_SENIORITY
+  PRIORITIZE_TEAM
+  PRIORITIZE_TIMEZONE
+  TIER_LEVEL
+  ESCALATION_CHAIN
+  CROSS_TEAM_ROTATION
+  CROSS_DOMAIN_ROTATION
+  ANALYST_POOL_ROTATION
+  TIMEZONE_AWARE
+  CUSTOM_GENERATION
+
+  @@schema("ems")
+}
+
 model rotation_audit_snapshots {
-  id            String   @id @default(uuid())
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   rotation_id   String   @db.Uuid
   snapshot_at   DateTime @default(now())
   snapshot_data Json // full rotation_definitions + members + tiers + rules

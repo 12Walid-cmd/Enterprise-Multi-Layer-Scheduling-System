@@ -14,9 +14,6 @@ import {
 export class RotationLoader {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Load a rotation by ID and fully expand tiers + members.
-   */
   async loadRotation(rotationId: string): Promise<LoadedRotation> {
     const rotation = await this.prisma.rotation_definitions.findUnique({
       where: { id: rotationId },
@@ -30,6 +27,8 @@ export class RotationLoader {
             },
           },
         },
+
+        rotationRules: true,
       },
     });
 
@@ -41,6 +40,14 @@ export class RotationLoader {
     const tiers: RotationTier[] = rotation.rotation_tiers.map((tier) => ({
       tierLevel: tier.tier_level,
       members: tier.rotation_tier_members.map((m) => this.mapMember(m)),
+    }));
+
+    // Map rules
+    const rules = rotation.rotationRules.map((r) => ({
+      id: r.id,
+      type: r.rule_type,
+      payload: r.rule_payload,
+      enabled: r.enabled,
     }));
 
     // Build LoadedRotation
@@ -71,18 +78,16 @@ export class RotationLoader {
       ownerId: rotation.owner_id,
 
       tiers,
+      rules,   
     };
 
     return loaded;
   }
 
-  /**
-   * Convert DB member row → RotationTierMember
-   */
   private mapMember(row: any): RotationTierMember {
     return {
       id: row.member_ref_id,
-      type: row.member_type as RotationMemberType,
+      type: row.member_type,
       weight: row.weight,
       orderIndex: row.order_index,
       isActive: row.is_active,

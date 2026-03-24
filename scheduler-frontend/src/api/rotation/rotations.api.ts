@@ -1,5 +1,9 @@
 import { http } from "../http";
-import type { RotationDefinition, RotationMember, } from "../../types/rotation";
+import type {
+  RotationDefinition, RotationMember, AddMemberPayload,
+  UpdateMemberPayload,
+} from "../../types/rotation";
+
 
 // =============================
 // Rotation Definitions
@@ -46,14 +50,25 @@ export const RotationAPI = {
 
   addMember: async (
     rotationId: string,
-    data: { member_type: string; member_ref_id: string }
+    data: AddMemberPayload
   ): Promise<RotationMember> => {
-    const res = await http.post(`/rotations/${rotationId}/members`, data);
+    const res = await http.post(`/rotations/${rotationId}/members`, {
+      ...data,
+      is_active: data.is_active,
+    });
     return res.data;
   },
 
   removeMember: async (memberId: string): Promise<void> => {
     await http.delete(`/rotations/members/${memberId}`);
+  },
+
+  updateMember: async (
+    memberId: string,
+    data: UpdateMemberPayload
+  ): Promise<RotationMember> => {
+    const res = await http.patch(`/rotations/members/${memberId}`, data);
+    return res.data;
   },
 
   reorderMembers: async (
@@ -65,4 +80,20 @@ export const RotationAPI = {
     });
     return res.data;
   },
+
+// =============================
+// Schedule Generation
+// =============================
+
+  generateSchedule: async (rotationId: string) => {
+    const res = await http.post(`/rotations/${rotationId}/schedule/generate`);
+    return res.data;
+  },
+
+  getSchedule: async (rotationId: string) => {
+    const res = await http.get(`/rotations/${rotationId}/schedule`);
+    return res.data;
+  },
+
 };
+

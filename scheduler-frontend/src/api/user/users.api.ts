@@ -1,8 +1,9 @@
+import type { User } from "../../types/user";
 import { http } from "../http";
 
 
 export const UsersAPI = {
-  getAll(search?: string) {
+  getAll(search?: string): Promise<User[]> {
     return http.get("/users", {
       params: { search },
     }).then(res => res.data);

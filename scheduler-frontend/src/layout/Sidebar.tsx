@@ -8,6 +8,7 @@ import {
   ListItemIcon,
   ListItemText,
   Collapse,
+  Box,
 } from "@mui/material";
 
 import GroupsIcon from "@mui/icons-material/Groups";
@@ -16,9 +17,12 @@ import PeopleIcon from "@mui/icons-material/People";
 import ShieldIcon from "@mui/icons-material/Shield";
 import PersonIcon from "@mui/icons-material/Person";
 import AutorenewIcon from "@mui/icons-material/Autorenew";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";   
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
+import BusinessIcon from "@mui/icons-material/Business";
+
+import cgiLogo from "../assets/cgi-logo.png";
 
 import { NavLink } from "react-router-dom";
 
@@ -28,7 +32,7 @@ export default function Sidebar() {
   const [openOrg, setOpenOrg] = useState(false);
   const [openUser, setOpenUser] = useState(false);
   const [openRotation, setOpenRotation] = useState(false);
-  const [openSchedule, setOpenSchedule] = useState(false); 
+  const [openSchedule, setOpenSchedule] = useState(false);
 
   return (
     <Drawer
@@ -42,7 +46,14 @@ export default function Sidebar() {
         },
       }}
     >
+
       <Toolbar>
+        <Box
+          component="img"
+          src={cgiLogo}
+          alt="Logo"
+          sx={{ height: 32, width: 'auto', mr: 1, }}
+        />
         <Typography variant="h6">Scheduler</Typography>
       </Toolbar>
 
@@ -76,18 +87,26 @@ export default function Sidebar() {
               <ListItemText primary="Teams" />
             </ListItemButton>
 
+            <ListItemButton component={NavLink} to="/domains" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <BusinessIcon />
+              </ListItemIcon>
+              <ListItemText primary="Domains" />
+            </ListItemButton>
+
+
             <ListItemButton component={NavLink} to="/roles/team-types" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
                 <ShieldIcon />
               </ListItemIcon>
-              <ListItemText primary="Team Role Types" />
+              <ListItemText primary="Team Role" />
             </ListItemButton>
 
             <ListItemButton component={NavLink} to="/roles/global-types" sx={{ pl: 4 }}>
               <ListItemIcon sx={{ color: "white" }}>
                 <ShieldIcon />
               </ListItemIcon>
-              <ListItemText primary="Global Role Types" />
+              <ListItemText primary="Global Role" />
             </ListItemButton>
 
           </List>
@@ -135,11 +154,12 @@ export default function Sidebar() {
               <ListItemIcon sx={{ color: "white" }}>
                 <AutorenewIcon />
               </ListItemIcon>
-              <ListItemText primary="Rotation Definitions" />
+              <ListItemText primary="Definitions" />
             </ListItemButton>
 
           </List>
         </Collapse>
+
 
         {/* ============================
             SCHEDULE  
@@ -159,7 +179,7 @@ export default function Sidebar() {
               <ListItemIcon sx={{ color: "white" }}>
                 <CalendarMonthIcon />
               </ListItemIcon>
-              <ListItemText primary="Schedule View" />
+              <ListItemText primary="View" />
             </ListItemButton>
 
           </List>

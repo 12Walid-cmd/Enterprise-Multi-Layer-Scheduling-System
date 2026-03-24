@@ -14,3 +14,4 @@ export function generateRotationCode(name: string, rotationType: string, cadence
 
   return `${normalizedName}_${normalizedType}_${normalizedCadence}_${dateStr}`;
 }
+

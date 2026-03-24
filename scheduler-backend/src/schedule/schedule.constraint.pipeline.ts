@@ -1,12 +1,12 @@
 // constraint.pipeline.ts
 
-import { Injectable } from '@nestjs/common';
-import { Constraint, LoadedRotation, DailyAssignment, ScheduleContext } from '../schedule/schedule.types';
+import { Inject, Injectable } from '@nestjs/common';
+import { Constraint, LoadedRotation, DailyAssignment, ScheduleContext, CONSTRAINTS } from '../schedule/schedule.types';
 
 @Injectable()
 export class ConstraintPipeline {
   constructor(
-    private readonly constraints: Constraint[],
+    @Inject(CONSTRAINTS) private readonly constraints: Constraint[],
   ) {}
 
   /**

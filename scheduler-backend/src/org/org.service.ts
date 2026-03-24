@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { DomainsService } from './domains/domains.service';
-import { DomainTeamsService } from './domain-teams/domain-teams.service';
+import { DomainTeamsService } from './domains/domain-teams.service';
 import { TeamsService } from './teams/teams.service';
 import { GroupsService } from './groups/groups.service';
 

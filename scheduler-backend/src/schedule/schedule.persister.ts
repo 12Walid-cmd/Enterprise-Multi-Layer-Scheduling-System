@@ -43,9 +43,10 @@ export class SchedulePersister {
       rotation_id: rotation.id,
       date: a.date,
       tier_level: a.tierLevel,
-      assignee_ref_id: a.assigneeRefId,
-      assignees: [a.assigneeRefId],   // ← 必填欄位
-      created_at: new Date(),
+      assignees: [a.assigneeRefId],
+      conflicts: [],                  
+      generated_by: null,            
+      override_flag: false,
     }));
 
     await this.prisma.schedule_results.createMany({
@@ -65,36 +66,45 @@ export class SchedulePersister {
     assignments: DailyAssignment[],
     conflicts: any[],
   ) {
-    await this.prisma.audit_logs.create({
+    await this.prisma.rotation_audit_snapshots.create({
       data: {
         id: crypto.randomUUID(),
         rotation_id: rotation.id,
-        snapshot: {
-          rotation,
-          assignments,
-          conflicts,
+        snapshot_data: {
+          rotation: this.toJsonSafe(rotation),
+          assignments: assignments.map(a => this.toJsonSafe(a)),
+          conflicts: conflicts.map(c => this.toJsonSafe(c)),
         },
-        created_at: new Date(),
       },
     });
+  }
+
+  private toJsonSafe(obj: any) {
+    return JSON.parse(JSON.stringify(obj));
   }
 
   /**
    * Write conflict logs.
    */
   private async writeConflictLogs(rotation: LoadedRotation, conflicts: any[]) {
-    const rows = conflicts.map((c) => ({
-      id: crypto.randomUUID(),
-      rotation_id: rotation.id,
-      date: c.date,
-      user_id: c.userId,
-      conflict_type: c.type,
-      details: c.details,
-      created_at: new Date(),
-    }));
+    const byDate = new Map<string, any[]>();
 
-    await this.prisma.schedule_conflicts.createMany({
-      data: rows,
-    });
+    for (const c of conflicts) {
+      const key = c.date.toISOString();
+      if (!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key)!.push(this.toJsonSafe(c));
+    }
+
+    for (const [date, conflictList] of byDate.entries()) {
+      await this.prisma.schedule_results.updateMany({
+        where: {
+          rotation_id: rotation.id,
+          date: new Date(date),
+        },
+        data: {
+          conflicts: conflictList,
+        },
+      });
+    }
   }
 }

@@ -160,7 +160,7 @@ CREATE TABLE "ems"."domain_teams" (
 
 -- CreateTable
 CREATE TABLE "ems"."rotation_definitions" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
     "code" TEXT NOT NULL,
     "type" "ems"."RotationType" NOT NULL,
@@ -171,7 +171,7 @@ CREATE TABLE "ems"."rotation_definitions" (
     "min_assignees" INTEGER NOT NULL DEFAULT 1,
     "max_assignees" INTEGER NOT NULL DEFAULT 1,
     "scope_type" "ems"."RotationScope" NOT NULL,
-    "scope_ref_id" TEXT,
+    "scope_ref_id" UUID,
     "start_date" TIMESTAMP(3) NOT NULL,
     "end_date" TIMESTAMP(3),
     "effective_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -187,11 +187,11 @@ CREATE TABLE "ems"."rotation_definitions" (
 
 -- CreateTable
 CREATE TABLE "ems"."rotation_members" (
-    "id" TEXT NOT NULL,
-    "rotation_definition_id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "rotation_definition_id" UUID NOT NULL,
     "member_type" "ems"."RotationMemberType" NOT NULL,
     "weight" INTEGER NOT NULL DEFAULT 1,
-    "member_ref_id" TEXT NOT NULL,
+    "member_ref_id" UUID NOT NULL,
     "order_index" INTEGER NOT NULL DEFAULT 0,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -202,8 +202,8 @@ CREATE TABLE "ems"."rotation_members" (
 
 -- CreateTable
 CREATE TABLE "ems"."rotation_tiers" (
-    "id" TEXT NOT NULL,
-    "rotation_definition_id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "rotation_definition_id" UUID NOT NULL,
     "tier_level" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
 
@@ -212,11 +212,11 @@ CREATE TABLE "ems"."rotation_tiers" (
 
 -- CreateTable
 CREATE TABLE "ems"."rotation_tier_members" (
-    "id" TEXT NOT NULL,
-    "tier_id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "tier_id" UUID NOT NULL,
     "member_type" "ems"."RotationMemberType" NOT NULL,
     "weight" INTEGER NOT NULL DEFAULT 1,
-    "member_ref_id" TEXT NOT NULL,
+    "member_ref_id" UUID NOT NULL,
     "order_index" INTEGER NOT NULL DEFAULT 0,
     "is_active" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -227,7 +227,7 @@ CREATE TABLE "ems"."rotation_tier_members" (
 
 -- CreateTable
 CREATE TABLE "ems"."schedule_results" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "date" TIMESTAMP(3) NOT NULL,
     "rotation_id" UUID NOT NULL,
     "tier_level" INTEGER NOT NULL,
@@ -242,7 +242,7 @@ CREATE TABLE "ems"."schedule_results" (
 
 -- CreateTable
 CREATE TABLE "ems"."schedule_overrides" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "schedule_id" UUID NOT NULL,
     "overridden_by" UUID NOT NULL,
     "overridden_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -255,7 +255,7 @@ CREATE TABLE "ems"."schedule_overrides" (
 
 -- CreateTable
 CREATE TABLE "ems"."conflict_resolution" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "schedule_id" UUID NOT NULL,
     "conflict_type" TEXT NOT NULL,
     "resolved_by" UUID NOT NULL,
@@ -268,7 +268,7 @@ CREATE TABLE "ems"."conflict_resolution" (
 
 -- CreateTable
 CREATE TABLE "ems"."fairness_metrics" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "rotation_id" UUID NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
@@ -280,7 +280,7 @@ CREATE TABLE "ems"."fairness_metrics" (
 
 -- CreateTable
 CREATE TABLE "ems"."holidays" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "date" TIMESTAMP(3) NOT NULL,
     "name" TEXT NOT NULL,
     "group_id" UUID,
@@ -296,7 +296,7 @@ CREATE TABLE "ems"."holidays" (
 
 -- CreateTable
 CREATE TABLE "ems"."leave_requests" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "start_date" TIMESTAMP(3) NOT NULL,
     "end_date" TIMESTAMP(3) NOT NULL,
@@ -310,7 +310,7 @@ CREATE TABLE "ems"."leave_requests" (
 
 -- CreateTable
 CREATE TABLE "ems"."leave_approvals" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "leave_id" UUID NOT NULL,
     "approved_by" UUID NOT NULL,
     "approved_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -322,11 +322,11 @@ CREATE TABLE "ems"."leave_approvals" (
 
 -- CreateTable
 CREATE TABLE "ems"."audit_logs" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID,
     "action" TEXT NOT NULL,
     "entity_type" TEXT NOT NULL,
-    "entity_id" TEXT NOT NULL,
+    "entity_id" UUID NOT NULL,
     "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "details" JSONB,
 
@@ -335,7 +335,7 @@ CREATE TABLE "ems"."audit_logs" (
 
 -- CreateTable
 CREATE TABLE "ems"."rotation_exceptions" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "rotation_id" UUID NOT NULL,
     "date" TIMESTAMP(3) NOT NULL,
     "skip" BOOLEAN NOT NULL DEFAULT false,
@@ -347,7 +347,7 @@ CREATE TABLE "ems"."rotation_exceptions" (
 
 -- CreateTable
 CREATE TABLE "ems"."rbac_roles" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -357,7 +357,7 @@ CREATE TABLE "ems"."rbac_roles" (
 
 -- CreateTable
 CREATE TABLE "ems"."role_assignments" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "role_id" UUID NOT NULL,
 
@@ -366,7 +366,7 @@ CREATE TABLE "ems"."role_assignments" (
 
 -- CreateTable
 CREATE TABLE "ems"."role_permissions" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "role_id" UUID NOT NULL,
     "permission" TEXT NOT NULL,
 
@@ -375,9 +375,9 @@ CREATE TABLE "ems"."role_permissions" (
 
 -- CreateTable
 CREATE TABLE "ems"."schedule_views" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "scope_type" "ems"."RotationScope" NOT NULL,
-    "scope_ref_id" TEXT,
+    "scope_ref_id" UUID,
     "date" TIMESTAMP(3) NOT NULL,
     "data" JSONB NOT NULL,
     "generated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -387,7 +387,7 @@ CREATE TABLE "ems"."schedule_views" (
 
 -- CreateTable
 CREATE TABLE "ems"."rotation_rules" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "rotation_id" UUID NOT NULL,
     "rule_type" TEXT NOT NULL,
     "rule_payload" JSONB NOT NULL,
@@ -398,12 +398,44 @@ CREATE TABLE "ems"."rotation_rules" (
 
 -- CreateTable
 CREATE TABLE "ems"."rotation_audit_snapshots" (
-    "id" TEXT NOT NULL,
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "rotation_id" UUID NOT NULL,
     "snapshot_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "snapshot_data" JSONB NOT NULL,
 
     CONSTRAINT "rotation_audit_snapshots_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ems"."scheduling_rules" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "scope_type" "ems"."RotationScope" NOT NULL,
+    "scope_ref_id" UUID,
+    "rule_type" TEXT NOT NULL,
+    "rule_payload" JSONB NOT NULL,
+    "effective_from" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "effective_to" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "scheduling_rules_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ems"."scheduling_rotation_paths" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "scope_type" "ems"."RotationScope" NOT NULL,
+    "scope_ref_id" UUID,
+    "sequence_type" TEXT NOT NULL,
+    "sequence_ref_id" UUID NOT NULL,
+    "order" INTEGER NOT NULL,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "effective_from" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "effective_to" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "scheduling_rotation_paths_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -512,6 +544,12 @@ CREATE UNIQUE INDEX "schedule_views_scope_type_scope_ref_id_date_key" ON "ems"."
 
 -- CreateIndex
 CREATE INDEX "rotation_audit_snapshots_rotation_id_idx" ON "ems"."rotation_audit_snapshots"("rotation_id");
+
+-- CreateIndex
+CREATE INDEX "scheduling_rules_scope_type_scope_ref_id_idx" ON "ems"."scheduling_rules"("scope_type", "scope_ref_id");
+
+-- CreateIndex
+CREATE INDEX "scheduling_rotation_paths_scope_type_scope_ref_id_idx" ON "ems"."scheduling_rotation_paths"("scope_type", "scope_ref_id");
 
 -- CreateIndex
 CREATE INDEX "_domainsTogroups_B_index" ON "ems"."_domainsTogroups"("B");

@@ -16,21 +16,72 @@ import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 
 import type { RotationDefinition } from "../../types/rotation";
-
-import { RotationAPI } from "../../api";
+import {
+  RotationAPI,
+  TeamsAPI,
+  DomainAPI,
+  DomainTeamsAPI,
+  SubTeamsAPI,
+} from "../../api";
 
 export default function RotationsList() {
   const navigate = useNavigate();
 
-  const [data, setData] = useState<RotationDefinition[]>([]);
+  const [data, setData] = useState<(RotationDefinition & { scope_name?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+ 
+  const resolveScopeName = async (r: RotationDefinition): Promise<string> => {
+    if (!r.scope_ref_id) return "None";
+
+    switch (r.scope_type) {
+      case "TEAM": {
+        const team = await TeamsAPI.getOne(r.scope_ref_id);
+        return team.name;
+      }
+
+      case "SUBTEAM": {
+        const subteam = await SubTeamsAPI.getOne(r.scope_ref_id);
+        return subteam.name;
+      }
+
+      case "GROUP": {
+        const allTeams = await TeamsAPI.getAll();
+        const groupTeam = allTeams.find(t => t.group_id === r.scope_ref_id);
+        return groupTeam?.name ?? "Unknown Group";
+      }
+
+      case "DOMAIN": {
+        const domain = await DomainAPI.getOne(r.scope_ref_id);
+        return domain.name;
+      }
+
+      case "DOMAIN_TEAM": {
+        const dt = await DomainTeamsAPI.getOne(r.scope_ref_id);
+        return dt.teams?.name ?? "Unknown Domain Team";
+      }
+
+      case "NONE":
+      default:
+        return "None";
+    }
+  };
 
   const fetchRotations = async () => {
     try {
       setLoading(true);
       const res = await RotationAPI.getAll();
-      setData(res);
+
+      
+      const withNames = await Promise.all(
+        res.map(async (r) => ({
+          ...r,
+          scope_name: await resolveScopeName(r),
+        }))
+      );
+
+      setData(withNames);
     } catch (err: any) {
       setError(err?.message ?? "Failed to load rotations");
     } finally {
@@ -111,10 +162,13 @@ export default function RotationsList() {
                     {r.cadence}
                     {r.cadence === "CUSTOM" ? ` (${r.cadence_interval} days)` : ""}
                   </TableCell>
+
+                  
                   <TableCell>
                     {r.scope_type}
-                    {r.scope_ref_id ? ` (${r.scope_ref_id})` : ""}
+                    {r.scope_name ? ` (${r.scope_name})` : ""}
                   </TableCell>
+
                   <TableCell>{r.is_active ? "Active" : "Inactive"}</TableCell>
 
                   <TableCell align="right">

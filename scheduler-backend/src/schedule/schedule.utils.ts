@@ -49,3 +49,4 @@ export function computeIndex(startDate: Date, currentDate: Date, length: number)
 export function stripTime(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
+
