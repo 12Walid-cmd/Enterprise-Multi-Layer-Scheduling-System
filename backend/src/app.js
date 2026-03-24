@@ -5,6 +5,7 @@ const authRoutes = require('./auth/auth');
 const adminRoutes = require('./auth/admin');
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./middleware/logger');
+const errorHandler = require('./middleware/errorHandler');
 
 // Opt-in cleanup: set CLEAR_TEMP_ADMIN=true to remove the test admin on startup.
 const pool = require('./config/db');
@@ -32,7 +33,7 @@ const app = express();
 // Middlewares
 app.use(cors());
 app.use(express.json());
-app.use(logger);
+app.use(logger); // Log all incoming requests
 
 // Auth Routes (before other routes)
 app.use('/api/auth', authRoutes);
@@ -49,7 +50,8 @@ app.get('/', (req, res) => {
   res.json({ message: 'EMS Backend Running' });
 });
 
-// Error Handler (MUST be last)
+// Global Error Handler
+// Must be registered last so it catches errors from all routes
 app.use(errorHandler);
 
 module.exports = app;

@@ -1,422 +1,332 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import api from "../../api/api";
+import React, { useState, useRef, useEffect } from "react";
+import { Link } from "react-router-dom";
 import cgiLogo from "../../images/cgiLogo.png";
 
-function Topbar() {
-  const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [notificationsError, setNotificationsError] = useState("");
-  const menuRef = useRef(null);
-  const notificationsRef = useRef(null);
-
-  const fetchNotifications = useCallback(async () => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
-
-    try {
-      setNotificationsLoading(true);
-      setNotificationsError("");
-
-      const { data } = await api.get("/notifications", {
-        params: { limit: 15, offset: 0 },
-      });
-
-      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
-      setUnreadCount(Number(data.unreadCount || 0));
-    } catch {
-      setNotificationsError("Failed to load notifications");
-    } finally {
-      setNotificationsLoading(false);
-    }
-  }, []);
-
+/* ─── tiny hook: detect click outside ─────────────────────────────── */
+function useClickOutside(ref, cb) {
   useEffect(() => {
-    const rawUser = localStorage.getItem("user");
-    let parsedUser = null;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) cb(); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [ref, cb]);
+}
 
-    try {
-      parsedUser = rawUser ? JSON.parse(rawUser) : null;
-    } catch {
-      parsedUser = null;
-    }
-
-    setCurrentUser(parsedUser);
-
-    const needsProfile = !parsedUser || !parsedUser.firstName || !parsedUser.lastName;
-    const token = localStorage.getItem("accessToken");
-
-    if (!needsProfile || !token) {
-      return;
-    }
-
-    axios.get("http://localhost:5000/api/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((response) => {
-        if (response.data && response.data.user) {
-          setCurrentUser(response.data.user);
-          localStorage.setItem("user", JSON.stringify(response.data.user));
-        }
-      })
-      .catch(() => {
-        // keep existing local user fallback
-      });
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem("accessToken");
-    if (!token) return;
-
-    fetchNotifications();
-    const intervalId = window.setInterval(fetchNotifications, 60 * 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [fetchNotifications]);
-
-  useEffect(() => {
-    function handleOutsideClick(event) {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setMenuOpen(false);
-      }
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
-        setNotificationsOpen(false);
-      }
-    }
-
-    function handleEscape(event) {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-        setNotificationsOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("keydown", handleEscape);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, []);
-
-  const displayName = useMemo(() => {
-    if (!currentUser) return "User";
-
-    const first = String(currentUser.firstName || "").trim();
-    const last = String(currentUser.lastName || "").trim();
-    if (first || last) {
-      return [first, last].filter(Boolean).join(" ");
-    }
-    return currentUser.username || "User";
-  }, [currentUser]);
-
-  const initials = useMemo(() => {
-    const first = String((currentUser && currentUser.firstName) || "").trim();
-    const last = String((currentUser && currentUser.lastName) || "").trim();
-
-    if (first || last) {
-      const fi = first ? first.charAt(0).toUpperCase() : "";
-      const li = last ? last.charAt(0).toUpperCase() : "";
-      return `${fi}${li}` || "U";
-    }
-
-    return String((currentUser && currentUser.username) || "U").slice(0, 2).toUpperCase();
-  }, [currentUser]);
-
-  async function handleLogout() {
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      const refreshToken = localStorage.getItem("refreshToken");
-      if (accessToken) {
-        await axios.post(
-          "http://localhost:5000/api/auth/logout",
-          { refreshToken },
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-      }
-    } catch {
-      // ignore errors — still clear client-side state
-    } finally {
-      localStorage.removeItem("accessToken");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
-      setCurrentUser(null);
-      setMenuOpen(false);
-      setNotificationsOpen(false);
-      navigate("/login");
-    }
-  }
-
-  async function handleMarkAsRead(notificationId) {
-    try {
-      await api.post(`/notifications/${notificationId}/read`);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-      );
-      setUnreadCount((prev) => Math.max(prev - 1, 0));
-    } catch {
-      setNotificationsError("Failed to update notification");
-    }
-  }
-
-  async function handleMarkAllAsRead() {
-    try {
-      await api.post("/notifications/read-all");
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch {
-      setNotificationsError("Failed to update notifications");
-    }
-  }
-
-  const notificationItems = notifications.slice(0, 8);
-
+/* ─── Icons ────────────────────────────────────────────────────────── */
+function BellIcon() {
   return (
-    <div className="topbar" style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "20px 30px",
-    }}>
-
-      {/* Left side: Logo and title */}
-      <div className="topbar-left" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <img
-          src={cgiLogo}
-          alt="CGI Logo"
-          style={{ width: "75px", height: "75px", objectFit: "contain" }}
-        />
-        <span className="topbar-title" style={{ fontWeight: "600", fontSize: "18px" }}>
-          Enterprise Scheduling System
-        </span>
-      </div>
-
-      {/* Right side: User info dropdown */}
-      <div
-        className="topbar-right"
-        style={{ display: "flex", alignItems: "center", gap: "15px", position: "relative" }}
-      >
-        <div ref={notificationsRef} style={{ position: "relative" }}>
-          <button
-            onClick={() => {
-              const willOpen = !notificationsOpen;
-              setNotificationsOpen(willOpen);
-              setMenuOpen(false);
-              if (willOpen) {
-                fetchNotifications();
-              }
-            }}
-            aria-label="Notifications"
-            aria-haspopup="menu"
-            aria-expanded={notificationsOpen}
-            style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "999px",
-              border: "1px solid #e5e7eb",
-              backgroundColor: "white",
-              cursor: "pointer",
-              fontSize: "18px",
-              position: "relative",
-            }}
-          >
-            🔔
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: "-4px",
-                  right: "-2px",
-                  backgroundColor: "#e31837",
-                  color: "white",
-                  borderRadius: "999px",
-                  minWidth: "18px",
-                  height: "18px",
-                  padding: "0 5px",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                }}
-              >
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
-            )}
-          </button>
-
-          {notificationsOpen && (
-            <div
-              role="menu"
-              style={{
-                position: "absolute",
-                top: "50px",
-                right: 0,
-                width: "360px",
-                maxHeight: "420px",
-                overflowY: "auto",
-                backgroundColor: "white",
-                border: "1px solid #e5e7eb",
-                borderRadius: "10px",
-                boxShadow: "0 10px 24px rgba(0, 0, 0, 0.1)",
-                zIndex: 1100,
-              }}
-            >
-              <div style={{ padding: "12px 14px", borderBottom: "1px solid #eef2f7", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <strong style={{ fontSize: "14px", color: "#1f2937" }}>Notifications</strong>
-                <button
-                  onClick={handleMarkAllAsRead}
-                  style={{ border: "none", background: "transparent", color: "#2563eb", fontSize: "12px", cursor: "pointer", fontWeight: 600 }}
-                >
-                  Mark all read
-                </button>
-              </div>
-
-              {notificationsLoading && <div style={{ padding: "14px", color: "#6b7280", fontSize: "13px" }}>Loading...</div>}
-              {notificationsError && <div style={{ padding: "14px", color: "#b91c1c", fontSize: "13px" }}>{notificationsError}</div>}
-
-              {!notificationsLoading && !notificationsError && notificationItems.length === 0 && (
-                <div style={{ padding: "14px", color: "#6b7280", fontSize: "13px" }}>
-                  No notifications yet.
-                </div>
-              )}
-
-              {!notificationsLoading && !notificationsError && notificationItems.map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    padding: "12px 14px",
-                    borderBottom: "1px solid #f3f4f6",
-                    backgroundColor: item.is_read ? "#ffffff" : "#f8fbff",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: "10px" }}>
-                    <div style={{ fontWeight: 600, color: "#111827", fontSize: "13px" }}>{item.title}</div>
-                    {!item.is_read && (
-                      <button
-                        onClick={() => handleMarkAsRead(item.id)}
-                        style={{ border: "none", background: "transparent", color: "#2563eb", fontSize: "12px", cursor: "pointer" }}
-                      >
-                        Mark read
-                      </button>
-                    )}
-                  </div>
-                  <div style={{ marginTop: "4px", color: "#4b5563", fontSize: "12px", lineHeight: 1.4 }}>{item.message}</div>
-                  <div style={{ marginTop: "6px", color: "#9ca3af", fontSize: "11px" }}>
-                    {new Date(item.created_at).toLocaleString()}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div
-          ref={menuRef}
-          style={{ position: "relative" }}
-        >
-        <button
-          onClick={() => {
-            setMenuOpen((prev) => !prev);
-            setNotificationsOpen(false);
-          }}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            padding: "6px 10px",
-            backgroundColor: "white",
-            border: "1px solid #e5e7eb",
-            borderRadius: "999px",
-            cursor: "pointer"
-          }}
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-        >
-          <span className="topbar-user" style={{ fontWeight: 600 }}>{displayName}</span>
-          <div className="topbar-avatar" style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "50%",
-            backgroundColor: "white",
-            color: "#e31837",
-            border: "1px solid #f1f5f9",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontWeight: "700"
-          }}>
-            {initials}
-          </div>
-          <span style={{ color: "#6b7280", fontSize: "14px" }}>▼</span>
-        </button>
-
-        {menuOpen && (
-          <div
-            style={{
-              position: "absolute",
-              top: "52px",
-              right: 0,
-              minWidth: "200px",
-              backgroundColor: "white",
-              border: "1px solid #e5e7eb",
-              borderRadius: "10px",
-              boxShadow: "0 10px 24px rgba(0, 0, 0, 0.1)",
-              padding: "6px",
-              zIndex: 1000
-            }}
-            role="menu"
-          >
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                navigate("/change-password");
-              }}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                border: "none",
-                background: "transparent",
-                padding: "10px 12px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                color: "#1f2937",
-                fontWeight: 500
-              }}
-              role="menuitem"
-            >
-              Change Password
-            </button>
-            <button
-              onClick={handleLogout}
-              style={{
-                width: "100%",
-                textAlign: "left",
-                border: "none",
-                background: "transparent",
-                padding: "10px 12px",
-                borderRadius: "8px",
-                cursor: "pointer",
-                color: "#b91c1c",
-                fontWeight: 600
-              }}
-              role="menuitem"
-            >
-              Logout
-            </button>
-          </div>
-        )}
-        </div>
-      </div>
-    </div>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
   );
 }
 
-export default Topbar;
+function ChevronDown() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+/* ─── Topbar ───────────────────────────────────────────────────────── */
+export default function Topbar() {
+  const [dropOpen, setDropOpen] = useState(false); // ✅ removed unused bellActive
+  const dropRef = useRef(null);
+  useClickOutside(dropRef, () => setDropOpen(false));
+
+  const notifCount = 3;
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+        .tb-root {
+          font-family: 'DM Sans', sans-serif;
+          height: 68px;
+          background: #ffffff;
+          border-bottom: 1px solid #ede9fe;
+          box-shadow: 0 2px 16px rgba(82,54,171,0.08);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 24px 0 20px;
+          position: sticky;
+          top: 0;
+          z-index: 500;
+        }
+
+        /* ── left: now a Link so it's clickable ── */
+        .tb-left {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+          border-radius: 10px;
+          padding: 4px 10px 4px 4px;
+          transition: background 0.18s;
+        }
+        .tb-left:hover { background: #f5f3ff; }
+
+        .tb-logo {
+          width: 44px;
+          height: 44px;
+          object-fit: contain;
+          filter: drop-shadow(0 2px 6px rgba(228,25,55,0.18));
+        }
+
+        .tb-divider-v {
+          width: 1.5px;
+          height: 28px;
+          background: linear-gradient(180deg, #5236ab44, #e4193744);
+          border-radius: 2px;
+        }
+
+        .tb-title-wrap { display: flex; flex-direction: column; gap: 1px; }
+
+        .tb-title {
+          font-size: 15px;
+          font-weight: 800;
+          letter-spacing: -0.3px;
+          background: linear-gradient(90deg, #5236ab 0%, #e41937 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+          line-height: 1.2;
+        }
+
+        /* ── right ── */
+        .tb-right {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .tb-icon-btn {
+          position: relative;
+          width: 38px; height: 38px;
+          border-radius: 10px;
+          border: 1.5px solid #ede9fe;
+          background: #fafafa;
+          color: #6b7280;
+          display: flex; align-items: center; justify-content: center;
+          cursor: pointer;
+          transition: all 0.18s;
+          outline: none;
+        }
+        .tb-icon-btn:hover {
+          background: #f5f3ff;
+          border-color: #c4b5fd;
+          color: #5236ab;
+        }
+
+        .tb-badge {
+          position: absolute;
+          top: 5px; right: 5px;
+          width: 16px; height: 16px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #e41937, #5236ab);
+          color: #fff;
+          font-size: 9px;
+          font-weight: 800;
+          display: flex; align-items: center; justify-content: center;
+          border: 2px solid #fff;
+          line-height: 1;
+          animation: tb-pulse 2s infinite;
+        }
+
+        @keyframes tb-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(228,25,55,0.4); }
+          50%       { box-shadow: 0 0 0 5px rgba(228,25,55,0); }
+        }
+
+        .tb-sep {
+          width: 1px; height: 28px;
+          background: linear-gradient(180deg, transparent, #e5e7eb, transparent);
+          margin: 0 4px;
+        }
+
+        .tb-user-btn {
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          padding: 5px 12px 5px 5px;
+          border-radius: 12px;
+          border: 1.5px solid #ede9fe;
+          background: #fafafa;
+          cursor: pointer;
+          transition: all 0.18s;
+          outline: none;
+          min-width: 0;
+        }
+        .tb-user-btn:hover {
+          background: #f5f3ff;
+          border-color: #c4b5fd;
+        }
+
+        .tb-avatar {
+          width: 34px; height: 34px;
+          border-radius: 9px;
+          background: linear-gradient(135deg, #5236ab 0%, #e41937 100%);
+          color: #fff;
+          font-size: 12px;
+          font-weight: 800;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(82,54,171,0.35);
+        }
+
+        .tb-user-info {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          text-align: left;
+          min-width: 0;
+        }
+
+        .tb-user-name {
+          font-size: 13px;
+          font-weight: 700;
+          color: #111827;
+          white-space: nowrap;
+          line-height: 1.2;
+        }
+
+        .tb-user-role {
+          font-size: 11px;
+          font-weight: 500;
+          color: #9ca3af;
+          white-space: nowrap;
+        }
+
+        .tb-chevron {
+          color: #9ca3af;
+          transition: transform 0.2s;
+          flex-shrink: 0;
+        }
+        .tb-chevron.open { transform: rotate(180deg); }
+
+        .tb-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          width: 200px;
+          background: #fff;
+          border: 1px solid #ede9fe;
+          border-radius: 12px;
+          box-shadow: 0 12px 40px rgba(82,54,171,0.14);
+          padding: 6px;
+          z-index: 600;
+          animation: tb-drop-in 0.16s ease;
+        }
+
+        @keyframes tb-drop-in {
+          from { opacity: 0; transform: translateY(-6px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .tb-drop-header {
+          padding: 10px 12px 8px;
+          border-bottom: 1px solid #f3f4f6;
+          margin-bottom: 4px;
+        }
+
+        .tb-drop-name  { font-size: 13px; font-weight: 700; color: #111827; }
+        .tb-drop-email { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+        .tb-drop-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          width: 100%;
+          padding: 9px 12px;
+          border: none;
+          border-radius: 8px;
+          background: transparent;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+          color: #374151;
+          cursor: pointer;
+          text-align: left;
+          text-decoration: none;
+          transition: background 0.15s, color 0.15s;
+        }
+        .tb-drop-item:hover { background: #f5f3ff; color: #5236ab; }
+        .tb-drop-item.danger:hover { background: #fff1f2; color: #e41937; }
+
+        .tb-drop-divider {
+          height: 1px;
+          background: #f3f4f6;
+          margin: 4px 6px;
+        }
+      `}</style>
+
+      <header className="tb-root">
+
+        {/* ── LEFT: Link wraps logo + title → redirects to "/" on click ── */}
+        <Link to="/" className="tb-left">
+          <img src={cgiLogo} alt="CGI" className="tb-logo" />
+          <div className="tb-divider-v" />
+          <div className="tb-title-wrap">
+            <span className="tb-title">Enterprise Scheduling</span>
+          </div>
+        </Link>
+
+        {/* ── RIGHT ── */}
+        <div className="tb-right">
+
+          <button className="tb-icon-btn" title="Notifications">
+            <BellIcon />
+            {notifCount > 0 && <span className="tb-badge">{notifCount}</span>}
+          </button>
+
+          <div className="tb-sep" />
+
+          <div style={{ position: "relative" }} ref={dropRef}>
+            <button className="tb-user-btn" onClick={() => setDropOpen(p => !p)}>
+              <div className="tb-avatar">AU</div>
+              <div className="tb-user-info">
+                <span className="tb-user-name">Admin User</span>
+                <span className="tb-user-role">Administrator</span>
+              </div>
+              <span className={`tb-chevron${dropOpen ? " open" : ""}`}>
+                <ChevronDown />
+              </span>
+            </button>
+
+            {dropOpen && (
+              <div className="tb-dropdown">
+                <div className="tb-drop-header">
+                  <div className="tb-drop-name">Admin User</div>
+                  <div className="tb-drop-email">admin@cgi.com</div>
+                </div>
+                <div className="tb-drop-divider" />
+                <Link
+                  to="/login"
+                  className="tb-drop-item danger"
+                  onClick={() => setDropOpen(false)}
+                >
+                  <LogoutIcon /> Sign Out
+                </Link>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </header>
+    </>
+  );
+}
