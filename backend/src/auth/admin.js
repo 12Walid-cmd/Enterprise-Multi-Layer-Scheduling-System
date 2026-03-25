@@ -236,24 +236,31 @@ router.get(
   requireAuth,
   requireRole('administrator'),
   asyncHandler(async (req, res) => {
-    const { limit = 200, offset = 0, search } = req.query;
+    const { limit = 200, offset = 0, search, role } = req.query;
     const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 200, 1), 1000);
     const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
     const searchParam = search ? `%${search}%` : null;
 
     // always exclude the built-in admin user from list
-    // use backticks to avoid escaping single quotes inside the SQL
     let query = `SELECT id, email, first_name, last_name, username, role, is_active, created_at \
       FROM ems.users \
       WHERE username <> 'admin'`;
     const params = [];
+    let paramIndex = 1;
 
     if (searchParam) {
-      query += ' AND (email ILIKE $1 OR first_name ILIKE $1 OR last_name ILIKE $1 OR username ILIKE $1)';
+      query += ` AND (email ILIKE $${paramIndex} OR first_name ILIKE $${paramIndex} OR last_name ILIKE $${paramIndex} OR username ILIKE $${paramIndex})`;
       params.push(searchParam);
+      paramIndex++;
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    if (role && VALID_ROLES.includes(role)) {
+      query += ` AND role = $${paramIndex}`;
+      params.push(role);
+      paramIndex++;
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(parsedLimit, parsedOffset);
 
     const result = await pool.query(query, params);
@@ -270,7 +277,7 @@ router.get(
 /**
  * GET /admin/audit-logs
  * List audit logs (admin only)
- * Query params: limit, offset, action, actorId, entityType, startDate, endDate
+ * Query params: limit, offset, action, actorId, actorSearch, entityType, entityId, startDate, endDate
  */
 router.get(
   '/audit-logs',
@@ -282,7 +289,9 @@ router.get(
       offset = 0,
       action,
       actorId,
+      actorSearch,
       entityType,
+      entityId,
       startDate,
       endDate,
     } = req.query;
@@ -303,9 +312,24 @@ router.get(
       whereParams.push(actorId);
     }
 
+    if (actorSearch) {
+      whereParts.push(`(
+        u.username ILIKE $${whereParams.length + 1}
+        OR u.email ILIKE $${whereParams.length + 1}
+        OR u.first_name ILIKE $${whereParams.length + 1}
+        OR u.last_name ILIKE $${whereParams.length + 1}
+      )`);
+      whereParams.push(`%${actorSearch}%`);
+    }
+
     if (entityType) {
       whereParts.push(`al.entity_type = $${whereParams.length + 1}`);
       whereParams.push(entityType);
+    }
+
+    if (entityId) {
+      whereParts.push(`al.entity_id = $${whereParams.length + 1}`);
+      whereParams.push(entityId);
     }
 
     if (startDate) {
@@ -339,11 +363,16 @@ router.get(
         al.action,
         al.entity_type,
         al.entity_id,
+        target_u.username AS target_username,
+        target_u.email AS target_email,
+        target_u.first_name AS target_first_name,
+        target_u.last_name AS target_last_name,
         al.before_state,
         al.after_state,
         al.created_at
       FROM ems.audit_logs al
       LEFT JOIN ems.users u ON u.id = al.actor_id
+      LEFT JOIN ems.users target_u ON target_u.id = al.entity_id
       ${whereClause}
       ORDER BY al.created_at DESC
       LIMIT $${whereParams.length + 1}
