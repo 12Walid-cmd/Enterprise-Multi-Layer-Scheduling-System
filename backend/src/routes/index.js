@@ -8,9 +8,8 @@ router.use('/rotations', require('../modules/rotations/rotations.routes'));
 router.use('/holidays', require('../modules/holidays/holidays.routes'));
 router.use('/users', require('../modules/users/users.routes'));
 router.use('/dashboard', require('../modules/dashboard/dashboard.routes'));
-router.use('/members', require('../modules/members/members.routes'));
-router.use('/location', require('../modules/location/location.routes'));
-router.use('/roles', require('../modules/roles/roles.routes'));
-router.use('/notifications', require('../modules/notifications/notifications.routes'));
-
+router.use("/members", require("../modules/members/members.routes"));
+router.use("/location", require("../modules/location/location.routes"));
+router.use("/roles", require("../modules/roles/roles.routes"));
+router.use("/schedules", require("../modules/schedules/schedules.routes"));
 module.exports = router;

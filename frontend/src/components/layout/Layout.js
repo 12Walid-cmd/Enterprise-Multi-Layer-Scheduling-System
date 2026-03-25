@@ -22,7 +22,7 @@ function Layout({ children }) {
 
         <Sidebar />
 
-        <div className="flex-grow-1 p-4 bg-light" style={{ minHeight: "100vh" }}>
+        <div className="flex-grow-1 bg-light" style={{ minHeight: "100vh" }}>
           {children}
         </div>
 

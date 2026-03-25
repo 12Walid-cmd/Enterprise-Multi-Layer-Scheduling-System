@@ -32,34 +32,47 @@ function Members() {
     remote: 0
   });
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("All");
-  const [location, setLocation] = useState("All");
+
   const [members, setMembers] = useState([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [countries, setCountries] = useState([]);
   const [provinces, setProvinces] = useState([]);
   const [cities, setCities] = useState([]);
-  const [jobTitles, setJobTitles] = useState([]);
-  const [jobTitleFilter, setJobTitleFilter] = useState("All");
-  const [showModal, setShowModal] = useState(false);
-  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
-  const [generatedCredentials, setGeneratedCredentials] = useState(null);
+  const [showModal, setShowModal] = useState(false); 
   const [editMode, setEditMode] = useState(false);
   const [selectedMemberId, setSelectedMemberId] = useState(null);
+  const [jobTitles, setJobTitles] = useState([]);
   const [openDropdown, setOpenDropdown] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState({ type: "", text: "" });
-  const [formData, setFormData] = useState(initialFormData);
-  const limit = 10;
+  const [filterCities, setFilterCities]         = useState([]);
+  const [selectedCities, setSelectedCities]     = useState([]);
+  const [selectedStatuses, setSelectedStatuses] = useState([]);
+  const [selectedJobTitles, setSelectedJobTitles] = useState([]);
+  const [cityDropOpen, setCityDropOpen]         = useState(false);
+  const [statusDropOpen, setStatusDropOpen]     = useState(false);
+  const [jobDropOpen, setJobDropOpen]           = useState(false);
 
-  const fetchJobTitles = useCallback(async () => {
-    try {
-      const res = await api.get("/roles");
-      setJobTitles(res.data);
-    } catch (error) {
-      console.error("Failed to load job titles", error);
-    }
+  const [formData, setFormData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    working_mode: "",
+    role_type_id: "",
+    city_id: "",
+    is_active: true
+  });
+
+  useEffect(() => {
+    const fetchFilterCities = async () => {
+      const res = await api.get("/location/cities");
+      setFilterCities(res.data);
+    };
+    fetchFilterCities();
+  }, []);
+
+
+  useEffect(() => {
+    fetchJobTitles();
   }, []);
 
   const fetchCountries = useCallback(async () => {
@@ -78,9 +91,9 @@ function Members() {
           page,
           limit,
           search,
-          jobTitle: jobTitleFilter,
-          status,
-          location
+          jobTitle: selectedJobTitles.join(","),   // comma-separated IDs
+          status: selectedStatuses.join(","),      // "true,false" or single
+          location: selectedCities.join(","),      // comma-separated city names
         }
       });
 
@@ -90,12 +103,15 @@ function Members() {
     } catch (error) {
       console.error("Failed to load members", error);
     }
-  }, [jobTitleFilter, limit, location, page, search, status]);
+  }, [page, search, selectedJobTitles, selectedStatuses, selectedCities]);
 
-  useEffect(() => {
-    fetchCountries();
-    fetchJobTitles();
-  }, [fetchCountries, fetchJobTitles]);
+    useEffect(() => {
+      fetchMembers();
+    }, [fetchMembers]);
+
+    useEffect(() => {
+      setPage(1);
+    }, [search, selectedJobTitles, selectedStatuses, selectedCities]);
 
   useEffect(() => {
     fetchMembers();
@@ -336,8 +352,18 @@ function Members() {
     }
   };
 
-  const locationLabel = (member) =>
-    [member.city, member.province, member.country].filter(Boolean).join(", ") || "-";
+  const statusBadge = (active) =>
+    active ? "badge badge-active" : "badge badge-inactive";
+  
+  useEffect(() => {
+    const close = () => {
+      setCityDropOpen(false);
+      setStatusDropOpen(false);
+      setJobDropOpen(false);
+    };
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, []);
 
   return (
     <div className="members-container">
@@ -377,61 +403,194 @@ function Members() {
         </div>
       </div>
 
-      <div className="filters">
-        <div>
-          <div className="filter-label">Search</div>
-          <input
-            type="text"
-            className="filter-input"
-            placeholder="Search employees, email, or username..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
+      {/* Filters */}
+      
+       <div className="filters-bar">
 
-        <div>
-          <div className="filter-label">Job Title</div>
-          <select
-            className="filter-select"
-            value={jobTitleFilter}
-            onChange={(event) => setJobTitleFilter(event.target.value)}
-          >
-            <option value="All">All Job Titles</option>
-            {jobTitles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
-        </div>
+          {/* ── Row 1: Search + 3 Filters ── */}
+          <div className="fb-top-row">
 
-        <div>
-          <div className="filter-label">Location</div>
-          <select
-            className="filter-select"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-          >
-            <option value="All">All Locations</option>
-            <option value="Calgary">Calgary</option>
-            <option value="Vancouver">Vancouver</option>
-            <option value="Toronto">Toronto</option>
-          </select>
-        </div>
+            {/* Search — takes 2 parts */}
+            <div className="fb-search-wrap">
+              <input
+                type="text"
+                className="fb-search"
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="fb-clear-x" onClick={() => setSearch("")}>×</button>
+              )}
+            </div>
 
-        <div>
-          <div className="filter-label">Status</div>
-          <select
-            className="filter-select"
-            value={status}
-            onChange={(event) => setStatus(event.target.value)}
-          >
-            <option value="All">All Status</option>
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-          </select>
+            {/* Job Title */}
+            <div className="fb-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
+              <div className="fb-drop-label">Job Title</div>
+              <button
+                className={`fb-drop-btn${selectedJobTitles.length ? " active" : ""}`}
+                onClick={() => { setJobDropOpen(p => !p); setCityDropOpen(false); setStatusDropOpen(false); }}
+              >
+                {selectedJobTitles.length ? `Job Title (${selectedJobTitles.length})` : "All Job Titles"}
+                <span className="fb-chevron">{jobDropOpen ? "▴" : "▾"}</span>
+              </button>
+              {jobDropOpen && (
+                <div className="fb-drop-panel">
+                  <label className="fb-option fb-option-all">
+                    <input
+                      type="checkbox"
+                      checked={selectedJobTitles.length === jobTitles.length && jobTitles.length > 0}
+                      onChange={() =>
+                        setSelectedJobTitles(
+                          selectedJobTitles.length === jobTitles.length ? [] : jobTitles.map(r => r.id)
+                        )
+                      }
+                    />
+                    <span>Select All</span>
+                  </label>
+                  <div className="fb-divider" />
+                  {jobTitles.map(role => (
+                    <label key={role.id} className="fb-option">
+                      <input
+                        type="checkbox"
+                        checked={selectedJobTitles.includes(role.id)}
+                        onChange={() =>
+                          setSelectedJobTitles(prev =>
+                            prev.includes(role.id) ? prev.filter(id => id !== role.id) : [...prev, role.id]
+                          )
+                        }
+                      />
+                      <span>{role.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Location */}
+            <div className="fb-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
+              <div className="fb-drop-label">Location</div>
+              <button
+                className={`fb-drop-btn${selectedCities.length ? " active" : ""}`}
+                onClick={() => { setCityDropOpen(p => !p); setJobDropOpen(false); setStatusDropOpen(false); }}
+              >
+                {selectedCities.length ? `Location (${selectedCities.length})` : "All Locations"}
+                <span className="fb-chevron">{cityDropOpen ? "▴" : "▾"}</span>
+              </button>
+              {cityDropOpen && (
+                <div className="fb-drop-panel">
+                  <label className="fb-option fb-option-all">
+                    <input
+                      type="checkbox"
+                      checked={selectedCities.length === filterCities.length && filterCities.length > 0}
+                      onChange={() =>
+                        setSelectedCities(
+                          selectedCities.length === filterCities.length ? [] : filterCities.map(c => c.name)
+                        )
+                      }
+                    />
+                    <span>Select All</span>
+                  </label>
+                  <div className="fb-divider" />
+                  {filterCities.map(city => (
+                    <label key={city.id} className="fb-option">
+                      <input
+                        type="checkbox"
+                        checked={selectedCities.includes(city.name)}
+                        onChange={() =>
+                          setSelectedCities(prev =>
+                            prev.includes(city.name) ? prev.filter(n => n !== city.name) : [...prev, city.name]
+                          )
+                        }
+                      />
+                      <span>{city.name}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Status */}
+            <div className="fb-dropdown-wrap" onClick={(e) => e.stopPropagation()}>
+              <div className="fb-drop-label">Status</div>
+              <button
+                className={`fb-drop-btn${selectedStatuses.length ? " active" : ""}`}
+                onClick={() => { setStatusDropOpen(p => !p); setJobDropOpen(false); setCityDropOpen(false); }}
+              >
+                {selectedStatuses.length ? `Status (${selectedStatuses.length})` : "All Status"}
+                <span className="fb-chevron">{statusDropOpen ? "▴" : "▾"}</span>
+              </button>
+              {statusDropOpen && (
+                <div className="fb-drop-panel">
+                  {[{ val:"true", label:"Active" }, { val:"false", label:"Inactive" }].map(s => (
+                    <label key={s.val} className="fb-option">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(s.val)}
+                        onChange={() =>
+                          setSelectedStatuses(prev =>
+                            prev.includes(s.val) ? prev.filter(v => v !== s.val) : [...prev, s.val]
+                          )
+                        }
+                      />
+                      <span>{s.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+          </div>
+
+          {/* ── Row 2: Active chips + Clear All (only shown when filters active) ── */}
+          {(selectedJobTitles.length > 0 || selectedCities.length > 0 || selectedStatuses.length > 0) && (
+            <div className="fb-bottom-row">
+              <div className="fb-chips">
+
+                {selectedJobTitles.map(id => {
+                  const role = jobTitles.find(r => r.id === id);
+                  return role ? (
+                    <span key={id} className="fb-chip">
+                      <span className="fb-chip-cat">Role</span>
+                      {role.name}
+                      <button onClick={() => setSelectedJobTitles(prev => prev.filter(x => x !== id))}>×</button>
+                    </span>
+                  ) : null;
+                })}
+
+                {selectedCities.map(name => (
+                  <span key={name} className="fb-chip">
+                    <span className="fb-chip-cat">City</span>
+                    {name}
+                    <button onClick={() => setSelectedCities(prev => prev.filter(x => x !== name))}>×</button>
+                  </span>
+                ))}
+
+                {selectedStatuses.map(val => (
+                  <span key={val} className="fb-chip">
+                    <span className="fb-chip-cat">Status</span>
+                    {val === "true" ? "Active" : "Inactive"}
+                    <button onClick={() => setSelectedStatuses(prev => prev.filter(x => x !== val))}>×</button>
+                  </span>
+                ))}
+
+              </div>
+
+              <button
+                className="fb-clear-all"
+                onClick={() => {
+                  setSelectedJobTitles([]);
+                  setSelectedCities([]);
+                  setSelectedStatuses([]);
+                  setSearch("");
+                }}
+              >
+                ✕ Clear All
+              </button>
+            </div>
+          )}
+
         </div>
-      </div>
 
       <div className="employee-section">
         <table className="employee-table">
