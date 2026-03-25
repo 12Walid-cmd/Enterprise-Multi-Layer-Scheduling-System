@@ -9,9 +9,6 @@ export class GroupsController {
 
   @Post()
   create(@Req() req, @Body() dto: CreateGroupDto) {
-    console.log("RAW BODY:", req.body);
-
-    console.log("DTO:", dto);
     return this.groupsService.create(dto);
   }
 

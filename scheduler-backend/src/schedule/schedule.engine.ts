@@ -5,6 +5,9 @@ import { LoadedRotation, DailyAssignment, ScheduleContext } from './schedule.typ
 import { ConstraintPipeline } from './schedule.constraint.pipeline';
 import { RuleEngineService } from './rule.engine.service';
 
+import { getPEIHolidays } from "../utils/holidays";
+
+
 @Injectable()
 export class ScheduleEngine {
   constructor(private readonly pipeline: ConstraintPipeline) { }
@@ -20,6 +23,16 @@ export class ScheduleEngine {
   ): Promise<DailyAssignment[]> {
     const ruleEngine = new RuleEngineService(rotation.rules);
     context.ruleEngine = ruleEngine;
+
+    // load PEI holiday
+    const year = startDate.getFullYear();
+    context.holidays = getPEIHolidays(year).map(h => h.date);
+
+    // FIXED_BLOCK override
+    if (ruleEngine.has("FIXED_BLOCK")) {
+      return this.generateFixedBlock(rotation, context, startDate, endDate);
+    }
+
     const assignments: DailyAssignment[] = [];
 
     const cur = new Date(startDate);
@@ -231,6 +244,69 @@ export class ScheduleEngine {
     // TODO: implement with prisma.team_members
     return null;
   }
+
+
+  private generateFixedBlock(
+    rotation: LoadedRotation,
+    context: ScheduleContext,
+    startDate: Date,
+    endDate: Date,
+  ): DailyAssignment[] {
+    const ruleEngine = context.ruleEngine!;
+    const globalBlock = ruleEngine.payload("FIXED_BLOCK")?.days ?? 1;
+    const perTierBlock = ruleEngine.payload("FIXED_BLOCK")?.perTier ?? {};
+
+    const assignments: DailyAssignment[] = [];
+
+    for (const tier of rotation.tiers) {
+      const members = tier.members;
+      if (!members || members.length === 0) continue;
+
+      const blockSize = perTierBlock[tier.tierLevel] ?? globalBlock;
+
+      let cur = new Date(startDate);
+      let memberIndex = 0;
+
+      while (cur <= endDate) {
+        const member = members[memberIndex % members.length];
+        const userId = member.id;
+
+        let assignedDays = 0;
+
+        while (assignedDays < blockSize && cur <= endDate) {
+
+          //  SKIP_WEEKENDS
+          if (ruleEngine.has("SKIP_WEEKENDS") &&
+            (cur.getDay() === 0 || cur.getDay() === 6)) {
+            cur.setDate(cur.getDate() + 1);
+            continue;
+          }
+
+          // SKIP_HOLIDAYS
+          if (ruleEngine.has("SKIP_HOLIDAYS") &&
+            context.holidays.some(h => h.toDateString() === cur.toDateString())) {
+            cur.setDate(cur.getDate() + 1);
+            continue;
+          }
+
+          assignments.push({
+            date: new Date(cur),
+            rotationId: rotation.id,
+            tierLevel: tier.tierLevel,
+            assigneeRefId: userId,
+          });
+
+          assignedDays++;
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        memberIndex++;
+      }
+    }
+
+    return assignments;
+  }
+
 }
 
 function shuffle<T>(arr: T[]): T[] {

@@ -19,6 +19,12 @@ export class SchedulePersister {
     assignments: DailyAssignment[],
     conflicts: any[] = [],
   ) {
+
+    // 0. delete old schedule
+    await this.prisma.schedule_results.deleteMany({
+      where: { rotation_id: rotation.id },
+    });
+
     // 1. Write schedule results
     await this.writeScheduleResults(rotation, assignments);
 
@@ -44,8 +50,8 @@ export class SchedulePersister {
       date: a.date,
       tier_level: a.tierLevel,
       assignees: [a.assigneeRefId],
-      conflicts: [],                  
-      generated_by: null,            
+      conflicts: [],
+      generated_by: null,
       override_flag: false,
     }));
 

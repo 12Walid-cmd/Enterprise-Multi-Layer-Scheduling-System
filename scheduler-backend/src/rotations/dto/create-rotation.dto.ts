@@ -16,6 +16,7 @@ import {
     RotationScope,
 } from '@prisma/client';
 
+
 export class CreateRotationDto {
     @IsString()
     @IsNotEmpty()
@@ -37,19 +38,31 @@ export class CreateRotationDto {
     cadence_interval?: number = 1;
 
     @IsOptional()
+    @IsInt()
+    priority?: number = 100;
+
+    @IsOptional()
     @IsBoolean()
     allow_overlap?: boolean = false;
 
+
     @IsOptional()
+    @Type(() => Number)
     @IsInt()
     @Min(1)
     min_assignees?: number = 1;
+
+    @IsOptional()
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    max_assignees?: number = 1;
 
     @IsEnum(RotationScope)
     scope_type: RotationScope;
 
     @IsOptional()
-    @IsString()
+    @IsUUID()
     scope_ref_id?: string;
 
     @IsDate()
@@ -62,6 +75,16 @@ export class CreateRotationDto {
     end_date?: Date;
 
     @IsOptional()
+    @IsDate()
+    @Type(() => Date)
+    effective_date?: Date = new Date();
+
+    @IsOptional()
+    @IsDate()
+    @Type(() => Date)
+    freeze_date?: Date;
+
+    @IsOptional()
     @IsString()
     description?: string;
 
@@ -69,9 +92,7 @@ export class CreateRotationDto {
     @IsUUID()
     owner_id?: string;
 
-
-    @IsBoolean()
     @IsOptional()
+    @IsBoolean()
     is_active?: boolean = true;
-
 }

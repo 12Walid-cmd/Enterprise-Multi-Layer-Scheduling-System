@@ -7,6 +7,7 @@ import type { CalendarEvent } from '../../../types/schedule';
 
 interface Props {
   events: CalendarEvent[];
+  holidays?: { name: string; date: string }[];
   onDayClick?: (date: string) => void;
 }
 
@@ -27,7 +28,7 @@ const EventCard = styled('div')(({ theme }) => ({
   boxShadow: theme.shadows[2],
 }));
 
-export default function CalendarView({ events, onDayClick }: Props) {
+export default function CalendarView({ events, holidays = [], onDayClick }: Props) {
   const mappedEvents = events.map((e) => ({
     id: e.id,
     title: e.title,
@@ -39,6 +40,15 @@ export default function CalendarView({ events, onDayClick }: Props) {
       overrides: e.overrideFlags,
       assignees: e.assignees,
     },
+  }));
+
+  const holidayEvents = (holidays ?? []).map(h => ({
+    id: `holiday-${h.date}`,
+    title: h.name,
+    start: h.date,
+    allDay: true, 
+    display: "background",
+    backgroundColor: "#ffcccc",
   }));
 
   return (
@@ -56,6 +66,12 @@ export default function CalendarView({ events, onDayClick }: Props) {
           borderColor:
             theme.palette.mode === 'dark' ? '#222' : theme.palette.divider,
         },
+
+        '.fc-bg-event': {
+          backgroundColor: '#ffcccc !important',
+          opacity: 0.6,
+        },
+
         '.fc-toolbar-title': {
           fontSize: '1.4rem',
           fontWeight: 600,
@@ -66,7 +82,7 @@ export default function CalendarView({ events, onDayClick }: Props) {
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         height="100%"
-        events={mappedEvents}
+        events={[...mappedEvents, ...holidayEvents]}
         dateClick={(info) => onDayClick?.(info.dateStr)}
         eventContent={(arg) => {
           const raw = arg.event.extendedProps.assignees;

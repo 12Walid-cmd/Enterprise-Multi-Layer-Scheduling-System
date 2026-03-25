@@ -56,6 +56,7 @@ export default function RotationRulesPage() {
         REQUIRE_TEAM_COVERAGE: "REQUIRE_TEAM_COVERAGE",
         CUSTOM_CONSTRAINT: "CUSTOM_CONSTRAINT",
 
+        FIXED_BLOCK: "FIXED_BLOCK",
         BLOCK_LENGTH: "BLOCK_LENGTH",
         SEQUENTIAL: "SEQUENTIAL",
         WEIGHTED: "WEIGHTED",
@@ -84,6 +85,7 @@ export default function RotationRulesPage() {
         MIN_STAFF: [{ field: "min", label: "Minimum Staff", type: "number" }],
         MAX_STAFF: [{ field: "max", label: "Maximum Staff", type: "number" }],
         BLOCK_LENGTH: [{ field: "days", label: "Block Length (days)", type: "number" }],
+        FIXED_BLOCK: [{ field: "days", label: "Block Size (days)", type: "number" }],
         SEQUENTIAL: [{ field: "enabled", label: "Enable Sequential Rotation", type: "boolean" }],
         WEIGHTED: [{ field: "field", label: "Weight Field", type: "text" }],
         SKIP_INACTIVE: [{ field: "enabled", label: "Skip Inactive Members", type: "boolean" }],

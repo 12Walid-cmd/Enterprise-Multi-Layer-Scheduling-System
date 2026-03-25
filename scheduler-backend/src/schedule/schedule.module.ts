@@ -32,7 +32,7 @@ import { BlockLengthConstraint } from './constraints/block-length.constraint';
     OverlapConstraint,
     RoleConflictConstraint,
     StaffingMinimumConstraint,
-
+    BlockLengthConstraint,
     // constraints  provider
     {
       provide: CONSTRAINTS,

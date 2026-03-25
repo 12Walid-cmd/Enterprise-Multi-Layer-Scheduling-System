@@ -184,6 +184,7 @@ export default function EditRotationPage() {
                                 {...register("cadence_interval", {
                                     required: "Interval is required for CUSTOM cadence",
                                     min: { value: 1, message: "Must be >= 1" },
+                                    valueAsNumber: true,
                                 })}
                                 error={!!errors.cadence_interval}
                                 helperText={errors.cadence_interval?.message}

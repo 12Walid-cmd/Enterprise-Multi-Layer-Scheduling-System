@@ -12,6 +12,7 @@ import { UpdateRotationDto } from './dto/update-rotation.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { ReorderMembersDto } from './dto/reorder-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
+import { getPEIHolidays } from 'src/utils/holidays';
 
 
 @Injectable()
@@ -28,8 +29,11 @@ export class RotationsService {
                 cadence: dto.cadence as RotationCadence,
                 cadence_interval: dto.cadence_interval ?? 1,
 
+                priority: dto.priority ?? 100,
+
                 allow_overlap: dto.allow_overlap ?? false,
                 min_assignees: dto.min_assignees ?? 1,
+                max_assignees: dto.max_assignees ?? 1,
 
                 scope_type: dto.scope_type as RotationScope,
                 scope_ref_id: dto.scope_ref_id ?? null,
@@ -37,11 +41,13 @@ export class RotationsService {
                 start_date: dto.start_date,
                 end_date: dto.end_date ?? null,
 
+                effective_date: dto.effective_date ?? new Date(),
+                freeze_date: dto.freeze_date ?? null,
+
                 owner_id: dto.owner_id ?? null,
                 description: dto.description ?? null,
 
                 is_active: dto.is_active ?? true,
-
             },
         });
     }
@@ -287,6 +293,9 @@ export class RotationsService {
         });
 
         const timeline = mergeTimeline(timelineRaw);
+        // Auto load Pei Holidays
+        const years = new Set(results.map(r => r.date.getFullYear()));
+        const holidays = [...years].flatMap(y => getPEIHolidays(y));
 
         return {
             rotationId: id,
@@ -300,6 +309,7 @@ export class RotationsService {
             daily: [],
             weekly: [],
             monthly: [],
+            holidays,
         };
     }
 }

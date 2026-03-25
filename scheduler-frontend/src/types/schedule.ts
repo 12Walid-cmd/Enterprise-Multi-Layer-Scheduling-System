@@ -75,4 +75,6 @@ export interface ScheduleResponse {
   daily: DailyProjection[];
   weekly: WeeklyProjection[];
   monthly: MonthlyProjection[];
+
+  holidays: { name: string; date: string }[];
 }

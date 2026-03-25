@@ -31,6 +31,7 @@ export default function SchedulePage() {
   const loadSchedule = async () => {
     if (!id) return;
     setLoading(true);
+    setData(null);
     try {
       const res = await getSchedule(id);
       setData(res);
@@ -42,10 +43,6 @@ export default function SchedulePage() {
   useEffect(() => {
     if (!id) return;
     loadSchedule();
-    setLoading(true);
-    getSchedule(id)
-      .then(setData)
-      .finally(() => setLoading(false));
   }, [id]);
 
   const handleDayClick = (dateStr: string) => {
@@ -123,6 +120,7 @@ export default function SchedulePage() {
 
           <CalendarView
             events={data.calendar}
+            holidays={data.holidays}
             onDayClick={handleDayClick}
           />
         </Paper>

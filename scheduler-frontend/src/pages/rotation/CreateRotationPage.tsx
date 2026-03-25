@@ -325,9 +325,9 @@ export default function CreateRotationPage() {
                                 </MenuItem>
                             ))}
 
-                            {/* Special / Global */}
+                            {/* Special / Global
                             <MenuItem disabled>──────── Special / Global ────────</MenuItem>
-                            <MenuItem value="NONE">NONE (Special / Global Pool)</MenuItem>
+                            <MenuItem value="NONE">NONE (Special / Global Pool)</MenuItem> */}
                         </TextField>
 
                         {/* Scope Selector */}

@@ -691,6 +691,7 @@ enum RotationRuleType {
 
   // Generation rules
   BLOCK_LENGTH
+  FIXED_BLOCK
   SEQUENTIAL
   WEIGHTED
   ROUND_ROBIN

@@ -19,6 +19,9 @@ CREATE TYPE "ems"."RotationMemberType" AS ENUM ('USER', 'TEAM', 'SUBTEAM', 'ROLE
 -- CreateEnum
 CREATE TYPE "ems"."LeaveStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
+-- CreateEnum
+CREATE TYPE "ems"."RotationRuleType" AS ENUM ('MIN_STAFF', 'MAX_STAFF', 'NO_OVERLAP', 'ALLOW_OVERLAP', 'NO_DOUBLE_BOOKING', 'SKIP_WEEKENDS', 'SKIP_HOLIDAYS', 'COVERAGE_WINDOW', 'TIME_RANGE_BLOCK', 'BLOCK_DURING_LEAVE', 'BLOCK_DURING_PENDING_LEAVE', 'REQUIRE_TIER_COVERAGE', 'REQUIRE_DOMAIN_COVERAGE', 'REQUIRE_TEAM_COVERAGE', 'CUSTOM_CONSTRAINT', 'BLOCK_LENGTH', 'SEQUENTIAL', 'WEIGHTED', 'ROUND_ROBIN', 'RANDOMIZED', 'SKIP_INACTIVE', 'SKIP_ON_LEAVE', 'PRIORITIZE_SENIORITY', 'PRIORITIZE_TEAM', 'PRIORITIZE_TIMEZONE', 'TIER_LEVEL', 'ESCALATION_CHAIN', 'CROSS_TEAM_ROTATION', 'CROSS_DOMAIN_ROTATION', 'ANALYST_POOL_ROTATION', 'TIMEZONE_AWARE', 'CUSTOM_GENERATION');
+
 -- CreateTable
 CREATE TABLE "ems"."groups" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
@@ -156,6 +159,15 @@ CREATE TABLE "ems"."domain_teams" (
     "updated_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "domain_teams_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ems"."domain_users" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "domain_id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
+
+    CONSTRAINT "domain_users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -389,8 +401,9 @@ CREATE TABLE "ems"."schedule_views" (
 CREATE TABLE "ems"."rotation_rules" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "rotation_id" UUID NOT NULL,
-    "rule_type" TEXT NOT NULL,
+    "rule_type" "ems"."RotationRuleType" NOT NULL,
     "rule_payload" JSONB NOT NULL,
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "rotation_rules_pkey" PRIMARY KEY ("id")
@@ -404,38 +417,6 @@ CREATE TABLE "ems"."rotation_audit_snapshots" (
     "snapshot_data" JSONB NOT NULL,
 
     CONSTRAINT "rotation_audit_snapshots_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "ems"."scheduling_rules" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "scope_type" "ems"."RotationScope" NOT NULL,
-    "scope_ref_id" UUID,
-    "rule_type" TEXT NOT NULL,
-    "rule_payload" JSONB NOT NULL,
-    "effective_from" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "effective_to" TIMESTAMP(3),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "scheduling_rules_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "ems"."scheduling_rotation_paths" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "scope_type" "ems"."RotationScope" NOT NULL,
-    "scope_ref_id" UUID,
-    "sequence_type" TEXT NOT NULL,
-    "sequence_ref_id" UUID NOT NULL,
-    "order" INTEGER NOT NULL,
-    "is_active" BOOLEAN NOT NULL DEFAULT true,
-    "effective_from" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "effective_to" TIMESTAMP(3),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "scheduling_rotation_paths_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -484,6 +465,9 @@ CREATE UNIQUE INDEX "domains_name_key" ON "ems"."domains"("name");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "domain_teams_domain_id_team_id_key" ON "ems"."domain_teams"("domain_id", "team_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "domain_users_domain_id_user_id_key" ON "ems"."domain_users"("domain_id", "user_id");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "rotation_definitions_code_key" ON "ems"."rotation_definitions"("code");
@@ -546,12 +530,6 @@ CREATE UNIQUE INDEX "schedule_views_scope_type_scope_ref_id_date_key" ON "ems"."
 CREATE INDEX "rotation_audit_snapshots_rotation_id_idx" ON "ems"."rotation_audit_snapshots"("rotation_id");
 
 -- CreateIndex
-CREATE INDEX "scheduling_rules_scope_type_scope_ref_id_idx" ON "ems"."scheduling_rules"("scope_type", "scope_ref_id");
-
--- CreateIndex
-CREATE INDEX "scheduling_rotation_paths_scope_type_scope_ref_id_idx" ON "ems"."scheduling_rotation_paths"("scope_type", "scope_ref_id");
-
--- CreateIndex
 CREATE INDEX "_domainsTogroups_B_index" ON "ems"."_domainsTogroups"("B");
 
 -- AddForeignKey
@@ -595,6 +573,12 @@ ALTER TABLE "ems"."domain_teams" ADD CONSTRAINT "domain_teams_domain_id_fkey" FO
 
 -- AddForeignKey
 ALTER TABLE "ems"."domain_teams" ADD CONSTRAINT "domain_teams_team_id_fkey" FOREIGN KEY ("team_id") REFERENCES "ems"."teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ems"."domain_users" ADD CONSTRAINT "domain_users_domain_id_fkey" FOREIGN KEY ("domain_id") REFERENCES "ems"."domains"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ems"."domain_users" ADD CONSTRAINT "domain_users_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "ems"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ems"."rotation_definitions" ADD CONSTRAINT "rotation_definitions_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "ems"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

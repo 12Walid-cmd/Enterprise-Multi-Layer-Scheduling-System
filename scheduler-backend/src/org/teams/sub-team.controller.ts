@@ -25,8 +25,6 @@ export class SubTeamController {
     @Param('teamId') teamId: string,
     @Body() dto: CreateSubTeamDto,
   ) {
-    console.log(CreateSubTeamDto);
-
     return this.subTeamService.createSubTeam(teamId, dto);
   }
 
