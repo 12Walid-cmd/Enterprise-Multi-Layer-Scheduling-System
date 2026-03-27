@@ -189,7 +189,7 @@ function GenerateModal({ onClose, onGenerated }) {
               </div>
 
               {/* Info box */}
-              <div className="sch-gen-info">
+              {/* <div className="sch-gen-info">
                 <strong>ℹ How generation works:</strong>
                 <ul>
                   <li>Members are assigned in rotation order based on cadence ({selectedRotData?.cadence_type || "WEEKLY"})</li>
@@ -198,7 +198,7 @@ function GenerateModal({ onClose, onGenerated }) {
                   <li>Existing schedule for this window will be replaced</li>
                   <li>Conflicts and coverage gaps are auto-detected</li>
                 </ul>
-              </div>
+              </div> */}
 
               {error && <div className="sch-gen-error">❌ {error}</div>}
 

@@ -1,32 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes');
-const authRoutes = require('./auth/auth');
-const adminRoutes = require('./auth/admin');
-const errorHandler = require('./middleware/errorHandler');
 const logger = require('./middleware/logger');
 const errorHandler = require('./middleware/errorHandler');
-
-// Opt-in cleanup: set CLEAR_TEMP_ADMIN=true to remove the test admin on startup.
-const pool = require('./config/db');
-async function removeTempAdmin() {
-  try {
-    await pool.query(
-      `DELETE FROM ems.auth_identities
-       WHERE user_id IN (SELECT id FROM ems.users WHERE username = 'admin' OR email = 'admin@local')`
-    );
-    await pool.query(
-      `DELETE FROM ems.users WHERE username = 'admin' OR email = 'admin@local'`
-    );
-    console.log('Temp admin cleanup executed.');
-  } catch (e) {
-    console.error('Error cleaning temp admin:', e);
-  }
-}
-
-if (process.env.NODE_ENV !== 'production' && process.env.CLEAR_TEMP_ADMIN === 'true') {
-  removeTempAdmin();
-}
 
 const app = express();
 
@@ -35,15 +11,8 @@ app.use(cors());
 app.use(express.json());
 app.use(logger); // Log all incoming requests
 
-// Auth Routes (before other routes)
-app.use('/api/auth', authRoutes);
-
-// Admin Routes (protected by requireAuth middleware)
-app.use('/api/admin', adminRoutes);
-
 // API Routes
 app.use('/api', routes);
-app.use('/api/v1', routes);
 
 // Root Test
 app.get('/', (req, res) => {

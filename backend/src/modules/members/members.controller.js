@@ -17,14 +17,11 @@ exports.getMembers = async (req, res) => {
     let index = 1;
 
     if (search) {
-      filters.push(`(u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index} OR u.username ILIKE $${index})`);
+      filters.push(`(u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index})`);
       values.push(`%${search}%`);
       index++;
     }
-
-    // always exclude admin account
-    filters.push(`u.username <> 'admin'`);
-
+    
     if (jobTitle && jobTitle !== "All") {
       const ids = jobTitle
         .split(",")
@@ -86,15 +83,12 @@ exports.getMembers = async (req, res) => {
     const employeesQuery = `
       SELECT 
         u.id,
-        u.username,
         u.first_name,
         u.last_name,
         u.email,
         u.working_mode,
-        u.role,
         u.is_active,
 
-        (array_agg(rt.id ORDER BY rt.name))[1] AS role_type_id,
         STRING_AGG(DISTINCT rt.name, ', ') AS job_title,
 
         u.city_id,
@@ -140,7 +134,6 @@ exports.getMembers = async (req, res) => {
         COUNT(*) FILTER (WHERE is_active = false) AS inactive,
         COUNT(*) FILTER (WHERE working_mode = 'REMOTE') AS remote
       FROM ems.users
-      WHERE username <> 'admin'
     `;
     const statsResult = await pool.query(statsQuery);
 
@@ -195,7 +188,7 @@ exports.createMember = async (req, res) => {
       RETURNING *
     `;
 
-    const result = await client.query(insertQuery, [
+    const result = await pool.query(insertQuery, [
       first_name,
       last_name,
       email,
@@ -235,8 +228,6 @@ exports.createMember = async (req, res) => {
     res.status(500).json({
       message: "Server Error"
     });
-  } finally {
-    client.release();
   }
 }; 
 
