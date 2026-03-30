@@ -61,13 +61,7 @@ function SortableMemberItem({ member, onRemove, index }) {
         >
           ⋮⋮
         </div>
-        <div style={{
-          fontWeight: 'bold',
-          fontSize: '16px',
-          color: '#374151',
-          minWidth: '35px',
-          marginRight: '8px'
-        }}>
+        <div style={{ fontWeight: 'bold', fontSize: '16px', color: '#374151', minWidth: '35px', marginRight: '8px' }}>
           {index + 1}.
         </div>
         <div className="member-avatar-circle">{member.initials}</div>
@@ -78,14 +72,10 @@ function SortableMemberItem({ member, onRemove, index }) {
               <span className="member-team-badge">Team ({member.memberCount})</span>
             )}
           </div>
-          {member.email && (
-            <div className="member-email-display">{member.email}</div>
-          )}
+          {member.email && <div className="member-email-display">{member.email}</div>}
         </div>
       </div>
-      <button className="remove-member-btn" onClick={() => onRemove(member.id)}>
-        Remove
-      </button>
+      <button className="remove-member-btn" onClick={() => onRemove(member.id)}>Remove</button>
     </div>
   );
 }
@@ -98,18 +88,18 @@ function Rotations() {
 
   // Confirm dialog state
   const [confirm, setConfirm] = useState(null);
-  const showConfirm = (message) => {
-    return new Promise((resolve) => {
-      setConfirm({ message, resolve });
-    });
-  };
+  const showConfirm = (message) => new Promise((resolve) => setConfirm({ message, resolve }));
   const handleConfirm = () => { confirm?.resolve(true); setConfirm(null); };
   const handleCancel = () => { confirm?.resolve(false); setConfirm(null); };
 
   // Rotation state
   const [showModal, setShowModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedRotation, setSelectedRotation] = useState(null);
+  const [detailsRotation, setDetailsRotation] = useState(null);
+  const [detailsMembers, setDetailsMembers] = useState([]);
+  const [detailsMembersLoading, setDetailsMembersLoading] = useState(false);
   const [rotationMembers, setRotationMembers] = useState([]);
   const [addMemberMode, setAddMemberMode] = useState("individual");
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -153,6 +143,14 @@ function Rotations() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   const isFiltersActive = filters.search || selectedTypes.length > 0 || selectedTeams.length > 0 || selectedStatuses.length > 0;
+
+  const cadenceLabel = (type, interval) => {
+    if (type === 'DAILY') return interval === 1 ? 'day' : 'days';
+    if (type === 'WEEKLY') return interval === 1 ? 'week' : 'weeks';
+    if (type === 'BI_WEEKLY') return interval === 1 ? 'bi-week' : 'bi-weeks';
+    if (type === 'MONTHLY') return interval === 1 ? 'month' : 'months';
+    return type?.toLowerCase();
+  };
 
   const getFilteredRotations = () => {
     return rotations.filter(rotation => {
@@ -212,14 +210,13 @@ function Rotations() {
   const fetchUsers = async () => {
     try {
       const response = await api.get('/members?limit=1000');
-      const formattedUsers = response.data.data.map(user => ({
+      setAvailableUsers(response.data.data.map(user => ({
         id: user.id,
         name: `${user.first_name} ${user.last_name}`,
         email: user.email,
         initials: `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`,
         jobTitle: user.job_title || 'Staff'
-      }));
-      setAvailableUsers(formattedUsers);
+      })));
     } catch (error) {
       console.error("Error fetching users:", error);
     }
@@ -261,6 +258,22 @@ function Rotations() {
       console.error("Error fetching templates:", error);
     } finally {
       setTemplatesLoading(false);
+    }
+  };
+
+  // View Details
+  const handleViewDetails = async (rotation) => {
+    setDetailsRotation(rotation);
+    setShowDetailsModal(true);
+    setDetailsMembersLoading(true);
+    try {
+      const response = await api.get(`/rotations/${rotation.id}/members`);
+      setDetailsMembers(response.data);
+    } catch (error) {
+      console.error("Error fetching rotation details:", error);
+      showToast("Failed to load rotation details", "error");
+    } finally {
+      setDetailsMembersLoading(false);
     }
   };
 
@@ -373,9 +386,7 @@ function Rotations() {
       showToast("Rotation name contains invalid characters", "error");
       return;
     }
-    const duplicateName = rotations.some(
-      r => r.name.toLowerCase().trim() === newRotation.name.toLowerCase().trim()
-    );
+    const duplicateName = rotations.some(r => r.name.toLowerCase().trim() === newRotation.name.toLowerCase().trim());
     if (duplicateName) {
       showToast("A rotation with this name already exists", "error");
       return;
@@ -517,9 +528,7 @@ function Rotations() {
   };
 
   const toggleUserSelection = (userId) => {
-    setSelectedUsers(prev =>
-      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
-    );
+    setSelectedUsers(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
   };
 
   const filteredUsers = availableUsers.filter(user =>
@@ -544,35 +553,31 @@ function Rotations() {
   return (
     <div className="rotations-page" onClick={() => { setTypeDropOpen(false); setTeamDropOpen(false); setStatusDropOpen(false); setOpenMenuId(null); }}>
 
-      {/* Page Header */}
+      {/* ── Page Header ───────────────────────────────────── */}
       <div className="page-header">
         <div className="page-title-section">
           <h1 className="page-title">Rotation Management</h1>
-          <p className="page-subtitle" style={{ color: '#ffffff' }}>
-            Create and manage rotation pools for your teams
-          </p>
+          <p className="page-subtitle">Create and manage rotation pools for your teams</p>
         </div>
         {activeTab === 'rotations' && (
           <button className="primary-button" onClick={(e) => { e.stopPropagation(); setShowModal(true); }}>
-            <span className="btn-icon">＋</span>
-            Create Rotation
+            <span className="btn-icon">＋</span>Create Rotation
           </button>
         )}
       </div>
 
-      {/* Tab Switcher */}
+      {/* ── Tab Switcher ──────────────────────────────────── */}
       <div className="tab-switcher">
-        <button onClick={() => setActiveTab('rotations')} className={`tab-btn ${activeTab === 'rotations' ? 'active' : ''}`}>
-          Rotations
-        </button>
+        <button onClick={() => setActiveTab('rotations')} className={`tab-btn ${activeTab === 'rotations' ? 'active' : ''}`}>Rotations</button>
         <button onClick={() => setActiveTab('templates')} className={`tab-btn ${activeTab === 'templates' ? 'active' : ''}`}>
           Templates {templates.length > 0 && `(${templates.length})`}
         </button>
       </div>
 
-      {/* ROTATIONS TAB */}
+      {/* ── ROTATIONS TAB ─────────────────────────────────── */}
       {activeTab === 'rotations' && (
         <>
+          {/* Filters Bar */}
           <div className="filters-bar" onClick={(e) => e.stopPropagation()}>
             <div className="fb-top-row">
               <div className="fb-search-wrap">
@@ -654,6 +659,7 @@ function Rotations() {
             )}
           </div>
 
+          {/* Rotations Grid */}
           <div className="rotations-grid">
             {getFilteredRotations().length === 0 ? (
               <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px' }}>
@@ -685,13 +691,7 @@ function Rotations() {
                     {rotation.team_name && (<div className="detail-row"><span className="detail-icon">👥</span><span>{rotation.team_name}</span></div>)}
                     <div className="detail-row">
                       <span className="detail-icon">📆</span>
-                      <span>Every {rotation.cadence_interval}{' '}
-                        {rotation.cadence_type === 'DAILY' ? (rotation.cadence_interval === 1 ? 'day' : 'days') :
-                          rotation.cadence_type === 'WEEKLY' ? (rotation.cadence_interval === 1 ? 'week' : 'weeks') :
-                            rotation.cadence_type === 'BI_WEEKLY' ? (rotation.cadence_interval === 1 ? 'bi-week' : 'bi-weeks') :
-                              rotation.cadence_type === 'MONTHLY' ? (rotation.cadence_interval === 1 ? 'month' : 'months') :
-                                rotation.cadence_type.toLowerCase()}
-                      </span>
+                      <span>Every {rotation.cadence_interval} {cadenceLabel(rotation.cadence_type, rotation.cadence_interval)}</span>
                     </div>
                     <div className="detail-row"><span className="detail-icon">👤</span><span>Min {rotation.min_assignees} assignee(s)</span></div>
                     <div className="detail-row">
@@ -699,7 +699,7 @@ function Rotations() {
                     </div>
                   </div>
                   <div className="rotation-actions">
-                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); showToast("View Details coming soon!", "info"); }}>View Details</button>
+                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleViewDetails(rotation); }}>View Details</button>
                     <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleManageMembers(rotation); }}>Manage Members</button>
                   </div>
                 </div>
@@ -709,7 +709,7 @@ function Rotations() {
         </>
       )}
 
-      {/* TEMPLATES TAB */}
+      {/* ── TEMPLATES TAB ─────────────────────────────────── */}
       {activeTab === 'templates' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -743,13 +743,7 @@ function Rotations() {
                   <div className="rotation-details">
                     <div className="detail-row">
                       <span className="detail-icon">📆</span>
-                      <span>Every {template.cadence_interval}{' '}
-                        {template.cadence_type === 'DAILY' ? (template.cadence_interval === 1 ? 'day' : 'days') :
-                          template.cadence_type === 'WEEKLY' ? (template.cadence_interval === 1 ? 'week' : 'weeks') :
-                            template.cadence_type === 'BI_WEEKLY' ? (template.cadence_interval === 1 ? 'bi-week' : 'bi-weeks') :
-                              template.cadence_type === 'MONTHLY' ? (template.cadence_interval === 1 ? 'month' : 'months') :
-                                template.cadence_type?.toLowerCase()}
-                      </span>
+                      <span>Every {template.cadence_interval} {cadenceLabel(template.cadence_type, template.cadence_interval)}</span>
                     </div>
                     <div className="detail-row"><span className="detail-icon">👤</span><span>Min {template.min_assignees} assignee(s)</span></div>
                   </div>
@@ -766,7 +760,7 @@ function Rotations() {
         </div>
       )}
 
-      {/* CREATE ROTATION MODAL */}
+      {/* ── CREATE ROTATION MODAL ─────────────────────────── */}
       {showModal && (
         <div className="create-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="create-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -828,7 +822,7 @@ function Rotations() {
         </div>
       )}
 
-      {/* TEMPLATE MODAL */}
+      {/* ── TEMPLATE MODAL ────────────────────────────────── */}
       {showTemplateModal && (
         <div className="create-modal-overlay" onClick={() => setShowTemplateModal(false)}>
           <div className="create-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -879,7 +873,7 @@ function Rotations() {
         </div>
       )}
 
-      {/* MANAGE MEMBERS MODAL */}
+      {/* ── MANAGE MEMBERS MODAL ──────────────────────────── */}
       {showMembersModal && (
         <div className="members-modal-overlay" onClick={() => setShowMembersModal(false)}>
           <div className="members-modal-content" onClick={(e) => e.stopPropagation()}>
@@ -985,7 +979,102 @@ function Rotations() {
         </div>
       )}
 
-      {/* Confirm dialog stays local */}
+      {/* ── VIEW DETAILS MODAL ────────────────────────────── */}
+      {showDetailsModal && detailsRotation && (
+        <div className="create-modal-overlay" onClick={() => setShowDetailsModal(false)}>
+          <div className="create-modal-content" style={{ width: '650px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="create-modal-header">
+              <div>
+                <h2 className="create-modal-title">{detailsRotation.name}</h2>
+                <p style={{ color: 'rgba(255,255,255,0.72)', margin: '4px 0 0', fontSize: '14px', fontFamily: "'DM Sans', sans-serif" }}>
+                  Rotation Details
+                </p>
+              </div>
+              <button className="create-modal-close" onClick={() => setShowDetailsModal(false)}>×</button>
+            </div>
+            <div className="create-modal-body">
+
+              {/* Rotation Info Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '16px',
+                marginBottom: '24px',
+                padding: '20px',
+                background: '#f9fafb',
+                borderRadius: '10px',
+                border: '1px solid #e5e7eb'
+              }}>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Rotation Type</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{detailsRotation.rotation_type}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Status</div>
+                  <span className={`status-badge ${detailsRotation.is_active ? 'status-active' : 'status-inactive'}`}>
+                    {detailsRotation.is_active ? 'ACTIVE' : 'INACTIVE'}
+                  </span>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Cadence</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
+                    Every {detailsRotation.cadence_interval} {cadenceLabel(detailsRotation.cadence_type, detailsRotation.cadence_interval)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Min Assignees</div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{detailsRotation.min_assignees}</div>
+                </div>
+                {detailsRotation.group_name && (
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Group</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{detailsRotation.group_name}</div>
+                  </div>
+                )}
+                {detailsRotation.team_name && (
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Team</div>
+                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{detailsRotation.team_name}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Members List */}
+              <h3 className="members-section-title">Members ({detailsMembers.length})</h3>
+              {detailsMembersLoading ? (
+                <div style={{ textAlign: 'center', padding: '30px', color: '#6b7280', fontSize: '14px' }}>Loading members...</div>
+              ) : detailsMembers.length === 0 ? (
+                <div className="members-empty-state">
+                  <div className="members-empty-icon">👥</div>
+                  <p className="members-empty-text">No members assigned yet</p>
+                </div>
+              ) : (
+                <div className="current-members-list">
+                  {detailsMembers.map((member, index) => (
+                    <div key={member.id} className="current-member-item">
+                      <div className="member-info-wrapper">
+                        <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#374151', minWidth: '28px' }}>
+                          {index + 1}.
+                        </div>
+                        <div className="member-avatar-circle">{member.initials}</div>
+                        <div className="member-info-text">
+                          <div className="member-name-text">{member.name}</div>
+                          {member.email && <div className="member-email-display">{member.email}</div>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="create-modal-footer">
+              <button className="secondary-button" onClick={() => setShowDetailsModal(false)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Dialog ────────────────────────────────── */}
       <ConfirmDialog confirm={confirm} onConfirm={handleConfirm} onCancel={handleCancel} />
 
     </div>
