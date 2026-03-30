@@ -1,0 +1,12 @@
+[2026-03-27T13:41:13.254Z] [INFO] GET /api/dashboard/stats - 304 - 249ms
+[2026-03-27T13:41:16.910Z] [INFO] GET /api/schedules?startDate=2026-02-23&endDate=2026-03-31 - 304 - 91ms
+[2026-03-27T13:41:20.116Z] [INFO] GET /api/dashboard/stats - 304 - 9ms
+[2026-03-27T16:14:24.784Z] [INFO] GET /api/groups - 304 - 235ms
+[2026-03-27T16:14:24.789Z] [INFO] GET /api/rotations/templates - 304 - 228ms
+[2026-03-27T16:14:24.793Z] [INFO] GET /api/rotations/types - 304 - 242ms
+[2026-03-27T16:14:24.798Z] [INFO] GET /api/teams - 304 - 245ms
+[2026-03-27T16:14:24.803Z] [INFO] GET /api/rotations - 304 - 260ms
+[2026-03-27T16:14:24.866Z] [INFO] GET /api/members?limit=1000 - 304 - 319ms
+[2026-03-27T16:14:27.002Z] [INFO] GET /api/rotations/f0a0b985-5209-420d-b15e-b27a2e93cd9b/members - 304 - 69ms
+[2026-03-27T16:14:28.930Z] [INFO] GET /api/rotations/f0a0b985-5209-420d-b15e-b27a2e93cd9b/members - 304 - 5ms
+[2026-03-27T21:15:43.193Z] [INFO] GET /api/dashboard/stats - 304 - 187ms
