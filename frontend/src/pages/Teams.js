@@ -6,60 +6,59 @@ function Teams() {
   // ===============================
   // Main page state
   // ===============================
-  // Stores all teams loaded from the backend
   const [teams, setTeams] = useState([]);
-
-  // Stores the currently selected team from the sidebar
   const [selectedTeam, setSelectedTeam] = useState(null);
-
-  // Stores members belonging to the selected team
   const [members, setMembers] = useState([]);
-
-  // Loading/error state for team list
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
-  // Loading/error state for team members
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState("");
-
-  // Stores the current search input for filtering teams in the sidebar
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Controls whether the Create Team modal is visible
+  // ===============================
+  // Create Team / Subteam modal state
+  // ===============================
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  // ===============================
-  // Create Team modal state
-  // ===============================
-  // Stores available groups for the group dropdown in the modal
   const [groups, setGroups] = useState([]);
-
-  // Loading/error state for team creation
   const [createError, setCreateError] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
-
-  // Form values for creating a new team
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamDescription, setNewTeamDescription] = useState("");
   const [newTeamGroupId, setNewTeamGroupId] = useState("");
   const [newTeamTimezone, setNewTeamTimezone] = useState("");
+  const [modalMode, setModalMode] = useState("team"); // "team" or "subteam"
+  const [parentTeam, setParentTeam] = useState(null);
 
- // ===============================
-    // Initial page load
-    // ===============================
-    // On first render, load teams and groups from the backend
-    useEffect(() => {
-      fetchTeams();
-      fetchGroups();
-    }, []);
+  // ===============================
+  // Add Member modal state
+  // ===============================
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [allMembers, setAllMembers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [selectedUserId, setSelectedUserId] = useState("");
+  const [selectedRoleTypeId, setSelectedRoleTypeId] = useState("");
+  const [addMemberLoading, setAddMemberLoading] = useState(false);
+  const [addMemberError, setAddMemberError] = useState("");
+
+  // ===============================
+  // Reassign Parent modal state
+  // ===============================
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [newParentTeamId, setNewParentTeamId] = useState("");
+  const [reassignLoading, setReassignLoading] = useState(false);
+  const [reassignError, setReassignError] = useState("");
+
+  // ===============================
+  // Initial page load
+  // ===============================
+  useEffect(() => {
+    fetchTeams();
+    fetchGroups();
+  }, []);
 
   // ===============================
   // API: Load all teams
   // ===============================
-  // Fetches all teams for the sidebar.
-  // If this is the first load and no team is selected yet,
-  // automatically select the first team and load its members.
   const fetchTeams = async () => {
     try {
       setLoading(true);
@@ -83,10 +82,8 @@ function Teams() {
   };
 
   // ===============================
-  // API: Load members for one team
+  // API: Load members for selected team
   // ===============================
-  // Fetches all members assigned to a selected team.
-  // Called whenever a user clicks a team in the sidebar.
   const fetchTeamMembers = async (teamId) => {
     try {
       setMembersLoading(true);
@@ -105,7 +102,6 @@ function Teams() {
   // ===============================
   // API: Load groups
   // ===============================
-  // Fetches available groups for the Create Team modal dropdown.
   const fetchGroups = async () => {
     try {
       const response = await api.get("/groups");
@@ -116,23 +112,89 @@ function Teams() {
   };
 
   // ===============================
+  // API: Load all members for Add Member modal
+  // ===============================
+  const fetchAllMembers = async () => {
+    try {
+      const response = await api.get("/members?limit=1000");
+      setAllMembers(response.data.data || []);
+    } catch (err) {
+      console.error("Error fetching all members:", err);
+      setAllMembers([]);
+    }
+  };
+
+  // ===============================
+  // API: Load roles for Add Member modal
+  // ===============================
+  const fetchRoles = async () => {
+    try {
+      const response = await api.get("/roles");
+      setRoles(response.data || []);
+    } catch (err) {
+      console.error("Error fetching roles:", err);
+      setRoles([]);
+    }
+  };
+
+  // ===============================
   // Event handlers
   // ===============================
-  // Updates the selected team and loads its members
   const handleSelectTeam = (team) => {
     setSelectedTeam(team);
     fetchTeamMembers(team.id);
   };
 
-  // Creates a new team from modal form data,
-  // refreshes the team list, selects the new team,
-  // and closes the modal on success.
+  // ===============================
+  // Create Team / Subteam modal helpers
+  // ===============================
+  const openCreateTeamModal = () => {
+    setModalMode("team");
+    setParentTeam(null);
+    setNewTeamName("");
+    setNewTeamDescription("");
+    setNewTeamGroupId("");
+    setNewTeamTimezone("");
+    setCreateError("");
+    setShowCreateModal(true);
+  };
+
+  const openCreateSubteamModal = () => {
+    if (!selectedTeam) return;
+
+    setModalMode("subteam");
+    setParentTeam(selectedTeam);
+    setNewTeamName("");
+    setNewTeamDescription("");
+    setNewTeamGroupId(selectedTeam.group_id);
+    setNewTeamTimezone(selectedTeam.timezone || "");
+    setCreateError("");
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    setModalMode("team");
+    setParentTeam(null);
+    setNewTeamName("");
+    setNewTeamDescription("");
+    setNewTeamGroupId("");
+    setNewTeamTimezone("");
+    setCreateError("");
+  };
+
+  // ===============================
+  // Create Team / Subteam submit
+  // ===============================
   const handleCreateTeam = async () => {
     try {
       setCreateLoading(true);
       setCreateError("");
 
-      if (!newTeamName.trim() || !newTeamGroupId) {
+      const resolvedGroupId =
+        modalMode === "subteam" ? parentTeam?.group_id : newTeamGroupId;
+
+      if (!newTeamName.trim() || !resolvedGroupId) {
         setCreateError("Team name and group are required.");
         return;
       }
@@ -140,9 +202,9 @@ function Teams() {
       const payload = {
         name: newTeamName.trim(),
         description: newTeamDescription.trim() || null,
-        group_id: newTeamGroupId,
+        group_id: resolvedGroupId,
         timezone: newTeamTimezone || null,
-        parent_team_id: null,
+        parent_team_id: modalMode === "subteam" ? parentTeam?.id : null,
         is_active: true,
       };
 
@@ -153,12 +215,7 @@ function Teams() {
       setSelectedTeam(createdTeam);
       fetchTeamMembers(createdTeam.id);
 
-      // Reset modal form after successful creation
-      setNewTeamName("");
-      setNewTeamDescription("");
-      setNewTeamGroupId("");
-      setNewTeamTimezone("");
-      setShowCreateModal(false);
+      closeCreateModal();
     } catch (err) {
       console.error("Error creating team:", err);
       setCreateError(err.response?.data?.error || "Failed to create team.");
@@ -167,246 +224,579 @@ function Teams() {
     }
   };
 
-    
+  // ===============================
+  // Add Member modal helpers
+  // ===============================
+  const openAddMemberModal = async () => {
+    if (!selectedTeam) return;
 
-    // ===============================
-    // Helper functions
-    // ===============================
-    // Builds a readable full name for a member
+    setSelectedUserId("");
+    setSelectedRoleTypeId("");
+    setAddMemberError("");
+
+    await Promise.all([fetchAllMembers(), fetchRoles()]);
+    setShowAddMemberModal(true);
+  };
+
+  const closeAddMemberModal = () => {
+    setShowAddMemberModal(false);
+    setSelectedUserId("");
+    setSelectedRoleTypeId("");
+    setAddMemberError("");
+  };
+
+  // ===============================
+  // Add Member submit
+  // ===============================
+  const handleAddMember = async () => {
+    try {
+      if (!selectedTeam) {
+        setAddMemberError("Please select a team first.");
+        return;
+      }
+
+      if (!selectedUserId) {
+        setAddMemberError("Please select a member.");
+        return;
+      }
+
+      setAddMemberLoading(true);
+      setAddMemberError("");
+
+      await api.post(`/teams/${selectedTeam.id}/members`, {
+        user_id: selectedUserId,
+        role_type_id: selectedRoleTypeId || null,
+      });
+
+      await fetchTeamMembers(selectedTeam.id);
+      closeAddMemberModal();
+    } catch (err) {
+      console.error("Error adding member:", err);
+      setAddMemberError(
+        err.response?.data?.error || "Failed to add member."
+      );
+    } finally {
+      setAddMemberLoading(false);
+    }
+  };
+
+  // ===============================
+  // Reassign parent modal helpers
+  // ===============================
+  const openReassignModal = () => {
+    if (!selectedTeam) return;
+
+    setNewParentTeamId(selectedTeam.parent_team_id || "");
+    setReassignError("");
+    setShowReassignModal(true);
+  };
+
+  const closeReassignModal = () => {
+    setShowReassignModal(false);
+    setNewParentTeamId("");
+    setReassignError("");
+  };
+
+  // ===============================
+  // Reassign parent submit
+  // ===============================
+  const handleReassignParent = async () => {
+    try {
+      if (!selectedTeam) return;
+
+      setReassignLoading(true);
+      setReassignError("");
+
+      const response = await api.put(`/teams/${selectedTeam.id}/parent`, {
+        parent_team_id: newParentTeamId || null,
+      });
+
+      const updatedTeam = response.data;
+
+      await fetchTeams();
+
+      setSelectedTeam((prev) => ({
+        ...prev,
+        ...updatedTeam,
+        parent_team_name:
+          teams.find((team) => team.id === updatedTeam.parent_team_id)?.name ||
+          null,
+      }));
+
+      closeReassignModal();
+    } catch (err) {
+      console.error("Error reassigning parent team:", err);
+      setReassignError(
+        err.response?.data?.error || "Failed to reassign parent team."
+      );
+    } finally {
+      setReassignLoading(false);
+    }
+  };
+
+  // ===============================
+  // Status toggle
+  // ===============================
+  const handleToggleStatus = async () => {
+    if (!selectedTeam) return;
+
+    try {
+      const updated = await api.put(`/teams/${selectedTeam.id}/status`, {
+        is_active: !selectedTeam.is_active,
+      });
+
+      const updatedTeam = updated.data;
+
+      setSelectedTeam((prev) => ({
+        ...prev,
+        ...updatedTeam,
+        parent_team_name: prev?.parent_team_name || null,
+        group_name: prev?.group_name || null,
+      }));
+
+      setTeams((prevTeams) =>
+        prevTeams.map((team) =>
+          team.id === updatedTeam.id ? { ...team, ...updatedTeam } : team
+        )
+      );
+    } catch (err) {
+      console.error("Error updating team status:", err);
+    }
+  };
+
+  // ===============================
+  // Helper functions
+  // ===============================
   const formatMemberName = (member) => {
     return `${member.first_name || ""} ${member.last_name || ""}`.trim() || "N/A";
   };
 
-  // Builds a readable location string from available location fields
   const formatLocation = (member) => {
     const parts = [member.city, member.province, member.country].filter(Boolean);
     return parts.length > 0 ? parts.join(", ") : "N/A";
   };
 
-  // Filters teams in the sidebar based on the search input
-  const filteredTeams = teams.filter((team) =>
-    team.name.toLowerCase().includes(searchTerm.toLowerCase())
+  // Main teams first, then subteams
+  const filteredTeams = [...teams]
+    .sort((a, b) => {
+      if (!a.parent_team_id && b.parent_team_id) return -1;
+      if (a.parent_team_id && !b.parent_team_id) return 1;
+
+      const aKey = `${a.parent_team_name || a.name}-${a.name}`.toLowerCase();
+      const bKey = `${b.parent_team_name || b.name}-${b.name}`.toLowerCase();
+
+      return aKey.localeCompare(bKey);
+    })
+    .filter((team) =>
+      team.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+  // Only allow valid parent teams:
+  // - same group
+  // - not itself
+  // - top-level teams only
+  const availableParentTeams = teams.filter(
+    (team) =>
+      selectedTeam &&
+      team.id !== selectedTeam.id &&
+      team.group_id === selectedTeam.group_id &&
+      !team.parent_team_id
   );
 
   return (
     <div className="teams-page">
-      {/* ===============================
-          Page header
-          Displays page title and opens the Create Team modal
-         =============================== */}
-      <div className="teams-header">
-        <h1>Teams</h1>
-        <button
-          className="create-team-btn"
-          onClick={() => setShowCreateModal(true)}
-        >
-          + Create Team
-        </button>
-      </div>
+      <div className="teams-shell">
+        <div className="teams-header">
+          <div>
+            <h1>Teams</h1>
+            <p className="teams-subtitle">
+              Manage teams and subteams in the system
+            </p>
+          </div>
 
-      {/* ===============================
-          Main layout
-          Left side = team list
-          Right side = selected team details
-         =============================== */}
-      <div className="teams-container">
-        {/* ===============================
-            Sidebar
-            Contains search and filtered list of teams
-           =============================== */}
-        <div className="teams-sidebar">
-          <h3>Teams</h3>
+          <button className="create-team-btn" onClick={openCreateTeamModal}>
+            + Create Team
+          </button>
+        </div>
 
-          {/* Search input used to filter teams by name */}
-          <input
-            type="text"
-            placeholder="Search teams..."
-            className="team-search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="teams-container">
+          <div className="teams-sidebar">
+            <h3>Teams</h3>
 
-          {/* Team list with loading/error/empty states */}
-          <div className="team-list">
-            {loading && <p>Loading teams...</p>}
-            {error && <p className="error-text">{error}</p>}
+            <input
+              type="text"
+              placeholder="Search teams..."
+              className="team-search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
 
-            {!loading &&
-              !error &&
-              filteredTeams.map((team) => (
-                <div
-                  key={team.id}
-                  className={`team-item ${
-                    selectedTeam?.id === team.id ? "active" : ""
+            <div className="team-list">
+              {loading && <p>Loading teams...</p>}
+              {error && <p className="error-text">{error}</p>}
+
+              {!loading &&
+                !error &&
+                filteredTeams.map((team) => {
+                  const isSubteam = !!team.parent_team_id;
+
+                  return (
+                    <div
+                      key={team.id}
+                      className={`team-item ${
+                        selectedTeam?.id === team.id ? "active" : ""
+                      } ${isSubteam ? "subteam-item" : "main-team-item"}`}
+                      onClick={() => handleSelectTeam(team)}
+                    >
+                      <div className="team-item-content">
+                        <div className="team-item-text">
+                          <span
+                            className={`team-name ${
+                              isSubteam ? "subteam-name" : "main-team-name"
+                            }`}
+                          >
+                            {isSubteam ? "↳ " : ""}
+                            {team.name}
+                          </span>
+
+                          {isSubteam && team.parent_team_name && (
+                            <span className="team-parent-label">
+                              under {team.parent_team_name}
+                            </span>
+                          )}
+                        </div>
+
+                        <span
+                          className={`team-type-badge ${
+                            isSubteam ? "subteam-badge" : "main-badge"
+                          }`}
+                        >
+                          {isSubteam ? "Subteam" : "Team"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {!loading && !error && filteredTeams.length === 0 && (
+                <p className="empty-sidebar-text">No teams found.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="team-details">
+            <h2>{selectedTeam ? selectedTeam.name : "Select a Team"}</h2>
+
+            <p className="team-description">
+              {selectedTeam
+                ? selectedTeam.description || "No description available."
+                : "Choose a team from the left panel to view details."}
+            </p>
+
+            <div className="team-info">
+              <div className="info-card">
+                <span>Group</span>
+                <strong>{selectedTeam?.group_name || "N/A"}</strong>
+              </div>
+
+              <div className="info-card">
+                <span>Parent Team</span>
+                <strong>{selectedTeam?.parent_team_name || "None"}</strong>
+              </div>
+
+              <div className="info-card">
+                <span>Timezone</span>
+                <strong>{selectedTeam?.timezone || "N/A"}</strong>
+              </div>
+
+              <div className="info-card">
+                <span>Status</span>
+                <button
+                  className={`status-toggle ${
+                    selectedTeam?.is_active ? "active" : "inactive"
                   }`}
-                  onClick={() => handleSelectTeam(team)}
+                  onClick={handleToggleStatus}
                 >
-                  {team.name}
-                </div>
-              ))}
+                  {selectedTeam?.is_active ? "Active" : "Inactive"}
+                </button>
+              </div>
+            </div>
 
-            {!loading && !error && filteredTeams.length === 0 && (
-              <p className="empty-sidebar-text">No teams found.</p>
+            {selectedTeam && (
+              <div className="team-actions">
+                <button
+                  className="create-team-btn"
+                  onClick={openCreateSubteamModal}
+                >
+                  + Create Subteam
+                </button>
+
+                <button
+                  className="create-team-btn"
+                  onClick={openAddMemberModal}
+                >
+                  + Add Member
+                </button>
+
+                {selectedTeam?.parent_team_id && (
+                  <button
+                    className="create-team-btn"
+                    onClick={openReassignModal}
+                  >
+                    Reassign Parent
+                  </button>
+                )}
+              </div>
             )}
-          </div>
-        </div>
 
-        {/* ===============================
-            Team details panel
-            Shows currently selected team's info and members
-           =============================== */}
-        <div className="team-details">
-          <h2>{selectedTeam ? selectedTeam.name : "Select a Team"}</h2>
+            <div className="members-section">
+              <h3>Team Members</h3>
 
-          <p className="team-description">
-            {selectedTeam
-              ? selectedTeam.description || "No description available."
-              : "Choose a team from the left panel to view details."}
-          </p>
+              {membersLoading && <p>Loading team members...</p>}
+              {membersError && <p className="error-text">{membersError}</p>}
 
-          {/* Summary cards for selected team */}
-          <div className="team-info">
-            <div className="info-card">
-              <span>Group</span>
-              <strong>{selectedTeam?.group_name || "N/A"}</strong>
-            </div>
-
-            <div className="info-card">
-              <span>Timezone</span>
-              <strong>{selectedTeam?.timezone || "N/A"}</strong>
-            </div>
-
-            <div className="info-card">
-              <span>Status</span>
-              <strong>{selectedTeam?.is_active ? "Active" : "Inactive"}</strong>
-            </div>
-          </div>
-
-          {/* Members table for the selected team */}
-          <div className="members-section">
-            <h3>Team Members</h3>
-
-            {membersLoading && <p>Loading team members...</p>}
-            {membersError && <p className="error-text">{membersError}</p>}
-
-            {!membersLoading && !membersError && members.length > 0 && (
-              <table className="members-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Working Mode</th>
-                    <th>Location</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map((member) => (
-                    <tr key={member.team_member_id || member.user_id}>
-                      <td>{formatMemberName(member)}</td>
-                      <td>{member.email || "N/A"}</td>
-                      <td>{member.role_name || "Member"}</td>
-                      <td>{member.working_mode || "N/A"}</td>
-                      <td>{formatLocation(member)}</td>
+              {!membersLoading && !membersError && members.length > 0 && (
+                <table className="members-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Role</th>
+                      <th>Working Mode</th>
+                      <th>Location</th>
                     </tr>
+                  </thead>
+                  <tbody>
+                    {members.map((member) => (
+                      <tr key={member.team_member_id || member.user_id}>
+                        <td>{formatMemberName(member)}</td>
+                        <td>{member.email || "N/A"}</td>
+                        <td>{member.role_name || "Member"}</td>
+                        <td>{member.working_mode || "N/A"}</td>
+                        <td>{formatLocation(member)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {!membersLoading && !membersError && members.length === 0 && (
+                <p>No members found for this team.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {showCreateModal && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <h3>
+                {modalMode === "subteam" ? "Create Subteam" : "Create Team"}
+              </h3>
+
+              {modalMode === "subteam" && parentTeam && (
+                <div className="subteam-parent-box">
+                  <strong>Parent Team:</strong> {parentTeam.name}
+                </div>
+              )}
+
+              {createError && <p className="error-text">{createError}</p>}
+
+              <div className="modal-field">
+                <label>Team Name</label>
+                <input
+                  type="text"
+                  placeholder="Team name"
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                />
+              </div>
+
+              <div className="modal-field">
+                <label>Description</label>
+                <input
+                  type="text"
+                  placeholder="Team description"
+                  value={newTeamDescription}
+                  onChange={(e) => setNewTeamDescription(e.target.value)}
+                />
+              </div>
+
+              {modalMode === "team" ? (
+                <div className="modal-field">
+                  <label>Group</label>
+                  <select
+                    value={newTeamGroupId}
+                    onChange={(e) => setNewTeamGroupId(e.target.value)}
+                  >
+                    <option value="">Select a group</option>
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="modal-field">
+                  <label>Group</label>
+                  <input
+                    type="text"
+                    value={parentTeam?.group_name || "Same as parent team"}
+                    disabled
+                  />
+                </div>
+              )}
+
+              <div className="modal-field">
+                <label>Timezone</label>
+                <select
+                  value={newTeamTimezone}
+                  onChange={(e) => setNewTeamTimezone(e.target.value)}
+                >
+                  <option value="">Select timezone</option>
+                  <option value="America/Halifax">America/Halifax</option>
+                  <option value="America/Toronto">America/Toronto</option>
+                  <option value="America/New_York">America/New_York</option>
+                  <option value="America/Edmonton">America/Edmonton</option>
+                  <option value="America/Vancouver">America/Vancouver</option>
+                </select>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  className="cancel-btn"
+                  onClick={closeCreateModal}
+                  disabled={createLoading}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="submit-btn"
+                  onClick={handleCreateTeam}
+                  disabled={createLoading}
+                >
+                  {createLoading
+                    ? "Creating..."
+                    : modalMode === "subteam"
+                    ? "Create Subteam"
+                    : "Create Team"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showAddMemberModal && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <h3>Add Member</h3>
+
+              <div className="subteam-parent-box">
+                <strong>Selected Team:</strong> {selectedTeam?.name}
+              </div>
+
+              {addMemberError && <p className="error-text">{addMemberError}</p>}
+
+              <div className="modal-field">
+                <label>Member</label>
+                <select
+                  value={selectedUserId}
+                  onChange={(e) => setSelectedUserId(e.target.value)}
+                >
+                  <option value="">Select a member</option>
+                  {allMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.first_name} {member.last_name} - {member.email}
+                    </option>
                   ))}
-                </tbody>
-              </table>
-            )}
+                </select>
+              </div>
 
-            {!membersLoading && !membersError && members.length === 0 && (
-              <p>No members found for this team.</p>
-            )}
+              <div className="modal-field">
+                <label>Role</label>
+                <select
+                  value={selectedRoleTypeId}
+                  onChange={(e) => setSelectedRoleTypeId(e.target.value)}
+                >
+                  <option value="">Select a role</option>
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  className="cancel-btn"
+                  onClick={closeAddMemberModal}
+                  disabled={addMemberLoading}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="submit-btn"
+                  onClick={handleAddMember}
+                  disabled={addMemberLoading}
+                >
+                  {addMemberLoading ? "Adding..." : "Add Member"}
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {showReassignModal && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <h3>Reassign Parent Team</h3>
+
+              <div className="subteam-parent-box">
+                <strong>Subteam:</strong> {selectedTeam?.name}
+              </div>
+
+              {reassignError && <p className="error-text">{reassignError}</p>}
+
+              <div className="modal-field">
+                <label>New Parent Team</label>
+                <select
+                  value={newParentTeamId}
+                  onChange={(e) => setNewParentTeamId(e.target.value)}
+                >
+                  <option value="">No Parent</option>
+                  {availableParentTeams.map((team) => (
+                    <option key={team.id} value={team.id}>
+                      {team.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="modal-actions">
+                <button
+                  className="cancel-btn"
+                  onClick={closeReassignModal}
+                  disabled={reassignLoading}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="submit-btn"
+                  onClick={handleReassignParent}
+                  disabled={reassignLoading}
+                >
+                  {reassignLoading ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
-
-      {/* ===============================
-          Create Team modal
-          Rendered only when showCreateModal is true
-         =============================== */}
-      {showCreateModal && (
-        <div className="modal-overlay">
-          <div className="modal-card">
-            <h3>Create Team</h3>
-
-            {createError && <p className="error-text">{createError}</p>}
-
-            {/* Team name input */}
-            <div className="modal-field">
-              <label>Team Name</label>
-              <input
-                type="text"
-                placeholder="Team name"
-                value={newTeamName}
-                onChange={(e) => setNewTeamName(e.target.value)}
-              />
-            </div>
-
-            {/* Team description input */}
-            <div className="modal-field">
-              <label>Description</label>
-              <input
-                type="text"
-                placeholder="Team description"
-                value={newTeamDescription}
-                onChange={(e) => setNewTeamDescription(e.target.value)}
-              />
-            </div>
-
-            {/* Group selection loaded from backend */}
-            <div className="modal-field">
-              <label>Group</label>
-              <select
-                value={newTeamGroupId}
-                onChange={(e) => setNewTeamGroupId(e.target.value)}
-              >
-                <option value="">Select a group</option>
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Optional timezone selection */}
-            <div className="modal-field">
-              <label>Timezone</label>
-              <select
-                value={newTeamTimezone}
-                onChange={(e) => setNewTeamTimezone(e.target.value)}
-              >
-                <option value="">Select timezone</option>
-                <option value="America/Halifax">America/Halifax</option>
-                <option value="America/Toronto">America/Toronto</option>
-                <option value="America/New_York">America/New_York</option>
-                <option value="America/Edmonton">America/Edmonton</option>
-                <option value="America/Vancouver">America/Vancouver</option>
-              </select>
-            </div>
-
-            {/* Modal action buttons */}
-            <div className="modal-actions">
-              <button
-                className="cancel-btn"
-                onClick={() => setShowCreateModal(false)}
-                disabled={createLoading}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="submit-btn"
-                onClick={handleCreateTeam}
-                disabled={createLoading}
-              >
-                {createLoading ? "Creating..." : "Create Team"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

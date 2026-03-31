@@ -63,3 +63,4 @@
 [2026-03-31T12:20:24.678Z] [INFO] PATCH /api/rotations/7dff34d4-6d5d-4df6-bb2c-ca503f85080a - 200 - 40ms
 [2026-03-31T12:20:24.731Z] [INFO] GET /api/rotations - 200 - 19ms
 [2026-03-31T12:20:30.835Z] [INFO] GET /api/schedules?startDate=2026-02-23&endDate=2026-03-31 - 200 - 61ms
+[2026-03-31T12:25:20.607Z] [ERROR] GET /api/schedules?startDate=2026-03-30&endDate=2026-04-12 - 500 - 161ms
