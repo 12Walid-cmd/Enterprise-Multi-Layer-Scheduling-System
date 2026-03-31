@@ -18,5 +18,6 @@ router.post('/:rotationId/members', controller.addRotationMember);
 router.patch('/:rotationId/members/reorder', controller.reorderRotationMembers);
 router.delete('/:rotationId/members/:memberId', controller.removeRotationMember);
 router.patch('/:rotationId', controller.updateRotation);
+router.delete('/:rotationId', controller.deleteRotation);
 
 module.exports = router;
