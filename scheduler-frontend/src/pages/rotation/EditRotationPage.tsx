@@ -199,6 +199,7 @@ export default function EditRotationPage() {
                             {...register("min_assignees", {
                                 required: "Minimum assignees required",
                                 min: { value: 1, message: "Must be >= 1" },
+                                valueAsNumber: true,
                             })}
                             error={!!errors.min_assignees}
                             helperText={errors.min_assignees?.message}

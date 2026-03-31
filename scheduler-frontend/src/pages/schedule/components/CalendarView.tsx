@@ -46,9 +46,10 @@ export default function CalendarView({ events, holidays = [], onDayClick }: Prop
     id: `holiday-${h.date}`,
     title: h.name,
     start: h.date,
-    allDay: true, 
+    allDay: true,
     display: "background",
     backgroundColor: "#ffcccc",
+    extendedProps: { isHoliday: true },
   }));
 
   return (
@@ -85,13 +86,22 @@ export default function CalendarView({ events, holidays = [], onDayClick }: Prop
         events={[...mappedEvents, ...holidayEvents]}
         dateClick={(info) => onDayClick?.(info.dateStr)}
         eventContent={(arg) => {
+          if (arg.event.extendedProps.isHoliday) {
+            return (
+              <Typography
+                variant="caption"
+                sx={{ fontWeight: 700, color: "#b71c1c" }}
+              >
+                {arg.event.title}
+              </Typography>
+            );
+          }
           const raw = arg.event.extendedProps.assignees;
           const assignees = Array.isArray(raw) ? raw : [];
 
           const tier = arg.event.extendedProps.tier;
           const conflicts = arg.event.extendedProps.conflicts ?? [];
           const overrides = arg.event.extendedProps.overrides ?? [];
-
 
           return (
             <Tooltip

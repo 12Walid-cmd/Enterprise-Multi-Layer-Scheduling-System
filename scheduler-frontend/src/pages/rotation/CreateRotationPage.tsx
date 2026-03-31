@@ -251,6 +251,7 @@ export default function CreateRotationPage() {
                                 {...register("cadence_interval", {
                                     required: "Interval is required for CUSTOM cadence",
                                     min: { value: 1, message: "Must be >= 1" },
+                                    valueAsNumber: true,
                                 })}
                                 error={!!errors.cadence_interval}
                                 helperText={errors.cadence_interval?.message}
@@ -265,6 +266,7 @@ export default function CreateRotationPage() {
                             {...register("priority", {
                                 required: "Priority is required",
                                 min: { value: 1, message: "Must be >= 1" },
+                                valueAsNumber: true,
                             })}
                             error={!!errors.priority}
                             helperText={errors.priority?.message}
@@ -278,6 +280,7 @@ export default function CreateRotationPage() {
                             {...register("min_assignees", {
                                 required: "Minimum assignees required",
                                 min: { value: 1, message: "Must be >= 1" },
+                                valueAsNumber: true,
                             })}
                             error={!!errors.min_assignees}
                             helperText={errors.min_assignees?.message}
@@ -291,6 +294,7 @@ export default function CreateRotationPage() {
                             {...register("max_assignees", {
                                 required: "Maximum assignees required",
                                 min: { value: 1, message: "Must be >= 1" },
+                                valueAsNumber: true,
                                 validate: (value, form) =>
                                     value >= form.min_assignees || "Max must be >= Min",
                             })}
