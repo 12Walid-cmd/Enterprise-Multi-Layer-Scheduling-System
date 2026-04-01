@@ -31,6 +31,7 @@ model users {
   first_name   String            @db.VarChar(100)
   last_name    String            @db.VarChar(100)
   email        String            @unique @db.VarChar(255)
+  password     String            @db.VarChar(255)
   is_active    Boolean           @default(true)
   created_at   DateTime?         @default(now()) @db.Timestamptz(6)
   updated_at   DateTime?         @default(now()) @db.Timestamptz(6)
@@ -70,6 +71,7 @@ model users {
   rotationDefinitions rotation_definitions[]
   fairnessMetrics     fairness_metrics[]
   leaveRequests       leave_requests[]
+  leave_approvals     leave_approvals[]
   domainUsers         domain_users[]
 
   @@schema("ems")
@@ -548,26 +550,44 @@ model holidays {
 }
 
 model leave_requests {
-  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id    String      @db.Uuid
-  start_date DateTime
-  end_date   DateTime
-  reason     String?
-  status     LeaveStatus @default(PENDING)
-  created_at DateTime    @default(now())
-  updated_at DateTime    @updatedAt
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String      @db.Uuid
+  type        LeaveType
+  start_date  DateTime
+  end_date    DateTime
+  is_full_day Boolean     @default(true)
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
 
-  users          users             @relation(fields: [user_id], references: [id])
-  leaveApprovals leave_approvals[]
+  affects_schedule   Boolean @default(true)
+  synced_to_schedule Boolean @default(false)
+
+  users     users             @relation(fields: [user_id], references: [id])
+  approvals leave_approvals[]
 
   @@index([user_id])
+  @@index([status])
+  @@schema("ems")
+}
+
+enum LeaveType {
+  VACATION
+  SICK
+  PERSONAL
+  TRAINING
+  OTHER
+
   @@schema("ems")
 }
 
 enum LeaveStatus {
   PENDING
+  PARTIALLY_APPROVED
   APPROVED
   REJECTED
+  CANCELLED
 
   @@schema("ems")
 }
@@ -579,9 +599,13 @@ model leave_approvals {
   approved_at DateTime    @default(now())
   decision    LeaveStatus
   notes       String?
+  level       Int         @default(1) //（team lead = 1, admin = 2）
 
-  leave leave_requests @relation(fields: [leave_id], references: [id])
+  leave    leave_requests @relation(fields: [leave_id], references: [id])
+  approver users          @relation(fields: [approved_by], references: [id])
 
+  @@index([leave_id])
+  @@index([approved_by])
   @@schema("ems")
 }
 
@@ -659,12 +683,12 @@ model schedule_views {
 }
 
 model rotation_rules {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  rotation_id  String   @db.Uuid
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_id  String           @db.Uuid
   rule_type    RotationRuleType // e.g., MIN_STAFF, MAX_STAFF, SKIP_WEEKENDS, CUSTOM_CADENCE
   rule_payload Json // flexible JSON payload
-  enabled      Boolean  @default(true)
-  created_at   DateTime @default(now())
+  enabled      Boolean          @default(true)
+  created_at   DateTime         @default(now())
 
   rotation rotation_definitions @relation(fields: [rotation_id], references: [id])
 

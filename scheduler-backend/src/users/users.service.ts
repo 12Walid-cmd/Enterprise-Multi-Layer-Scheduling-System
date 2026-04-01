@@ -19,6 +19,7 @@ export class UsersService {
     return this.prisma.users.create({
       data: {
         ...dto,
+        password: '1234'
       },
     });
   }
