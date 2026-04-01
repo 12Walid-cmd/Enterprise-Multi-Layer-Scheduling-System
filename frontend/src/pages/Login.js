@@ -3,10 +3,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
 import "../styles/login.css";
+import { useToastContext } from "../context/ToastContext";
 
 
 function Login() {
   const navigate = useNavigate();
+  const { showToast } = useToastContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showTempPwd, setShowTempPwd] = useState(false);
@@ -68,7 +70,7 @@ function Login() {
         localStorage.setItem("firstName", "");
         localStorage.setItem("lastName", "");
       }
-      alert("Login successful!");
+      showToast("Login successful!", "success");
       navigate("/");
     } catch (err) {
       setLoginError("Invalid email or password.");

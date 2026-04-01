@@ -1,0 +1,14 @@
+[2026-04-01T15:44:03.279Z] [INFO] GET /api/dashboard/stats - 304 - 333ms
+[2026-04-01T15:44:06.422Z] [INFO] GET /api/schedules?startDate=2026-03-30&endDate=2026-04-12 - 304 - 39ms
+[2026-04-01T15:44:07.310Z] [INFO] GET /api/dashboard/stats - 304 - 3ms
+[2026-04-01T15:46:46.655Z] [INFO] POST /api/login - 200 - 109ms
+[2026-04-01T15:47:13.251Z] [INFO] POST /api/login/validate - 200 - 103ms
+[2026-04-01T15:47:13.314Z] [INFO] GET /api/members?search=giuseppe_manansala%40dummy.com&limit=1 - 200 - 60ms
+[2026-04-01T15:47:45.739Z] [INFO] GET /api/dashboard/stats - 304 - 57ms
+[2026-04-01T15:48:26.024Z] [INFO] GET /api/dashboard/stats - 304 - 146ms
+[2026-04-01T15:51:16.104Z] [INFO] POST /api/login/validate - 200 - 223ms
+[2026-04-01T15:51:16.122Z] [INFO] GET /api/members?search=giuseppe_manansala%40dummy.com&limit=1 - 304 - 16ms
+[2026-04-01T15:51:16.208Z] [INFO] GET /api/dashboard/stats - 304 - 9ms
+[2026-04-01T15:51:39.342Z] [INFO] POST /api/login/validate - 200 - 201ms
+[2026-04-01T15:51:39.359Z] [INFO] GET /api/members?search=giuseppe_manansala%40dummy.com&limit=1 - 304 - 14ms
+[2026-04-01T15:51:39.413Z] [INFO] GET /api/dashboard/stats - 304 - 10ms
