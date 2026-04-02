@@ -12,4 +12,8 @@ router.use("/members", require("../modules/members/members.routes"));
 router.use("/location", require("../modules/location/location.routes"));
 router.use("/roles", require("../modules/roles/roles.routes"));
 router.use("/schedules", require("../modules/schedules/schedules.routes"));
+
+// Auth routes
+router.use('/login', require('../auth/login'));
+router.use('/logout', require('../auth/logout'));
 module.exports = router;

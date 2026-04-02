@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import cgiLogo from "../../images/cgiLogo.png";
 
 /* ─── tiny hook: detect click outside ─────────────────────────────── */
@@ -40,12 +40,52 @@ function LogoutIcon() {
 }
 
 /* ─── Topbar ───────────────────────────────────────────────────────── */
+
 export default function Topbar() {
-  const [dropOpen, setDropOpen] = useState(false); // ✅ removed unused bellActive
+  const [dropOpen, setDropOpen] = useState(false);
+  const [userInfo, setUserInfo] = useState({
+    token: localStorage.getItem("token"),
+    firstName: localStorage.getItem("firstName"),
+    lastName: localStorage.getItem("lastName")
+  });
   const dropRef = useRef(null);
+  const navigate = useNavigate();
   useClickOutside(dropRef, () => setDropOpen(false));
 
+  // Listen for storage changes (e.g., login/logout in other tabs)
+  useEffect(() => {
+    const syncUserInfo = () => {
+      setUserInfo({
+        token: localStorage.getItem("token"),
+        firstName: localStorage.getItem("firstName"),
+        lastName: localStorage.getItem("lastName")
+      });
+    };
+    window.addEventListener("storage", syncUserInfo);
+    return () => window.removeEventListener("storage", syncUserInfo);
+  }, []);
+
+  // Also update on navigation (login/logout in same tab)
+  useEffect(() => {
+    setUserInfo({
+      token: localStorage.getItem("token"),
+      firstName: localStorage.getItem("firstName"),
+      lastName: localStorage.getItem("lastName")
+    });
+  }, [window.location.pathname]);
+
   const notifCount = 3;
+
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("email");
+    localStorage.removeItem("firstName");
+    localStorage.removeItem("lastName");
+    setDropOpen(false);
+    setUserInfo({ token: null, firstName: null, lastName: null });
+    navigate("/login");
+  };
 
   return (
     <>
@@ -287,44 +327,39 @@ export default function Topbar() {
 
         {/* ── RIGHT ── */}
         <div className="tb-right">
-
           <button className="tb-icon-btn" title="Notifications">
             <BellIcon />
             {notifCount > 0 && <span className="tb-badge">{notifCount}</span>}
           </button>
-
           <div className="tb-sep" />
-
-          <div style={{ position: "relative" }} ref={dropRef}>
-            <button className="tb-user-btn" onClick={() => setDropOpen(p => !p)}>
-              <div className="tb-avatar">AU</div>
-              <div className="tb-user-info">
-                <span className="tb-user-name">Admin User</span>
-                <span className="tb-user-role">Administrator</span>
-              </div>
-              <span className={`tb-chevron${dropOpen ? " open" : ""}`}>
-                <ChevronDown />
-              </span>
-            </button>
-
-            {dropOpen && (
-              <div className="tb-dropdown">
-                <div className="tb-drop-header">
-                  <div className="tb-drop-name">Admin User</div>
-                  <div className="tb-drop-email">admin@cgi.com</div>
+          {userInfo.token ? (
+            <div style={{ position: "relative" }} ref={dropRef}>
+              <button className="tb-user-btn" onClick={() => setDropOpen(p => !p)}>
+                <div className="tb-avatar">{userInfo.firstName ? userInfo.firstName[0].toUpperCase() : "U"}</div>
+                <div className="tb-user-info">
+                  <span className="tb-user-name">{userInfo.firstName || "User"} {userInfo.lastName || ""}</span>
+                  <span className="tb-user-role">User</span>
                 </div>
-                <div className="tb-drop-divider" />
-                <Link
-                  to="/login"
-                  className="tb-drop-item danger"
-                  onClick={() => setDropOpen(false)}
-                >
-                  <LogoutIcon /> Sign Out
-                </Link>
-              </div>
-            )}
-          </div>
-
+                <span className={`tb-chevron${dropOpen ? " open" : ""}`}>
+                  <ChevronDown />
+                </span>
+              </button>
+              {dropOpen && (
+                <div className="tb-dropdown">
+                  <div className="tb-drop-header">
+                    <div className="tb-drop-name">{userInfo.firstName || "User"} {userInfo.lastName || ""}</div>
+                  </div>
+                  <div className="tb-drop-divider" />
+                  <button
+                    className="tb-drop-item danger"
+                    onClick={handleSignOut}
+                  >
+                    <LogoutIcon /> Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       </header>
     </>
