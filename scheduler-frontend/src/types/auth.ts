@@ -1,6 +1,5 @@
 export interface AuthTokens {
   access_token: string;
-  refresh_token: string;
 }
 
 export interface AuthUser {
@@ -22,4 +21,15 @@ export interface AuthUser {
 
   created_at?: string;
   updated_at?: string;
+
+  group_id: string | null;
+
+  team_ids: string[];
+  sub_team_ids: string[];
+
+  domain_ids: string[];
+  domain_team_ids: string[];
+
+  roles: string[];         
+  permissions: string[];
 }

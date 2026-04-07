@@ -14,8 +14,9 @@ export default function Login() {
 
     async function handleLogin() {
         try {
-            const tokens = await AuthAPI.login(email, password);
-            localStorage.setItem("access_token", tokens.access_token);
+            const res = await AuthAPI.login(email, password);
+
+            sessionStorage.setItem("access_token", res.access_token);
 
             const me = await AuthAPI.me();
             setUser(me);
