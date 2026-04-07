@@ -5,7 +5,7 @@ import { NavLink } from "react-router-dom";
 const S = {
   sidebar: (open) => ({
     width: open ? 240 : 64,
-    minHeight: "calc(100vh - 70px)",
+    minHeight: 0,
     background: "#ffffff",
     borderRight: "1px solid #ede9fe",
     display: "flex",
