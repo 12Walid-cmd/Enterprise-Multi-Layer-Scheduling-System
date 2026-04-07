@@ -9,10 +9,14 @@ import { CreateLeaveRequestDto } from './dto/crate-leave-request.dto';
 import { UpdateLeaveStatusDto } from './dto/update-leave-status.dto';
 import { FilterLeaveRequestsDto } from './dto/filter-leave-requests.dto';
 import { $Enums } from '@prisma/client';
+import { AuditWriter } from 'src/audit/audit-writer.service';
 
 @Injectable()
 export class LeaveService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditWriter,
+  ) {}
 
   async create(userId: string, dto: CreateLeaveRequestDto) {
     if (new Date(dto.start_date) > new Date(dto.end_date)) {
@@ -21,7 +25,7 @@ export class LeaveService {
       );
     }
 
-    return this.prisma.leave_requests.create({
+    const leave = await this.prisma.leave_requests.create({
       data: {
         user_id: userId,
         type: dto.type as $Enums.LeaveType,
@@ -32,6 +36,10 @@ export class LeaveService {
         affects_schedule: dto.affects_schedule ?? true,
       },
     });
+
+    await this.audit.leave.requested(userId, leave.id, dto);
+
+    return leave;
   }
 
   async findMyLeaves(userId: string, filter: FilterLeaveRequestsDto) {
@@ -57,13 +65,17 @@ export class LeaveService {
       throw new BadRequestException('Only PENDING leaves can be cancelled');
     }
 
-    return this.prisma.leave_requests.update({
+    const updated = await this.prisma.leave_requests.update({
       where: { id: leaveId },
       data: {
         status: $Enums.LeaveStatus.CANCELLED,
         synced_to_schedule: false,
       },
     });
+
+    await this.audit.leave.cancelled(userId, leaveId);
+
+    return updated;
   }
 
   async findPendingForApprover(approverId: string) {
@@ -113,6 +125,12 @@ export class LeaveService {
           synced_to_schedule: false,
         },
       });
+
+      if (dto.decision === $Enums.LeaveStatus.APPROVED) {
+        await this.audit.leave.approved(approverId, leaveId);
+      } else {
+        await this.audit.leave.rejected(approverId, leaveId);
+      }
 
       return { leave: updatedLeave, approval };
     });

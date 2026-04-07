@@ -4,11 +4,12 @@ import { RouterProvider } from "react-router-dom";
 import { router } from "./router";
 
 import { ThemeProvider, createTheme, CssBaseline } from "@mui/material";
+import { AuthProvider } from "./context/AuthContext";   
 
 const theme = createTheme({
   palette: {
     mode: "light",
-    primary: { main: "#6366f1" }, 
+    primary: { main: "#6366f1" },
     background: { default: "#f7f8fa" },
   },
   typography: {
@@ -20,7 +21,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <RouterProvider router={router} />
+
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+
     </ThemeProvider>
   </React.StrictMode>
 );

@@ -5,14 +5,15 @@ import { UpdateDomainDto } from './dto/update-domain.dto';
 import { AddTeamToDomainDto } from './dto/add-team-to-domain.dto';
 import { AddUserToDomainTeamDto } from './dto/add-user-to-domain-team.dto';
 import { DomainUserDto } from './dto/domain-user.dto';
+import { CurrentUser } from 'src/auth/current-user.decorator';
 
 @Controller('domains')
 export class DomainsController {
   constructor(private readonly domainService: DomainsService) { }
 
   @Post()
-  create(@Body() dto: CreateDomainDto) {
-    return this.domainService.create(dto);
+  create(@Body() dto: CreateDomainDto, @CurrentUser('id') userId: string) {
+    return this.domainService.create(dto, userId);
   }
 
   @Get()
@@ -26,13 +27,13 @@ export class DomainsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateDomainDto) {
-    return this.domainService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateDomainDto, @CurrentUser('id') userId: string) {
+    return this.domainService.update(id, dto, userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.domainService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.domainService.remove(id, userId);
   }
 
   @Post(':domainId/users')

@@ -7,9 +7,11 @@ import { TierController } from './tier/tier.controller';
 import { TierService } from './tier/tier.service';
 import { RotationRulesController } from './rule/rule.controller';
 import { RotationRulesService } from './rule/rule.service';
+import { AuditModule } from 'src/audit/audit.module';
+import { RotationSnapshotService } from './rotation_audit_snapshot.service';
 
 @Module({
-  imports: [ScheduleModule],
+  imports: [ScheduleModule, AuditModule],
   controllers: [
     RotationsController,
     TierController,   
@@ -19,7 +21,8 @@ import { RotationRulesService } from './rule/rule.service';
     RotationsService,
     TierService,           
     PrismaService,
-    RotationRulesService
+    RotationRulesService,
+    RotationSnapshotService,
   ],
 })
 export class RotationsModule {}

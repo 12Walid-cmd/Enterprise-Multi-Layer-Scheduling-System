@@ -44,14 +44,10 @@ import DomainDetailPage from "./pages/org/domains/DomainDetailPage";
 import EditDomainPage from "./pages/org/domains/EditDomainPage";
 import CreateDomainPage from "./pages/org/domains/CreateDomainPage";
 
-// Domain-Team
-import DomainTeamDetail from "./pages/org/domain-teams/DomainTeamDetail";
-// import AddUserToDomainTeamPage from "./pages/org/domain-teams/AddUserToDomainPage";
 import AddUserToDomainPage from "./pages/org/domains/AddUserToDomainPage";
 import AddTeamToDomainPage from "./pages/org/domains/AddTeamToDomainPage";
-// inport EditDomainTeamPage from "./pages/org/domain-teams/EditDomainTeamPage";
-import CreateDomainTeamPage from "./pages/org/domain-teams/CreateDomainTeamPage";
-import DomainTeamList from "./pages/org/domain-teams/DomainTeamsList";
+
+
 
 
 
@@ -69,6 +65,24 @@ import RotationTiersPage from "./pages/rotation/RotationTiersPage";
 import ScheduleListPage from "./pages/schedule/ScheduleListPage";
 import SchedulePage from "./pages/schedule/SchedulePage";
 import RotationRulesPage from "./pages/rotation/RotationRulesPage";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+// Auth
+import Register from "./pages/auth/Register";
+import Login from "./pages/auth/Login";
+
+// Leaves
+import MyLeavesPage from "./pages/leave/MyLeavesPage";
+import CreateLeavePage from "./pages/leave/CreateLeavePage";
+import ApprovalsPage from "./pages/leave/ApprovalsPage";
+
+// Holidays
+import HolidayPage from "./pages/holiday/HolidayPage";
+
+// Audit Logs
+import AuditLogPage from "./pages/audit/AuditLogPage";
+
+
 
 
 
@@ -78,9 +92,15 @@ const SubTeamListWrapper = () => {
 };
 
 export const router = createBrowserRouter([
+  { path: "/login", element: <Login />, },
+  { path: "/register", element: <Register />, },
   {
     path: "/",
-    element: <RootLayout />,
+    element: (
+      <ProtectedRoute>
+        <RootLayout />
+      </ProtectedRoute>
+    ),
     children: [
       // Groups
       { index: true, element: <GroupsList /> },
@@ -112,11 +132,6 @@ export const router = createBrowserRouter([
       { path: "domains/:id", element: <DomainDetailPage /> },
       { path: "domains/:id/edit", element: <EditDomainPage /> },
 
-      // Domain-Team
-      { path: "domains/:id/teams", element: <DomainTeamList /> },
-      { path: "domains/:id/teams/create", element: <CreateDomainTeamPage /> },
-      { path: "domains/:id/teams/:teamId", element: <DomainTeamDetail /> },
-      // { path: "domains/:id/teams/:teamId/edit", element: <EditDomainTeamPage /> },
       { path: "domains/:domainId/add-user", element: <AddUserToDomainPage /> },
       { path: "domains/:id/add-team", element: <AddTeamToDomainPage /> },
 
@@ -156,6 +171,16 @@ export const router = createBrowserRouter([
       // Schedule
       { path: '/schedule', element: <ScheduleListPage /> },
       { path: '/schedule/:id', element: <SchedulePage /> },
+      // Leaves
+      { path: "leave", element: <MyLeavesPage /> },
+      { path: "leave/create", element: <CreateLeavePage /> },
+      { path: "leave/approvals", element: <ApprovalsPage /> },
+
+      // Holidays
+      { path: "holidays", element: <HolidayPage /> },
+
+      // Audit Logs
+      { path: "audit-logs", element: <AuditLogPage /> },
     ],
   },
 ]);

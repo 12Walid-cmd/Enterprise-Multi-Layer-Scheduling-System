@@ -33,7 +33,7 @@ export default function Sidebar() {
   const [openUser, setOpenUser] = useState(false);
   const [openRotation, setOpenRotation] = useState(false);
   const [openSchedule, setOpenSchedule] = useState(false);
-
+  const [openLeave, setOpenLeave] = useState(false);
   return (
     <Drawer
       variant="permanent"
@@ -182,8 +182,55 @@ export default function Sidebar() {
               <ListItemText primary="View" />
             </ListItemButton>
 
+            <ListItemButton component={NavLink} to="/holidays" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <CalendarMonthIcon />
+              </ListItemIcon>
+              <ListItemText primary="Holidays" />
+            </ListItemButton>
+
           </List>
         </Collapse>
+
+        {/* ============================
+          LEAVE
+          ============================ */}
+        <ListItemButton onClick={() => setOpenLeave(!openLeave)}>
+          <ListItemIcon sx={{ color: "white" }}>
+            <CalendarMonthIcon />
+          </ListItemIcon>
+          <ListItemText primary="LEAVE" />
+          {openLeave ? <ExpandLess /> : <ExpandMore />}
+        </ListItemButton>
+
+        <Collapse in={openLeave} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+
+            <ListItemButton component={NavLink} to="/leave" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <CalendarMonthIcon />
+              </ListItemIcon>
+              <ListItemText primary="My Leaves" />
+            </ListItemButton>
+
+            <ListItemButton component={NavLink} to="/leave/approvals" sx={{ pl: 4 }}>
+              <ListItemIcon sx={{ color: "white" }}>
+                <ShieldIcon />
+              </ListItemIcon>
+              <ListItemText primary="Approvals" />
+            </ListItemButton>
+
+          </List>
+        </Collapse>
+        {/* ============================
+          Audit Logs
+          ============================ */}
+        <ListItemButton component={NavLink} to="/audit-logs" sx={{ pl: 4 }}>
+          <ListItemIcon sx={{ color: "white" }}>
+            <ShieldIcon />
+          </ListItemIcon>
+          <ListItemText primary="Audit Logs" />
+        </ListItemButton>
 
       </List>
     </Drawer>

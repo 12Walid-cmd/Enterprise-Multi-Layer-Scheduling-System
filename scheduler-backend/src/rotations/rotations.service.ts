@@ -13,14 +13,19 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { ReorderMembersDto } from './dto/reorder-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { getPEIHolidays } from 'src/utils/holidays';
+import { RotationSnapshotService } from './rotation_audit_snapshot.service';
+import { AuditWriter } from 'src/audit/audit-writer.service';
 
 
 @Injectable()
 export class RotationsService {
-    constructor(private readonly prisma: PrismaService) { }
+    constructor(private readonly prisma: PrismaService,
+        private readonly audit: AuditWriter,
+        private readonly snapshot: RotationSnapshotService,
+    ) { }
 
-    async create(dto: CreateRotationDto) {
-        return this.prisma.rotation_definitions.create({
+    async create(dto: CreateRotationDto, userId: string) {
+        const rotation = await this.prisma.rotation_definitions.create({
             data: {
                 name: dto.name,
                 code: dto.code,
@@ -50,6 +55,10 @@ export class RotationsService {
                 is_active: dto.is_active ?? true,
             },
         });
+        await this.audit.rotation.created(userId, rotation.id, dto);
+        await this.snapshot.createSnapshot(rotation.id);
+
+        return rotation;
     }
 
     async findAll() {
@@ -83,10 +92,11 @@ export class RotationsService {
         return rotation;
     }
 
-    async update(id: string, dto: UpdateRotationDto) {
+    async update(id: string, dto: UpdateRotationDto, userId: string) {
         await this.ensureExists(id);
-
-        return this.prisma.rotation_definitions.update({
+        const before = await this.prisma.rotation_definitions.findUnique({ where: { id } });
+        if (!before) throw new NotFoundException("Rotation not found");
+        const after = await this.prisma.rotation_definitions.update({
             where: { id },
             data: {
                 ...(dto.name !== undefined && { name: dto.name }),
@@ -119,9 +129,12 @@ export class RotationsService {
                 ...(dto.is_active !== undefined && { is_active: dto.is_active }),
             },
         });
+        await this.audit.rotation.updated(userId, id, before, after);
+        await this.snapshot.createSnapshot(id);
+        return after;
     }
 
-    async remove(id: string) {
+    async remove(id: string, userId: string) {
         await this.ensureExists(id);
 
         await this.prisma.$transaction([
@@ -143,6 +156,8 @@ export class RotationsService {
             }),
         ]);
 
+        await this.audit.rotation.deleted(userId, id);
+
         return { id };
     }
 
@@ -155,14 +170,14 @@ export class RotationsService {
         });
     }
 
-    async addMember(rotationId: string, dto: AddMemberDto) {
+    async addMember(rotationId: string, dto: AddMemberDto, userId: string) {
         await this.ensureExists(rotationId);
 
         const count = await this.prisma.rotation_members.count({
             where: { rotation_definition_id: rotationId },
         });
 
-        return this.prisma.rotation_members.create({
+        const member = await this.prisma.rotation_members.create({
             data: {
                 rotation_definition_id: rotationId,
                 member_type: dto.member_type as RotationMemberType,
@@ -171,9 +186,12 @@ export class RotationsService {
                 is_active: true,
             },
         });
+        await this.audit.rotation.memberAdded(userId, rotationId, dto);
+        await this.snapshot.createSnapshot(rotationId);
+        return member;
     }
 
-    async removeMember(memberId: string) {
+    async removeMember(memberId: string, userId: string) {
         const exists = await this.prisma.rotation_members.findUnique({
             where: { id: memberId },
         });
@@ -186,10 +204,18 @@ export class RotationsService {
             where: { id: memberId },
         });
 
+        await this.audit.rotation.memberRemoved(
+            userId,
+            exists.rotation_definition_id,
+            { memberId },
+        );
+        await this.audit.rotation.memberRemoved(userId, exists.rotation_definition_id, { memberId });
+        await this.snapshot.createSnapshot(exists.rotation_definition_id);
+
         return { id: memberId };
     }
 
-    async reorderMembers(rotationId: string, dto: ReorderMembersDto) {
+    async reorderMembers(rotationId: string, dto: ReorderMembersDto, userId: string) {
         await this.ensureExists(rotationId);
 
         await this.prisma.$transaction(
@@ -200,14 +226,18 @@ export class RotationsService {
                 }),
             ),
         );
-
+        await this.audit.rotation.reordered(userId, rotationId, dto);
+        await this.snapshot.createSnapshot(rotationId);
         return this.findMembers(rotationId);
     }
-    async updateMember(memberId: string, dto: UpdateMemberDto) {
-        return this.prisma.rotation_members.update({
+    async updateMember(memberId: string, dto: UpdateMemberDto, userId: string) {
+        const member = await this.prisma.rotation_members.update({
             where: { id: memberId },
             data: dto,
         });
+        await this.snapshot.createSnapshot(member.rotation_definition_id);
+
+        return member;
     }
 
     private async ensureExists(id: string) {
@@ -248,6 +278,15 @@ export class RotationsService {
             users.map(u => [u.id, `${u.first_name} ${u.last_name}`.trim()])
         );
 
+        const tiers = await this.prisma.rotation_tiers.findMany({
+            where: { rotation_definition_id: id },
+            select: { tier_level: true, name: true },
+        });
+
+        const tierMap = Object.fromEntries(
+            tiers.map(t => [t.tier_level, t.name])
+        );
+        
         const calendar = results.map(r => {
             const rawAssignees = Array.isArray(r.assignees)
                 ? (r.assignees as unknown[]).filter((x): x is string => typeof x === "string")
@@ -269,6 +308,7 @@ export class RotationsService {
                 conflictFlags: rawConflicts,
                 ruleViolations: [],
                 tier: r.tier_level,
+                tierName: tierMap[r.tier_level] ?? null,
                 overrideFlags: r.override_flag ? ['override'] : [],
             };
         });

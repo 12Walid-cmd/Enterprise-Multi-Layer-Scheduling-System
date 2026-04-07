@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
     Box,
     Button,
+    FormControl,
     FormControlLabel,
+    InputLabel,
     MenuItem,
     Paper,
     Stack,
@@ -17,7 +19,7 @@ import { UsersAPI, RotationAPI } from "../../api";
 import ScopeSelector from "./components/ScopeSelector";
 import type { User } from "../../types/user";
 
-const ROTATION_TYPES = ["TEAM", "SUBTEAM", "ROLE", "DOMAIN", "DOMAIN_TEAM", "CROSS_TEAM"] as const;
+const ROTATION_TYPES = ["TEAM", "SUBTEAM", "ROLE", "DOMAIN", "CROSS_TEAM"] as const; // , "DOMAIN_TEAM"
 const CADENCE_TYPES = ["DAILY", "WEEKLY", "BIWEEKLY", "CUSTOM"] as const;
 
 type RotationType = (typeof ROTATION_TYPES)[number];
@@ -28,7 +30,7 @@ type RotationScope =
     | "GROUP"
     | "ROLE"
     | "DOMAIN"
-    | "DOMAIN_TEAM"
+    // | "DOMAIN_TEAM"
     | "NONE";
 
 //  Rotation Type → Allowed Scope Types
@@ -37,7 +39,7 @@ const ALLOWED_SCOPE_TYPES: Record<RotationType, RotationScope[]> = {
     SUBTEAM: ["SUBTEAM"],
     ROLE: ["ROLE"],
     DOMAIN: ["DOMAIN"],
-    DOMAIN_TEAM: ["DOMAIN_TEAM"],
+    // DOMAIN_TEAM: ["DOMAIN_TEAM"],
     CROSS_TEAM: ["GROUP", "DOMAIN"], // cross-team rotations
     // NONE is a special/global scope that can be used with any rotation type
 };
@@ -86,8 +88,8 @@ function getDefaultsByType(type: RotationType): {
             return { scope_type: "ROLE", cadence: "WEEKLY", min_assignees: 1, max_assignees: 1, allow_overlap: false, priority: 50 };
         case "DOMAIN":
             return { scope_type: "DOMAIN", cadence: "DAILY", min_assignees: 1, max_assignees: 1, allow_overlap: false, priority: 100 };
-        case "DOMAIN_TEAM":
-            return { scope_type: "DOMAIN_TEAM", cadence: "DAILY", min_assignees: 1, max_assignees: 1, allow_overlap: false, priority: 100 };
+        // case "DOMAIN_TEAM":
+        //     return { scope_type: "DOMAIN_TEAM", cadence: "DAILY", min_assignees: 1, max_assignees: 1, allow_overlap: false, priority: 100 };
         case "CROSS_TEAM":
             return { scope_type: "GROUP", cadence: "WEEKLY", min_assignees: 1, max_assignees: 1, allow_overlap: false, priority: 80 };
         default:
@@ -335,15 +337,21 @@ export default function CreateRotationPage() {
                         </TextField>
 
                         {/* Scope Selector */}
-                        <ScopeSelector
-                            scopeType={scopeType}
-                            value={watch("scope_ref_id") ?? null}
-                            onChange={(v) => setValue("scope_ref_id", v ?? null)}
-                        />
+                        <FormControl fullWidth>
+                            <InputLabel shrink>Scope Reference</InputLabel>
+
+                            <Box mt={3}>
+                                <ScopeSelector
+                                    scopeType={scopeType}
+                                    value={watch("scope_ref_id") ?? null}
+                                    onChange={(v) => setValue("scope_ref_id", v ?? null)}
+                                />
+                            </Box>
+                        </FormControl>
 
                         {/* Rotation Owner */}
                         <TextField select label="Rotation Owner" fullWidth {...register("owner_id")}>
-                            <MenuItem value="">(None)</MenuItem>
+                            
                             {users.map((u) => (
                                 <MenuItem key={u.id} value={u.id}>
                                     {u.first_name} {u.last_name} ({u.email})

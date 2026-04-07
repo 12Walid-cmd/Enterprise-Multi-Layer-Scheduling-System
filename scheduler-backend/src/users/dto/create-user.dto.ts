@@ -2,6 +2,10 @@ import { IsEmail, IsString, IsEnum, IsBoolean, IsOptional } from 'class-validato
 import { working_mode_enum } from '@prisma/client';
 
 export class CreateUserDto {
+    @IsOptional()
+    @IsString()
+    password?: string;
+
     @IsString()
     first_name: string;
 

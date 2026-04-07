@@ -42,9 +42,10 @@ import { DomainsService } from './domains/domains.service';
 import { DomainTeamsService } from './domains/domain-teams.service';
 import { DomainsController } from './domains/domains.controller';
 import { DomainTeamsController } from './domains/domain-teams.controller';
+import { AuditModule } from 'src/audit/audit.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuditModule],
   controllers: [
     GroupsController,
     TeamsController,

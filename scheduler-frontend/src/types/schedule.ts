@@ -7,7 +7,8 @@ export interface CalendarEvent {
   assignees: string[];
   conflictFlags: string[];
   ruleViolations: string[];
-  tier: number;               
+  tier: number; 
+  tierName?: string;              
   overrideFlags: string[];
 }
 

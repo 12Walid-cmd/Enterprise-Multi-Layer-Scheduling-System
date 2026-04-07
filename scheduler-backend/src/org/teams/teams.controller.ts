@@ -2,14 +2,15 @@ import { Controller, Post, Get, Patch, Delete, Body, Param } from '@nestjs/commo
 import { TeamsService } from './teams.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
+import { CurrentUser } from 'src/auth/current-user.decorator';
 
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
   @Post()
-  create(@Body() dto: CreateTeamDto) {
-    return this.teamsService.create(dto);
+  create(@Body() dto: CreateTeamDto, @CurrentUser('id') userId: string) {
+    return this.teamsService.create(dto, userId);
   }
 
   @Get()
@@ -18,8 +19,8 @@ export class TeamsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateTeamDto) {
-    return this.teamsService.update(id, dto);
+  update(@Param('id') id: string, @Body() dto: UpdateTeamDto, @CurrentUser('id') userId: string) {
+    return this.teamsService.update(id, dto, userId);
   }
   
   @Get(':id')
@@ -28,7 +29,7 @@ export class TeamsController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.teamsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.teamsService.remove(id, userId);
   }
 }

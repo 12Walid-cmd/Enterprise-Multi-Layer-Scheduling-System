@@ -12,9 +12,16 @@ interface Props {
 }
 
 const tierColors: Record<number, string> = {
-  1: '#4FC3F7',
-  2: '#7C4DFF',
-  3: '#FFB300',
+  1: '#4FC3F7', // Light Blue
+  2: '#7C4DFF', // Purple
+  3: '#FFB300', // Amber
+  4: '#E57373', // Soft Red
+  5: '#81C784', // Green
+  6: '#BA68C8', // Lavender
+  7: '#FFD54F', // Soft Yellow
+  8: '#4DB6AC', // Teal
+  9: '#9575CD', // Deep Purple
+  10: '#F06292', // Pink
 };
 
 const EventCard = styled('div')(({ theme }) => ({
@@ -36,11 +43,14 @@ export default function CalendarView({ events, holidays = [], onDayClick }: Prop
     end: e.end,
     extendedProps: {
       tier: e.tier,
+      tierName: e.tierName,
       conflicts: e.conflictFlags,
       overrides: e.overrideFlags,
       assignees: e.assignees,
     },
   }));
+
+
 
   const holidayEvents = (holidays ?? []).map(h => ({
     id: `holiday-${h.date}`,
@@ -100,6 +110,7 @@ export default function CalendarView({ events, holidays = [], onDayClick }: Prop
           const assignees = Array.isArray(raw) ? raw : [];
 
           const tier = arg.event.extendedProps.tier;
+          const tierName = arg.event.extendedProps.tierName;
           const conflicts = arg.event.extendedProps.conflicts ?? [];
           const overrides = arg.event.extendedProps.overrides ?? [];
 
@@ -108,7 +119,7 @@ export default function CalendarView({ events, holidays = [], onDayClick }: Prop
               title={
                 <Box p={1}>
                   <Typography variant="subtitle2" fontWeight={600}>
-                    {arg.event.title}
+                    {arg.event.title}-{tierName}
                   </Typography>
 
                   <Typography variant="body2">
@@ -138,7 +149,7 @@ export default function CalendarView({ events, holidays = [], onDayClick }: Prop
               <EventCard>
                 <Chip
                   size="small"
-                  label={`Tier ${tier}`}
+                  label={`Tier ${tier}-${tierName}`}
                   sx={{
                     bgcolor: tierColors[tier] ?? '#555',
                     color: '#000',

@@ -15,6 +15,7 @@ import { AddMemberDto } from './dto/add-member.dto';
 import { ReorderMembersDto } from './dto/reorder-members.dto';
 import { UpdateMemberDto } from './dto/update-member.dto';
 import { ScheduleService } from '../schedule/schedule.service';
+import { CurrentUser } from 'src/auth/current-user.decorator';
 
 @Controller('rotations')
 export class RotationsController {
@@ -25,8 +26,8 @@ export class RotationsController {
   // ============================
 
   @Post()
-  create(@Body() dto: CreateRotationDto) {
-    return this.service.create(dto);
+  create(@Body() dto: CreateRotationDto, @CurrentUser('id') userId: string) {
+    return this.service.create(dto, userId);
   }
 
   @Get()
@@ -40,13 +41,17 @@ export class RotationsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateRotationDto) {
-    return this.service.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateRotationDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.service.update(id, dto, userId);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id);
+  remove(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.service.remove(id, userId);
   }
 
   // ============================
@@ -59,34 +64,44 @@ export class RotationsController {
   }
 
   @Post(':id/members')
-  addMember(@Param('id') id: string, @Body() dto: AddMemberDto) {
-    return this.service.addMember(id, dto);
+  addMember(
+    @Param('id') id: string,
+    @Body() dto: AddMemberDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.service.addMember(id, dto, userId);
   }
 
   @Patch(':id/members/reorder')
   reorderMembers(
     @Param('id') id: string,
     @Body() dto: ReorderMembersDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.service.reorderMembers(id, dto);
+    return this.service.reorderMembers(id, dto, userId);
   }
 
   @Delete('members/:memberId')
-  removeMember(@Param('memberId') memberId: string) {
-    return this.service.removeMember(memberId);
+  removeMember(
+    @Param('memberId') memberId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.service.removeMember(memberId, userId);
   }
 
   @Patch('members/:memberId')
   updateMember(
     @Param('memberId') memberId: string,
     @Body() dto: UpdateMemberDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.service.updateMember(memberId, dto);
+    return this.service.updateMember(memberId, dto, userId);
   }
 
-// ============================
-// Schedule Generation
-// ============================
+
+  // ============================
+  // Schedule Generation
+  // ============================
 
   @Post(':id/schedule/generate')
   async generateSchedule(
