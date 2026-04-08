@@ -6,7 +6,7 @@ export default function Topbar() {
   const { user, logout } = useAuth();
 
   const fullName = user ? `${user.first_name} ${user.last_name}` : "Guest";
-  const role = user?.roles?.[0] ?? "User"; 
+  const role = user?.roles?.[0] ?? "User";
   const avatarLetter = user?.first_name?.[0]?.toUpperCase() ?? "U";
 
   return (
@@ -20,7 +20,7 @@ export default function Topbar() {
       }}
     >
       <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
-        
+
         {/* Logo */}
         <Box
           component="img"
@@ -31,12 +31,33 @@ export default function Topbar() {
 
         {/* Right side */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <Box sx={{ textAlign: "right" }}>
-            <Typography fontWeight={600}>{fullName}</Typography>
-            <Typography variant="body2" color="text.secondary">
+          {/* Role + Name */}
+          <Box
+            sx={{
+              display: "flex",
+              flexDirection: "row",   
+              alignItems: "center",   
+              gap: 2                 
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ fontSize: "1.2rem" }}
+            >
               {role}
             </Typography>
+
+            <Typography
+              fontWeight={700}
+              sx={{ fontSize: "1.45rem", lineHeight: 1 }}
+            >
+              {fullName}
+            </Typography>
           </Box>
+
+
+
 
           <Avatar sx={{ bgcolor: "primary.main" }}>{avatarLetter}</Avatar>
 

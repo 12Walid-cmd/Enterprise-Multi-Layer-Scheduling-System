@@ -11,7 +11,7 @@ export const http = axios.create({
 });
 
 http.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem("access_token"); 
+  const token = sessionStorage.getItem("access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -23,6 +23,13 @@ http.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
+    if (original.url.includes("/auth/refresh")) {
+      sessionStorage.removeItem("access_token");
+      window.location.href = "/login";
+      return Promise.reject(error);
+    }
+
+    
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
 
@@ -31,15 +38,18 @@ http.interceptors.response.use(
         const newAccessToken = refreshRes.data.access_token;
 
         sessionStorage.setItem("access_token", newAccessToken);
-
         original.headers["Authorization"] = `Bearer ${newAccessToken}`;
+
         return http(original);
       } catch (err) {
+        
         sessionStorage.removeItem("access_token");
         window.location.href = "/login";
+        return Promise.reject(err);
       }
     }
 
     return Promise.reject(error);
   }
 );
+
