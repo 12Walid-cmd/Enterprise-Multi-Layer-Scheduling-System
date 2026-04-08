@@ -12,6 +12,8 @@ import { UsersModule } from './users/users.module';
 import { RulesModule } from './rules/rules.module';
 import { HolidayModule } from './holiday/holiday.module';
 import { AuditModule } from './audit/audit.module';
+import { PermissionsModule } from './permissions/permissions.module';
+
 
 @Module({
   imports: [
@@ -30,6 +32,7 @@ import { AuditModule } from './audit/audit.module';
     RulesModule,
     HolidayModule,
     AuditModule,
+    PermissionsModule,
   ],
 })
 export class AppModule {}

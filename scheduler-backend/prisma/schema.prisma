@@ -74,6 +74,7 @@ model users {
   leaveRequests       leave_requests[]
   leave_approvals     leave_approvals[]
   domainUsers         domain_users[]
+  userResourceScopes  user_resource_scope[]
 
   @@schema("ems")
 }
@@ -634,6 +635,19 @@ model rotation_exceptions {
   rotation rotation_definitions @relation(fields: [rotation_id], references: [id])
 
   @@unique([rotation_id, date])
+  @@schema("ems")
+}
+
+model user_resource_scope {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String @db.Uuid
+  resource_type String // "GROUP" | "DOMAIN" | "TEAM" | "ROTATION"
+  resource_id   String @db.Uuid
+
+  users users @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([resource_type, resource_id])
   @@schema("ems")
 }
 

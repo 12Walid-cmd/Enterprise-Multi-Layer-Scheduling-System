@@ -114,6 +114,30 @@ export class AuthService {
       },
     });
 
+    // PBAC: Resource Scope
+    const resourceScope = await this.prisma.user_resource_scope.findMany({
+      where: { user_id: userId },
+    });
+
+    // Build PBAC scope structure
+    const scope = {
+      group_ids: resourceScope
+        .filter(r => r.resource_type === 'GROUP')
+        .map(r => r.resource_id),
+
+      domain_ids: resourceScope
+        .filter(r => r.resource_type === 'DOMAIN')
+        .map(r => r.resource_id),
+
+      team_ids: resourceScope
+        .filter(r => r.resource_type === 'TEAM')
+        .map(r => r.resource_id),
+
+      rotation_ids: resourceScope
+        .filter(r => r.resource_type === 'ROTATION')
+        .map(r => r.resource_id),
+    };
+
     if (!fullUser) throw new UnauthorizedException('User not found');
 
     // Access Token payload
@@ -131,6 +155,7 @@ export class AuthService {
       domain_team_ids: fullUser.domainTeams.map(dt => dt.domain_team_id),
       roles: fullUser.user_roles.map(r => r.global_roles.code),
       permissions: [],
+      scope,
     };
 
     // Session metadata

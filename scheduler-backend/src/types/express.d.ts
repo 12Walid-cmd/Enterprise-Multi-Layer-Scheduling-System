@@ -21,6 +21,14 @@ declare module 'express' {
 
       roles: string[];
       permissions: string[];
+
+      scope: {                
+        group_ids: string[];
+        domain_ids: string[];
+        team_ids: string[];
+        rotation_ids: string[];
+      };
+
     };
   }
 }

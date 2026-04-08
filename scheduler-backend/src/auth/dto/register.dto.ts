@@ -4,30 +4,30 @@ import { IsEmail, IsString, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsString()
-  first_name: string;
+  first_name!: string;
 
   @IsString()
-  last_name: string;
+  last_name!: string;
 
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
   @MinLength(8)
-  password: string;
+  password!: string;
 
   @IsString()
-  phone: string;
+  phone!: string;
 
   @IsString()
-  timezone: string;
+  timezone!: string;
 }
 
 // auth/dto/login.dto.ts
 export class LoginDto {
   @IsEmail()
-  email: string;
+  email!: string;
 
   @IsString()
-  password: string;
+  password!: string;
 }

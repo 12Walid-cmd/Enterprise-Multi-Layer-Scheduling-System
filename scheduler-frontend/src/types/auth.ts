@@ -22,14 +22,14 @@ export interface AuthUser {
   created_at?: string;
   updated_at?: string;
 
-  group_id: string | null;
-
-  team_ids: string[];
-  sub_team_ids: string[];
-
-  domain_ids: string[];
-  domain_team_ids: string[];
-
   roles: string[];         
   permissions: string[];
+
+  scope: {
+    group_ids: string[];
+    domain_ids: string[];
+    team_ids: string[];
+    rotation_ids: string[];
+  };
+
 }
