@@ -29,10 +29,6 @@ const LEGEND_CHIPS = [
 ];
 
 // ── Date helpers ──────────────────────────────────────────────────
-// State is year (int) + month 1-12 (int) + span (int months).
-// Dates are always built from integers — never parsed from strings.
-// This eliminates all timezone/UTC shift bugs entirely.
-
 function pad(n) { return String(n).padStart(2, "0"); }
 
 function ymd(year, month1, day) {
@@ -73,8 +69,7 @@ function getDatesInRange(start, end) {
 
 function isWeekend(dateStr) {
   const { y, m, d } = parseYMD(dateStr);
-  const day = new Date(y, m - 1, d).getDay();
-  return day === 0 || day === 6;
+  return new Date(y, m - 1, d).getDay() % 6 === 0;
 }
 
 function dateInRange(dateStr, start, end) {
@@ -99,8 +94,7 @@ function getWindow(year, month1, span) {
   let endMonth = month1 + span - 1;
   let endYear  = year;
   while (endMonth > 12) { endMonth -= 12; endYear++; }
-  const end = monthEnd(endYear, endMonth);
-  return { start, end };
+  return { start, end: monthEnd(endYear, endMonth) };
 }
 
 function rowHeight(row) {
@@ -175,11 +169,12 @@ function ScheduleCanvas({
   const hoverCol   = useRef(-1);
   const rafRef     = useRef(null);
   const isPainting = useRef(false);
-  const prevWinKey = useRef(winKey);
   const today      = todayStr();
   const canvasW    = allDates.length * COL_W;
 
   const draw = useCallback(() => {
+
+
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const canvas = canvasRef.current;
@@ -187,17 +182,10 @@ function ScheduleCanvas({
       const dpr = window.devicePixelRatio || 1;
       const vw  = canvas.width  / dpr;
       const vh  = canvas.height / dpr;
+      const sx  = scrollX.current;
       const ctx = canvas.getContext("2d");
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // Reset scroll position when date window changes
-      if (prevWinKey.current !== winKey) {
-        prevWinKey.current = winKey;
-        scrollX.current = 0;
-      }
-
-      const sx = scrollX.current;
       ctx.clearRect(0, 0, vw, vh);
       ctx.fillStyle = CC.bg; ctx.fillRect(0, 0, vw, vh);
 
@@ -368,9 +356,9 @@ function ScheduleCanvas({
       });
     });
   }, [allDates, rows, holidayMap, gapMap, leaveByUser, oooPerDate,
-      monthSpans, today, activePaintChip, paintedCells, winKey]);
+      monthSpans, today, activePaintChip, paintedCells]);
 
-  // Resize observer — constrain canvas to exact content height
+  // Resize observer
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -389,13 +377,14 @@ function ScheduleCanvas({
 
   useEffect(() => { draw(); }, [draw]);
 
-  // Wheel scroll
+  // Wheel — horizontal only, let vertical pass through to container
   const onWheel = useCallback(e => {
-    e.preventDefault();
-    const maxSX = Math.max(0, canvasW - (canvasRef.current?.offsetWidth || 0));
-    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
-    scrollX.current = Math.max(0, Math.min(maxSX, scrollX.current + delta * 0.8));
-    draw();
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5) {
+      e.preventDefault();
+      const maxSX = Math.max(0, canvasW - (canvasRef.current?.offsetWidth || 0));
+      scrollX.current = Math.max(0, Math.min(maxSX, scrollX.current + e.deltaX * 0.8));
+      draw();
+    }
   }, [canvasW, draw]);
 
   useEffect(() => {
@@ -485,7 +474,7 @@ function ScheduleCanvas({
       onContextMenu={onContextMenu}
       style={{
         width: "100%",
-        height: canvasH + "px",   // exact content height — no empty space
+        height: canvasH + "px",
         display: "block",
         cursor: activePaintChip ? "crosshair" : "pointer",
         flexShrink: 0,
@@ -500,7 +489,7 @@ function FrozenCols({ rows, canvasH }) {
     <div style={{
       position: "absolute", top: 0, left: 0,
       width: FROZEN_W,
-      height: canvasH + "px",   // match exact canvas height
+      height: canvasH + "px",
       pointerEvents: "none", zIndex: 10,
       display: "flex", flexDirection: "column",
       fontFamily: "'DM Sans', system-ui, sans-serif",
@@ -788,10 +777,9 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
 export default function Schedule() {
   const now = new Date();
 
-  // Core state — just integers, no date parsing ever
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
-  const [span,  setSpan]  = useState(1);  // 1 = month, 12 = year
+  const [span,  setSpan]  = useState(1);
 
   const [data,            setData]            = useState(null);
   const [loading,         setLoading]         = useState(true);
@@ -807,13 +795,11 @@ export default function Schedule() {
 
   const fetchTimerRef = useRef(null);
 
-  // Derived window — always exact month boundaries, no parsing
   const { start: winStart, end: winEnd } = useMemo(
     () => getWindow(year, month, span), [year, month, span]
   );
   const winKey = `${winStart}-${winEnd}`;
 
-  // Navigate one month at a time — pure integer arithmetic
   const goPrev = useCallback(() => {
     setMonth(m => {
       if (m === 1) { setYear(y => y - 1); return 12; }
@@ -828,7 +814,6 @@ export default function Schedule() {
     });
   }, []);
 
-  // Escape cancels paint mode
   useEffect(() => {
     const onKey = e => { if (e.key === "Escape") setActivePaintChip(null); };
     window.addEventListener("keydown", onKey);
@@ -887,7 +872,6 @@ export default function Schedule() {
     return () => clearTimeout(fetchTimerRef.current);
   }, [fetchSchedules, search]);
 
-  // Period label — built from integers
   const periodLabel = useMemo(() => {
     if (span === 1) return `${MONTHS[month - 1]} ${year}`;
     let endMonth = month + span - 1;
@@ -914,9 +898,7 @@ export default function Schedule() {
       getDatesInRange(
         (g.gap_start || "").substring(0, 10),
         (g.gap_end   || "").substring(0, 10)
-      ).forEach(d => {
-        if (!m[d]) m[d] = []; m[d].push(g.rotation_id);
-      });
+      ).forEach(d => { if (!m[d]) m[d] = []; m[d].push(g.rotation_id); });
     });
     return m;
   }, [data]);
@@ -984,7 +966,6 @@ export default function Schedule() {
     return r;
   }, [grouped]);
 
-  // Exact content height — no empty rows at the bottom
   const canvasH = useMemo(() =>
     HEAD_H + rows.reduce((sum, row) => sum + rowHeight(row), 0),
   [rows]);
@@ -1022,7 +1003,6 @@ export default function Schedule() {
         </div>
       )}
 
-      {/* Top bar */}
       <div className="sch-topbar">
         <div className="sch-topbar-left">
           <div className="sch-topbar-title">Schedules</div>
@@ -1033,13 +1013,9 @@ export default function Schedule() {
           </div>
         </div>
 
-        {/* Month / Year toggle */}
         <div className="sch-topbar-center">
           <div className="sch-view-toggle">
-            {[
-              { s: 1,  label: "Month" },
-              { s: 12, label: "Year"  },
-            ].map(({ s, label }) => (
+            {[{ s: 1, label: "Month" }, { s: 12, label: "Year" }].map(({ s, label }) => (
               <button key={s}
                 className={`sch-view-btn${span === s ? " active" : ""}`}
                 onClick={() => setSpan(s)}>
@@ -1074,7 +1050,6 @@ export default function Schedule() {
         </div>
       </div>
 
-      {/* Stats strip */}
       <div className="sch-stats-strip">
         {[
           { lbl: "OOO",       val: stats.ooo_count          || 0, sub: "this period" },
@@ -1091,7 +1066,6 @@ export default function Schedule() {
         ))}
       </div>
 
-      {/* Main */}
       <div className="sch-main">
         <div className="sch-grid-wrap">
           {!hasData ? (
@@ -1105,24 +1079,26 @@ export default function Schedule() {
               </div>
             </div>
           ) : (
-            <div style={{ position: "relative", width: "100%", height: canvasH + "px" }}>
-              <ScheduleCanvas
-                allDates={allDates}
-                rows={rows}
-                holidayMap={holidayMap}
-                gapMap={gapMap}
-                leaveByUser={leaveByUser}
-                oooPerDate={oooPerDate}
-                monthSpans={monthSpans}
-                onCellClick={handleCellClick}
-                onCellRightClick={handleCellRightClick}
-                activePaintChip={activePaintChip}
-                paintedCells={paintedCells}
-                winKey={winKey}
-                canvasH={canvasH}
-              />
-              <FrozenCols rows={rows} canvasH={canvasH} />
-            </div>
+    <div style={{ position: "relative", width: "100%", height: canvasH + "px" }}>
+  <div style={{ marginLeft: FROZEN_W, height: canvasH + "px" }}>
+    <ScheduleCanvas
+      allDates={allDates}
+      rows={rows}
+      holidayMap={holidayMap}
+      gapMap={gapMap}
+      leaveByUser={leaveByUser}
+      oooPerDate={oooPerDate}
+      monthSpans={monthSpans}
+      onCellClick={handleCellClick}
+      onCellRightClick={handleCellRightClick}
+      activePaintChip={activePaintChip}
+      paintedCells={paintedCells}
+      winKey={winKey}
+      canvasH={canvasH}
+    />
+  </div>
+  <FrozenCols rows={rows} canvasH={canvasH} />
+</div>
           )}
         </div>
 

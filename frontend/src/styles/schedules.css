@@ -277,7 +277,8 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #ffffff;
   position: relative;
   width: 100%;
