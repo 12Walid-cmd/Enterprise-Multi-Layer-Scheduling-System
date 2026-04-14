@@ -499,3 +499,71 @@ exports.deleteSchedule = async (req, res) => {
     res.status(500).json({ message: "Server Error" });
   }
 };
+
+// ================================================================
+// GET OVERRIDES
+// ================================================================
+exports.getOverrides = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const result = await pool.query(`
+      SELECT id, user_id, rotation_id,
+             override_date::date AS override_date,
+             chip_cls, chip_label
+      FROM ems.schedule_overrides
+      WHERE override_date BETWEEN $1 AND $2
+      ORDER BY override_date
+    `, [startDate, endDate]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("getOverrides error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// ================================================================
+// SAVE OVERRIDE
+// ================================================================
+exports.saveOverride = async (req, res) => {
+  try {
+    const { userId, rotationId, overrideDate, chipCls, chipLabel } = req.body;
+    if (!userId || !overrideDate || !chipCls || !chipLabel)
+      return res.status(400).json({ message: "userId, overrideDate, chipCls, chipLabel are required" });
+
+    // Prevent duplicate — same user/rotation/date/chip
+    const existing = await pool.query(`
+      SELECT id FROM ems.schedule_overrides
+      WHERE user_id=$1 AND override_date=$2 AND chip_cls=$3
+        AND (rotation_id=$4 OR (rotation_id IS NULL AND $4::uuid IS NULL))
+    `, [userId, overrideDate, chipCls, rotationId || null]);
+
+    if (existing.rows.length > 0)
+      return res.json({ id: existing.rows[0].id, duplicate: true });
+
+    const result = await pool.query(`
+      INSERT INTO ems.schedule_overrides
+        (user_id, rotation_id, override_date, chip_cls, chip_label)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+    `, [userId, rotationId || null, overrideDate, chipCls, chipLabel]);
+
+    res.json({ id: result.rows[0].id });
+  } catch (error) {
+    console.error("saveOverride error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// ================================================================
+// DELETE OVERRIDE
+// ================================================================
+exports.deleteOverride = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(`DELETE FROM ems.schedule_overrides WHERE id=$1`, [id]);
+    res.json({ message: "Override deleted" });
+  } catch (error) {
+    console.error("deleteOverride error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
