@@ -43,12 +43,12 @@ function generateJWT(email) {
 // Store refresh token in DB with expiration
 async function generateRefreshToken(email) {
 	const token = uuidv4();
-	const expiresAt = new Date(Date.now() + REFRESH_EXPIRES_IN * 1000); // ms
+	const expires_at = new Date(Date.now() + REFRESH_EXPIRES_IN * 1000); // ms
 	await pool.query(
 		`INSERT INTO refresh_tokens (email, token, created_at, expires_at)
 		 VALUES ($1, $2, NOW(), $3)
 		 ON CONFLICT (email) DO UPDATE SET token = $2, created_at = NOW(), expires_at = $3`,
-		[email, token, expiresAt]
+		[email, token, expires_at]
 	);
 	return token;
 }
