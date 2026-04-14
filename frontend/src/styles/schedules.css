@@ -43,10 +43,10 @@
   background: var(--cgi-gradient);
   box-shadow: 0 3px 16px rgba(82,54,171,0.35);
   position: relative;
-  z-index: 20;
+  z-index: 100;
   flex-wrap: nowrap;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* Left */
