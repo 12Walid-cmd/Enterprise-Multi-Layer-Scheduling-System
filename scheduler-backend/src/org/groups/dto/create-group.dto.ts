@@ -1,4 +1,9 @@
-import { IsString, IsOptional } from "class-validator";
+import {
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsBoolean,
+} from "class-validator";
 
 export class CreateGroupDto {
   @IsString()
@@ -10,5 +15,14 @@ export class CreateGroupDto {
 
   @IsOptional()
   @IsString()
-  timezone?: string;
+  timezone?: string = "UTC";
+
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean = true;
+
+  //  NEW: Group Owner
+  @IsOptional()
+  @IsUUID()
+  owner_user_id?: string;
 }

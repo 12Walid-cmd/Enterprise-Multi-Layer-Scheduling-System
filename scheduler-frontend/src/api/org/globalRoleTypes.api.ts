@@ -6,8 +6,11 @@ import type {
 } from "../../types/org";
 
 export const GlobalRoleTypesAPI = {
-  getAll(): Promise<GlobalRoleType[]> {
-    return http.get("/roles/global-types").then(res => res.data);
+  getAll(search?: string): Promise<GlobalRoleType[]> {
+    return http.get("/roles/global-types", {
+      params: { search },
+    })
+      .then(res => res.data);
   },
 
   getOne(id: string): Promise<GlobalRoleType> {
@@ -24,5 +27,11 @@ export const GlobalRoleTypesAPI = {
 
   delete(id: string): Promise<void> {
     return http.delete(`/roles/global-types/${id}`).then(res => res.data);
+  },
+  
+  checkCode(code: string, excludeId?: string): Promise<{ exists: boolean }> {
+    return http.get("/roles/global-types/check-code", {
+      params: { code, excludeId },
+    }).then(res => res.data);
   },
 };

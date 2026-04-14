@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Drawer,
   Toolbar,
@@ -9,229 +9,267 @@ import {
   ListItemText,
   Collapse,
   Box,
+  Divider,
 } from "@mui/material";
 
-import GroupsIcon from "@mui/icons-material/Groups";
-import GroupIcon from "@mui/icons-material/Group";
-import PeopleIcon from "@mui/icons-material/People";
-import ShieldIcon from "@mui/icons-material/Shield";
-import PersonIcon from "@mui/icons-material/Person";
-import AutorenewIcon from "@mui/icons-material/Autorenew";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import ExpandLess from "@mui/icons-material/ExpandLess";
-import ExpandMore from "@mui/icons-material/ExpandMore";
-import BusinessIcon from "@mui/icons-material/Business";
+import {
+  Groups,
+  Group,
+  People,
+  Shield,
+  Person,
+  Autorenew,
+  CalendarMonth,
+  Business,
+  ExpandLess,
+  ExpandMore,
+} from "@mui/icons-material";
 
+import { NavLink, useLocation } from "react-router-dom";
 import cgiLogo from "../assets/cgi-logo.png";
 
-import { NavLink } from "react-router-dom";
+const drawerWidth = 260;
 
-const drawerWidth = 240;
+type MenuItem = {
+  label: string;
+  path?: string;
+  icon?: React.ReactNode;
+  children?: MenuItem[];
+};
+
+const menu: MenuItem[] = [
+  {
+    label: "Organization",
+    icon: <Groups />,
+    children: [
+      { label: "Groups", path: "/groups", icon: <Group /> },
+      { label: "Teams", path: "/teams", icon: <People /> },
+      { label: "Sub Teams", path: "/sub-teams", icon: <People /> },
+      { label: "Domains", path: "/domains", icon: <Business /> },
+      
+    ],
+  },
+  {
+    label: "Users",
+    icon: <Person />,
+    children: [
+      { label: "User Management", path: "/users", icon: <People /> },
+    ],
+  },
+  {
+    label: "Roles",
+    icon: <Shield />,
+    children: [
+      { label: "Team Roles", path: "/roles/team-types", icon: <Shield /> },
+      { label: "Global Roles", path: "/roles/global-types", icon: <Shield /> },
+      { label: "RBAC Roles", path: "/roles", icon: <Shield /> },
+      { label: "Permissions", path: "/permissions", icon: <Shield /> },
+    ],
+  },
+  {
+    label: "Rotations",
+    icon: <Autorenew />,
+    children: [
+      { label: "Rotation Definitions", path: "/rotations", icon: <Autorenew /> },
+    ],
+  },
+  {
+    label: "Schedule",
+    icon: <CalendarMonth />,
+    children: [
+      { label: "Calendar View", path: "/schedule", icon: <CalendarMonth /> },
+      { label: "Holidays", path: "/holidays", icon: <CalendarMonth /> },
+    ],
+  },
+  {
+    label: "Leave",
+    icon: <CalendarMonth />,
+    children: [
+      { label: "My Leaves", path: "/leave", icon: <CalendarMonth /> },
+      { label: "Approvals", path: "/leave/approvals", icon: <Shield /> },
+    ],
+  },
+  {
+    label: "Audit",
+    children: [
+      { label: "Audit Logs", path: "/audit-logs", icon: <Shield /> },
+    ],
+  },
+];
 
 export default function Sidebar() {
-  const [openOrg, setOpenOrg] = useState(false);
-  const [openUser, setOpenUser] = useState(false);
-  const [openRotation, setOpenRotation] = useState(false);
-  const [openSchedule, setOpenSchedule] = useState(false);
-  const [openLeave, setOpenLeave] = useState(false);
+  const location = useLocation();
+
+  
+  const initialOpen = useMemo(() => {
+    const state: Record<string, boolean> = {};
+
+    menu.forEach((section) => {
+      if (
+        section.children?.some((item) =>
+          location.pathname.startsWith(item.path || "")
+        )
+      ) {
+        state[section.label] = true;
+      }
+    });
+
+    return state;
+  }, [location.pathname]);
+
+  const [open, setOpen] = useState<Record<string, boolean>>(initialOpen);
+
+  const toggle = (label: string) => {
+    setOpen((prev) => ({
+      ...prev,
+      [label]: !prev[label],
+    }));
+  };
+
   return (
     <Drawer
       variant="permanent"
       sx={{
         width: drawerWidth,
+        flexShrink: 0,
         "& .MuiDrawer-paper": {
           width: drawerWidth,
-          background: "#1f1f2e",
-          color: "white",
+          boxSizing: "border-box",
+          bgcolor: "#020617",
+          color: "#ffffff",
+          borderRight: "1px solid #111827",
         },
       }}
     >
-
-      <Toolbar>
+      {/* ================= HEADER ================= */}
+      <Toolbar sx={{ px: 2 }}>
         <Box
           component="img"
           src={cgiLogo}
-          alt="Logo"
-          sx={{ height: 32, width: 'auto', mr: 1, }}
+          sx={{ height: 28, mr: 1 }}
         />
-        <Typography variant="h6">Scheduler</Typography>
+        <Typography fontWeight={700} fontSize={25}>
+          Scheduler
+        </Typography>
       </Toolbar>
 
-      <List>
+      <Divider sx={{ borderColor: "#111827" }} />
 
-        {/* ============================
-            ORGANIZATION
-        ============================ */}
-        <ListItemButton onClick={() => setOpenOrg(!openOrg)}>
-          <ListItemIcon sx={{ color: "white" }}>
-            <GroupsIcon />
-          </ListItemIcon>
-          <ListItemText primary="ORGANIZATION" />
-          {openOrg ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
+      {/* ================= MENU ================= */}
+      <List sx={{ px: 1, mt: 1 }}>
+        {menu.map((section) => (
+          <Box key={section.label}>
+            {/* SECTION HEADER */}
+            <ListItemButton
+              onClick={() => toggle(section.label)}
+              sx={{
+                borderRadius: 2,
+                mb: 0.5,
+                "&:hover": {
+                  bgcolor: "#111827",
+                },
+              }}
+            >
+              {section.icon && (
+                <ListItemIcon
+                  sx={{
+                    color: "#cbd5e1",
+                    minWidth: 36,
+                  }}
+                >
+                  {section.icon}
+                </ListItemIcon>
+              )}
 
-        <Collapse in={openOrg} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
+              <ListItemText
+                primary={section.label}
+                slotProps={{
+                  primary: {
+                    sx: {
+                      fontSize: 14,
+                      fontWeight: 600,
+                      letterSpacing: 1,
+                      color: "#94a3b8",
+                    },
+                  },
+                }}
+              />
 
-            <ListItemButton component={NavLink} to="/groups" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <GroupIcon />
-              </ListItemIcon>
-              <ListItemText primary="Groups" />
+              {open[section.label] ? (
+                <ExpandLess />
+              ) : (
+                <ExpandMore />
+              )}
             </ListItemButton>
 
-            <ListItemButton component={NavLink} to="/teams" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <PeopleIcon />
-              </ListItemIcon>
-              <ListItemText primary="Teams" />
-            </ListItemButton>
+            {/* CHILDREN */}
+            <Collapse
+              in={open[section.label]}
+              timeout="auto"
+              unmountOnExit
+            >
+              {section.children?.map((item) => (
+                <ListItemButton
+                  key={item.path}
+                  component={NavLink}
+                  to={item.path!}
+                  end
+                  sx={{
+                    position: "relative",
+                    pl: 4,
+                    borderRadius: 2,
+                    mx: 1,
+                    mb: 0.5,
 
-            <ListItemButton component={NavLink} to="/domains" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <BusinessIcon />
-              </ListItemIcon>
-              <ListItemText primary="Domains" />
-            </ListItemButton>
+                    /* Hover */
+                    "&:hover": {
+                      bgcolor: "#111827",
+                    },
 
+                    /* ACTIVE（NavLink） */
+                    "&.active": {
+                      bgcolor: "#2563eb",
+                      color: "#ffffff",
 
-            <ListItemButton component={NavLink} to="/roles/team-types" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <ShieldIcon />
-              </ListItemIcon>
-              <ListItemText primary="Team Role" />
-            </ListItemButton>
+                      "&::before": {
+                        content: '""',
+                        position: "absolute",
+                        left: 0,
+                        top: 6,
+                        bottom: 6,
+                        width: 3,
+                        borderRadius: 2,
+                        bgcolor: "#3b82f6",
+                      },
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: "inherit",
+                      minWidth: 32,
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
 
-            <ListItemButton component={NavLink} to="/roles/global-types" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <ShieldIcon />
-              </ListItemIcon>
-              <ListItemText primary="Global Role" />
-            </ListItemButton>
-
-          </List>
-        </Collapse>
-
-        {/* ============================
-            USER
-        ============================ */}
-        <ListItemButton onClick={() => setOpenUser(!openUser)}>
-          <ListItemIcon sx={{ color: "white" }}>
-            <PersonIcon />
-          </ListItemIcon>
-          <ListItemText primary="USER" />
-          {openUser ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-
-        <Collapse in={openUser} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-
-            <ListItemButton component={NavLink} to="/users" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <PeopleIcon />
-              </ListItemIcon>
-              <ListItemText primary="Users" />
-            </ListItemButton>
-
-          </List>
-        </Collapse>
-
-        {/* ============================
-            ROTATION
-        ============================ */}
-        <ListItemButton onClick={() => setOpenRotation(!openRotation)}>
-          <ListItemIcon sx={{ color: "white" }}>
-            <AutorenewIcon />
-          </ListItemIcon>
-          <ListItemText primary="ROTATION" />
-          {openRotation ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-
-        <Collapse in={openRotation} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-
-            <ListItemButton component={NavLink} to="/rotations" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <AutorenewIcon />
-              </ListItemIcon>
-              <ListItemText primary="Definitions" />
-            </ListItemButton>
-
-          </List>
-        </Collapse>
-
-
-        {/* ============================
-            SCHEDULE  
-        ============================ */}
-        <ListItemButton onClick={() => setOpenSchedule(!openSchedule)}>
-          <ListItemIcon sx={{ color: "white" }}>
-            <CalendarMonthIcon />
-          </ListItemIcon>
-          <ListItemText primary="SCHEDULE" />
-          {openSchedule ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-
-        <Collapse in={openSchedule} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-
-            <ListItemButton component={NavLink} to="/schedule" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <CalendarMonthIcon />
-              </ListItemIcon>
-              <ListItemText primary="View" />
-            </ListItemButton>
-
-            <ListItemButton component={NavLink} to="/holidays" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <CalendarMonthIcon />
-              </ListItemIcon>
-              <ListItemText primary="Holidays" />
-            </ListItemButton>
-
-          </List>
-        </Collapse>
-
-        {/* ============================
-          LEAVE
-          ============================ */}
-        <ListItemButton onClick={() => setOpenLeave(!openLeave)}>
-          <ListItemIcon sx={{ color: "white" }}>
-            <CalendarMonthIcon />
-          </ListItemIcon>
-          <ListItemText primary="LEAVE" />
-          {openLeave ? <ExpandLess /> : <ExpandMore />}
-        </ListItemButton>
-
-        <Collapse in={openLeave} timeout="auto" unmountOnExit>
-          <List component="div" disablePadding>
-
-            <ListItemButton component={NavLink} to="/leave" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <CalendarMonthIcon />
-              </ListItemIcon>
-              <ListItemText primary="My Leaves" />
-            </ListItemButton>
-
-            <ListItemButton component={NavLink} to="/leave/approvals" sx={{ pl: 4 }}>
-              <ListItemIcon sx={{ color: "white" }}>
-                <ShieldIcon />
-              </ListItemIcon>
-              <ListItemText primary="Approvals" />
-            </ListItemButton>
-
-          </List>
-        </Collapse>
-        {/* ============================
-          Audit Logs
-          ============================ */}
-        <ListItemButton component={NavLink} to="/audit-logs" sx={{ pl: 4 }}>
-          <ListItemIcon sx={{ color: "white" }}>
-            <ShieldIcon />
-          </ListItemIcon>
-          <ListItemText primary="Audit Logs" />
-        </ListItemButton>
-
+                  <ListItemText
+                    primary={item.label}
+                    slotProps={{
+                      primary: {
+                        sx: {
+                          fontSize: 16,
+                          fontWeight: 500,
+                          color: "#e5e7eb",
+                        },
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              ))}
+            </Collapse>
+          </Box>
+        ))}
       </List>
     </Drawer>
   );

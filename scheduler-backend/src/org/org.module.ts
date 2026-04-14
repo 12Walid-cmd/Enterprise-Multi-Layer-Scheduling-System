@@ -42,7 +42,20 @@ import { DomainsService } from './domains/domains.service';
 import { DomainTeamsService } from './domains/domain-teams.service';
 import { DomainsController } from './domains/domains.controller';
 import { DomainTeamsController } from './domains/domain-teams.controller';
+import { DomainUsersController } from './domains/domain-users.controller';
+import { DomainUsersService } from './domains/domain-users.service';
+
+
 import { AuditModule } from 'src/audit/audit.module';
+
+// Roles
+import { RolesService } from './roles/roles.service';
+import { RolesController } from './roles/roles.controller';
+
+// Permissions
+import { GlobalRolePermissionsController } from './roles/global-role-permissions.controller';
+import { GlobalRolePermissionsService } from './roles/global-role-permissions.service';
+
 
 @Module({
   imports: [PrismaModule, AuditModule],
@@ -50,14 +63,16 @@ import { AuditModule } from 'src/audit/audit.module';
     GroupsController,
     TeamsController,
     MembersController,
+    RolesController,
     TeamRoleTypesController,
-    GlobalRoleTypesController,   
-    UserRolesController, 
+    GlobalRoleTypesController,
+    UserRolesController,
     SubTeamController,
-    SubTeamMembersController, 
+    SubTeamMembersController,
     DomainsController,
+    DomainUsersController,
     DomainTeamsController,
-   
+    GlobalRolePermissionsController,
   ],
   providers: [
     PrismaService,
@@ -65,15 +80,17 @@ import { AuditModule } from 'src/audit/audit.module';
     GroupsService,
     TeamsService,
     MembersService,
+    RolesService,
     TeamRoleTypesService,
-    GlobalRoleTypesService,      
+    GlobalRoleTypesService,
     UserRolesService,
-    SubTeamService,   
-    SubTeamMembersService,  
+    SubTeamService,
+    SubTeamMembersService,
     DomainsService,
+    DomainUsersService,
     DomainTeamsService,
-       
+    GlobalRolePermissionsService,
   ],
   exports: [OrgService],
 })
-export class OrgModule {}
+export class OrgModule { }

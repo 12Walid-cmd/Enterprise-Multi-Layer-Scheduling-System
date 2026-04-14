@@ -102,7 +102,9 @@ export default function UserDetail() {
                 <Typography variant="h6" fontWeight="bold" gutterBottom> Global Role </Typography>
                 <DetailRow label="Global Role" value={user.user_roles?.[0]?.global_roles?.name ?? "-"} />
 
-                <Box mt={4} display="flex" gap={2}>
+                <Box mt={4} display="flex" gap={2} flexWrap="wrap">
+
+                    {/* Global Roles */}
                     <Button
                         variant="outlined"
                         color="secondary"
@@ -111,6 +113,25 @@ export default function UserDetail() {
                         Manage Global Roles
                     </Button>
 
+                    {/* User Permissions */}
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => navigate(`/users/${id}/permissions`)}
+                    >
+                        Manage Permissions
+                    </Button>
+
+                    {/* User Scope */}
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => navigate(`/users/${id}/scope`)}
+                    >
+                        Manage Scope
+                    </Button>
+
+                    {/* Edit User */}
                     <Button
                         variant="contained"
                         color="primary"
@@ -118,6 +139,7 @@ export default function UserDetail() {
                     >
                         Edit User
                     </Button>
+
                 </Box>
             </Paper>
         </Box>

@@ -5,77 +5,154 @@ export type Timestamp = string;
    1. GROUPS
    ============================================================ */
 
-export interface Group {
+export type Group = {
   id: string;
   name: string;
-  description: string;
-  timezone: string;
-  is_active: boolean;
-  created_at: Timestamp;
+  description?: string;
+  timezone?: string;
+  is_active?: boolean;
+  created_at?: string;
 
-  teams?: Team[];
-}
+  owner?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+
+  _count?: {
+    teams: number;
+  };
+};
 
 export interface CreateGroupDto {
   name: string;
-  description: string;
-  timezone: string;
+  description?: string;
+  timezone?: string;
+  is_active?: boolean;
+  owner_user_id?: string | null;
 }
 
 export interface UpdateGroupDto {
   name?: string;
   description?: string;
   timezone?: string;
+  is_active?: boolean;
+  owner_user_id?: string | null;
 }
 
 /* ============================================================
-   2. TEAMS (Root Team + SubTeam)
+   2. TEAMS (Root Team + SubTeam - SAME TABLE)
    ============================================================ */
+
+/* ================= BASE TEAM ================= */
 
 export interface Team {
   id: string;
   group_id: string;
   parent_team_id: string | null; // null = root team
+
   name: string;
-  description: string;
-  timezone: string | null;
+  description?: string;
+  timezone?: string;
+
   is_active: boolean;
   created_at: Timestamp;
 
-  team_members?: TeamMember[];
-  sub_team_members?: SubTeamMember[];
+  // relations
+  groups?: {
+    id: string;
+    name: string;
+  };
 
+  lead?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email?: string;
+  };
+
+  // counts
+  _count?: {
+    team_members: number;
+    other_teams?: number;
+  };
+
+  // 
+  total_members?: number;
 }
 
-/** Root team = parent_team_id === null */
+/* ================= ROOT TEAM ================= */
+
 export type RootTeam = Team & {
   parent_team_id: null;
 };
 
-/** Sub-team = parent_team_id !== null */
-export type SubTeam = Team & {
+/* ================= SUB TEAM ================= */
+
+export interface SubTeam {
+  id: string;
+  name: string;
+  description?: string;
+  timezone?: string;
   parent_team_id: string;
-};
+
+  lead?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
+
+  _count?: {
+    sub_team_members: number;
+  };
+}
+
+/* ============================================================
+   DTOs
+   ============================================================ */
+
+/* ================= TEAM ================= */
 
 export interface CreateTeamDto {
   name: string;
   group_id: string;
-  parent_team_id: string | null;
-  description: string;
-  timezone: string;
+
+  // root team 
+  parent_team_id?: string | null;
+
+  description?: string;
+  timezone?: string;
+
+  lead_user_id?: string;
 }
 
 export interface UpdateTeamDto {
   name?: string;
   description?: string;
   timezone?: string;
-  parent_team_id?: string;
+
+  parent_team_id?: string | null;
+
+  lead_user_id?: string;
 }
+
+/* ================= SUB TEAM ================= */
 
 export interface CreateSubTeam {
   name: string;
   description?: string;
   timezone?: string;
+
+  lead_user_id?: string;
+}
+
+export interface UpdateSubTeamDto {
+  name?: string;
+  description?: string;
+  timezone?: string;
+
+  lead_user_id?: string;
 }
 
 /* ============================================================
@@ -96,8 +173,9 @@ export interface TeamMember {
     email: string;
   };
 
-  team_role_types?: {
+  team_roles?: {
     name: string;
+    id?: string;
   };
 }
 
@@ -120,7 +198,12 @@ export interface SubTeamMember {
     last_name: string;
     email: string;
   };
+
+  team_roles?: {
+    name: string;
+  };
 }
+
 export interface AddSubTeamMemberDto {
   userId: string;
 }
@@ -192,5 +275,16 @@ export interface AssignUserGlobalRoleDto {
 
 
 
+export interface UserScope {
+  group_ids: string[];
+  domain_ids: string[];
+  team_ids: string[];
+  rotation_ids: string[];
+}
 
-
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  permissions?: string[]; 
+}

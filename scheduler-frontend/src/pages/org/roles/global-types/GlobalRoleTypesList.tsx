@@ -1,64 +1,336 @@
 import { useEffect, useState } from "react";
-import { GlobalRoleTypesAPI } from "../../../../api";
 import {
   Box,
   Button,
   CircularProgress,
+  IconButton,
   Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
+  Stack,
+  Alert,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+
+import { GlobalRoleTypesAPI } from "../../../../api";
 import type { GlobalRoleType } from "../../../../types/org";
 
 export default function GlobalRoleTypesList() {
-  const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<GlobalRoleType[]>([]);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
-  const load = () => {
-    GlobalRoleTypesAPI.getAll().then((data) => {
+  const [search, setSearch] = useState("");
+
+  const [open, setOpen] = useState(false);
+  const [edit, setEdit] = useState<GlobalRoleType | null>(null);
+
+  const [form, setForm] = useState({
+    code: "",
+    name: "",
+    description: "",
+  });
+
+  const [codeExists, setCodeExists] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  /* ================= LOAD ================= */
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await GlobalRoleTypesAPI.getAll(search);
       setItems(data);
+    } finally {
       setLoading(false);
-    });
+    }
   };
 
   useEffect(() => {
     load();
   }, []);
 
-  if (loading)
-    return (
-      <Box display="flex" justifyContent="center" mt={10}>
-        <CircularProgress />
-      </Box>
-    );
+    /* ================= SEARCH DEBOUNCE ================= */
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      load();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  /* ================= NAME → CODE ================= */
+
+  useEffect(() => {
+    if (edit) return;
+
+    const timer = setTimeout(() => {
+      const code = form.name
+        .trim()
+        .toUpperCase()
+        .replace(/\s+/g, "_");
+
+      setForm((prev) => ({ ...prev, code }));
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [form.name]);
+
+  /* ================= CODE CHECK ================= */
+
+  useEffect(() => {
+    if (!form.code) {
+      setCodeExists(false);
+      return;
+    }
+
+    let active = true;
+
+    const timer = setTimeout(async () => {
+      try {
+        setChecking(true);
+
+      
+        const res = await GlobalRoleTypesAPI.checkCode?.(
+          form.code,
+          edit?.id
+        );
+
+        if (active && res) {
+          setCodeExists(res.exists);
+        }
+      } finally {
+        if (active) setChecking(false);
+      }
+    }, 400);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [form.code, edit]);
+
+  /* ================= ACTION ================= */
+
+  const openCreate = () => {
+    setEdit(null);
+    setForm({ code: "", name: "", description: "" });
+    setCodeExists(false);
+    setOpen(true);
+  };
+
+  const openEdit = (item: GlobalRoleType) => {
+    setEdit(item);
+    setForm({
+      code: item.code,
+      name: item.name,
+      description: item.description ?? "",
+    });
+    setCodeExists(false);
+    setOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!form.name || !form.code || codeExists) return;
+
+    if (edit) {
+      await GlobalRoleTypesAPI.update(edit.id, form);
+    } else {
+      await GlobalRoleTypesAPI.create(form);
+    }
+
+    setOpen(false);
+    await load();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this role?")) return;
+    await GlobalRoleTypesAPI.delete(id);
+    await load();
+  };
+
+  const truncate = (text?: string | null, max = 30) =>
+    text && text.length > max ? text.slice(0, max) + "..." : text || "";
+
+  /* ================= UI ================= */
 
   return (
-    <Box p={4}>
-      <Typography variant="h4" fontWeight="bold" mb={3}>
-        Global Role Types
-      </Typography>
+    <Box p={3}>
+      {/* HEADER */}
+      <Box display="flex" justifyContent="space-between" mb={3}>
+        <Typography variant="h4" fontWeight={700}>
+          Global Role
+        </Typography>
 
-      <Button
-        variant="contained"
-        onClick={() => navigate("/roles/global-types/create")}
-        sx={{ mb: 3 }}
-      >
-        Create Global Role Type
-      </Button>
+        <Box display="flex" gap={1.5}>
+          <TextField
+            size="small"
+            placeholder="Search global roles..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && load()}
+            sx={{ width: 260 }}
+          />
 
-      {items.length === 0 && <Typography>No global roles found.</Typography>}
+          <Button variant="outlined" onClick={load}>
+            Search
+          </Button>
 
-      {items.map((r: any) => (
-        <Paper
-          key={r.id}
-          sx={{ p: 2, mb: 2, cursor: "pointer" }}
-          onClick={() => navigate(`/roles/global-types/${r.id}`)}
-        >
-          <Typography><strong>{r.name}</strong></Typography>
-          <Typography variant="body2">{r.description}</Typography>
-        </Paper>
-      ))}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openCreate}
+          >
+            Create
+          </Button>
+        </Box>
+      </Box>
+
+      {/* LOADING */}
+      {loading && (
+        <Box textAlign="center" mt={5}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {/* TABLE */}
+      {!loading && (
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell><b>Name</b></TableCell>
+                <TableCell><b>Code</b></TableCell>
+                <TableCell><b>Description</b></TableCell>
+                <TableCell align="right"><b>Actions</b></TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {items.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center">
+                    No data
+                  </TableCell>
+                </TableRow>
+              )}
+
+              {items.map((r) => (
+                <TableRow key={r.id} hover>
+                  <TableCell>{r.name}</TableCell>
+                  <TableCell>{r.code}</TableCell>
+
+                  <TableCell>
+                    <Tooltip title={r.description || ""}>
+                      <span>{truncate(r.description || "-")}</span>
+                    </Tooltip>
+                  </TableCell>
+
+                  <TableCell align="right">
+                    <Tooltip title="Edit">
+                      <IconButton
+                        color="secondary"
+                        onClick={() => openEdit(r)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+
+                    <Tooltip title="Delete">
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDelete(r.id)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* DIALOG */}
+      <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>
+          {edit ? "Edit Global Role" : "Create Global Role"}
+        </DialogTitle>
+
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Name"
+              value={form.name}
+              onChange={(e) =>
+                setForm({ ...form, name: e.target.value })
+              }
+              fullWidth
+            />
+
+            <TextField
+              label="Code"
+              value={form.code}
+              onChange={(e) =>
+                setForm({ ...form, code: e.target.value })
+              }
+              fullWidth
+              error={codeExists}
+              helperText={
+                checking
+                  ? "Checking..."
+                  : codeExists
+                  ? "Code already exists"
+                  : ""
+              }
+            />
+
+            {codeExists && (
+              <Alert severity="error">
+                Code already exists
+              </Alert>
+            )}
+
+            <TextField
+              label="Description"
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+              fullWidth
+              multiline
+              minRows={3}
+            />
+          </Stack>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={!form.name || !form.code || codeExists}
+          >
+            {edit ? "Save" : "Create"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

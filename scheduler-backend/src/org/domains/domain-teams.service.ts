@@ -57,7 +57,7 @@ export class DomainTeamsService {
   }
 
   async delete(id: string, userId: string) {
-    await this.audit.domainTeam.deleted(id, userId);
+    await this.audit.domainTeam.deleted(userId, id);
     return this.prisma.domain_teams.delete({ where: { id } });
   }
 

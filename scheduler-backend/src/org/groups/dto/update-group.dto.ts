@@ -1,4 +1,9 @@
-import { IsString, IsOptional, IsBoolean } from "class-validator";
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsUUID,
+} from "class-validator";
 
 export class UpdateGroupDto {
   @IsOptional()
@@ -16,4 +21,9 @@ export class UpdateGroupDto {
   @IsOptional()
   @IsBoolean()
   is_active?: boolean;
+
+  //  NEW
+  @IsOptional()
+  @IsUUID()
+  owner_user_id?: string;
 }

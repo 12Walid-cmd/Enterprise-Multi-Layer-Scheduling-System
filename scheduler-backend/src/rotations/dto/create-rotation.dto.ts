@@ -90,7 +90,7 @@ export class CreateRotationDto {
 
     @IsOptional()
     @IsUUID()
-    owner_id?: string;
+    owner_user_id?: string;
 
     @IsOptional()
     @IsBoolean()

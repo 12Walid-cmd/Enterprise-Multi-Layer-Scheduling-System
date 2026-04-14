@@ -16,6 +16,9 @@ model groups {
   created_at  DateTime? @default(now()) @db.Timestamptz(6)
   updated_at  DateTime? @default(now()) @updatedAt
 
+  owner_user_id String? @db.Uuid
+  owner         users?  @relation("GroupOwner", fields: [owner_user_id], references: [id])
+
   // Teams directly under this group
   teams    teams[]
   // Optional: domains logically associated with this group (business choice)
@@ -66,6 +69,21 @@ model users {
   roleAssignments role_assignments[] // team roles (via team_members)
 
   /// -----------------------------
+  ///  Ownership / Leadership
+  /// -----------------------------
+  // Group Owner
+  ownedGroups groups[] @relation("GroupOwner")
+
+  // Domain Owner
+  ownedDomains domains[] @relation("DomainOwner")
+
+  //  Team Lead
+  leadTeams teams[] @relation("TeamLead")
+
+  //  Rotation Owner
+  ownedRotations rotation_definitions[] @relation("RotationOwner")
+
+  /// -----------------------------
   ///  Scheduling-related
   /// -----------------------------
   rotationDefinitions rotation_definitions[]
@@ -75,6 +93,7 @@ model users {
   leave_approvals     leave_approvals[]
   domainUsers         domain_users[]
   userResourceScopes  user_resource_scope[]
+  userPermissions     user_permissions[]
 
   @@schema("ems")
 }
@@ -101,7 +120,8 @@ model global_role_types {
 
   user_roles user_roles[]
 
-  holidays holidays[]
+  holidays              holidays[]
+  globalRolePermissions global_role_permissions[]
 
   @@schema("ems")
 }
@@ -146,6 +166,9 @@ model teams {
   is_active      Boolean?  @default(true)
   created_at     DateTime? @default(now()) @db.Timestamptz(6)
   updated_at     DateTime? @default(now()) @updatedAt
+
+  lead_user_id String? @db.Uuid
+  lead         users?  @relation("TeamLead", fields: [lead_user_id], references: [id])
 
   // Direct members of this team
   team_members team_members[]
@@ -204,15 +227,21 @@ model sub_team_members {
 }
 
 model domains {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String    @unique @db.VarChar(255)
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String  @unique @db.VarChar(255)
   description String?
+
+  type DomainType @default(CAPABILITY)
+
   // If true, users may be restricted from participating in multiple domain rotations
-  exclusive   Boolean   @default(false)
-  is_active   Boolean   @default(true)
-  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  exclusive  Boolean   @default(false)
+  is_active  Boolean   @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
 
   updated_at DateTime? @default(now()) @updatedAt
+
+  owner_user_id String? @db.Uuid
+  owner         users?  @relation("DomainOwner", fields: [owner_user_id], references: [id])
 
   // Mapping to teams that belong to this business domain
   domain_teams domain_teams[]
@@ -221,6 +250,13 @@ model domains {
   // Optional: logical association to groups (if needed)
   groups      groups[]
   domainUsers domain_users[]
+
+  @@schema("ems")
+}
+
+enum DomainType {
+  CAPABILITY // Security, Data...
+  POOL // Oncall, Analyst, Mountain, Custom rotation pools
 
   @@schema("ems")
 }
@@ -293,8 +329,8 @@ model rotation_definitions {
   is_active Boolean @default(true)
 
   // Rotation owner (e.g., rotation manager)
-  owner_id String? @db.Uuid
-  owner    users?  @relation(fields: [owner_id], references: [id])
+  owner_user_id String? @db.Uuid
+  owner         users?  @relation("RotationOwner", fields: [owner_user_id], references: [id])
 
   description String?
 
@@ -308,6 +344,8 @@ model rotation_definitions {
   rotationExceptions     rotation_exceptions[]
   rotationRules          rotation_rules[]
   rotationAuditSnapshots rotation_audit_snapshots[]
+  users                  users?                     @relation(fields: [usersId], references: [id])
+  usersId                String?                    @db.Uuid
 
   @@schema("ems")
 }
@@ -652,14 +690,28 @@ model user_resource_scope {
 }
 
 model rbac_roles {
-  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  code       String   @unique
-  name       String
-  created_at DateTime @default(now())
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?
+  created_at  DateTime @default(now())
 
   role_assignments role_assignments[]
   role_permissions role_permissions[]
 
+  @@schema("ems")
+}
+
+model global_role_permissions {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role_id     String            @db.Uuid
+  permission  String            @db.VarChar(128)
+  description String?
+  global_role global_role_types @relation(fields: [role_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([role_id, permission])
   @@schema("ems")
 }
 
@@ -681,6 +733,26 @@ model role_permissions {
   permission String
 
   role rbac_roles @relation(fields: [role_id], references: [id])
+
+  @@schema("ems")
+}
+
+model user_permissions {
+  user_id    String @db.Uuid
+  permission String
+
+  users users @relation(fields: [user_id], references: [id])
+
+  @@id([user_id, permission])
+  @@schema("ems")
+}
+
+model permission_types {
+  code        String   @id @db.VarChar(128)
+  name        String   @db.VarChar(128)
+  description String?
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
 
   @@schema("ems")
 }

@@ -75,7 +75,7 @@ export class RotationLoader {
       effectiveDate: rotation.effective_date,
       freezeDate: rotation.freeze_date,
 
-      ownerId: rotation.owner_id,
+      ownerId: rotation.owner_user_id,
 
       tiers,
       rules,   

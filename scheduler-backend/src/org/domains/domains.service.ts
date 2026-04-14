@@ -1,16 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateDomainDto } from './dto/create-domain.dto';
+import { CreateDomainDto, DomainType } from './dto/create-domain.dto';
 import { UpdateDomainDto } from './dto/update-domain.dto';
 import { AuditWriter } from 'src/audit/audit-writer.service';
 
-
 @Injectable()
 export class DomainsService {
-  constructor(private readonly prisma: PrismaService,
+  constructor(
+    private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
-  ) { }
+  ) {}
 
+  /* ================= CREATE ================= */
   async create(dto: CreateDomainDto, userId: string) {
     const domain = await this.prisma.domains.create({
       data: {
@@ -18,6 +19,8 @@ export class DomainsService {
         description: dto.description,
         exclusive: dto.exclusive ?? false,
         is_active: dto.is_active ?? true,
+        owner_user_id: dto.owner_user_id ?? null,
+        type: dto.type ?? DomainType.CAPABILITY,
       },
     });
 
@@ -25,98 +28,147 @@ export class DomainsService {
     return domain;
   }
 
-
-  async findAll() {
+  /* ================= LIST ================= */
+  async findAll(search?: string) {
     return this.prisma.domains.findMany({
-      include: {
-        domain_teams: {
-          include: {
-            teams: true,
+      where: {
+        is_active: true,
+
+        ...(search
+          ? {
+              OR: [
+                {
+                  name: {
+                    contains: search,
+                    mode: 'insensitive',
+                  },
+                },
+                {
+                  description: {
+                    contains: search,
+                    mode: 'insensitive',
+                  },
+                },
+              ],
+            }
+          : {}),
+      },
+
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        exclusive: true,
+        is_active: true,
+        created_at: true,
+
+      
+        owner: {
+          select: {
+            id: true,
+            first_name: true,
+            last_name: true,
           },
         },
+
+      
+        _count: {
+          select: {
+            domain_teams: true,
+            domainUsers: true,
+          },
+        },
+      },
+
+      orderBy: {
+        created_at: 'desc',
       },
     });
   }
 
+  /* ================= DETAIL ================= */
   async findOne(id: string) {
     const domain = await this.prisma.domains.findUnique({
       where: { id },
+
       include: {
+        owner: true,
+
         domain_teams: {
           include: {
-            teams: true,
-            domainTeamMembers: {
-              include: {
-                user: true,
+            teams: {
+              select: {
+                id: true,
+                name: true,
               },
             },
           },
         },
-        holidays: true,
+
         domainUsers: {
           include: {
-            user: true,
+            user: {
+              select: {
+                id: true,
+                first_name: true,
+                last_name: true,
+              },
+            },
           },
         },
+
+        holidays: true,
       },
     });
 
     if (!domain) throw new NotFoundException('Domain not found');
+
     return domain;
   }
 
+  /* ================= UPDATE ================= */
   async update(id: string, dto: UpdateDomainDto, userId: string) {
-    const before = await this.prisma.domains.findUnique({ where: { id } });
+    const before = await this.prisma.domains.findUnique({
+      where: { id },
+    });
+
     if (!before) throw new NotFoundException('Domain not found');
 
     const after = await this.prisma.domains.update({
       where: { id },
-      data: dto,
+      data: {
+        name: dto.name,
+        description: dto.description,
+        exclusive: dto.exclusive,
+        is_active: dto.is_active,
+        type: dto.type ?? undefined,
+        owner_user_id:
+          dto.owner_user_id !== undefined
+            ? dto.owner_user_id
+            : undefined,
+      },
     });
 
     await this.audit.domain.updated(userId, id, before, after);
     return after;
   }
 
-
+  /* ================= DELETE (SOFT) ================= */
   async remove(id: string, userId: string) {
-    const before = await this.prisma.domains.findUnique({ where: { id } });
+    const before = await this.prisma.domains.findUnique({
+      where: { id },
+    });
+
     if (!before) throw new NotFoundException('Domain not found');
 
     const after = await this.prisma.domains.update({
       where: { id },
-      data: { is_active: false },
+      data: {
+        is_active: false,
+      },
     });
 
     await this.audit.domain.deleted(userId, id);
     return after;
-  }
-
-
-  async addUserToDomain(domainId: string, userId: string) {
-    return this.prisma.domain_users.create({
-      data: {
-        domain_id: domainId,
-        user_id: userId,
-      },
-    });
-  }
-
-  async removeUserFromDomain(domainId: string, userId: string) {
-    return this.prisma.domain_users.deleteMany({
-      where: {
-        domain_id: domainId,
-        user_id: userId,
-      },
-    });
-  }
-
-  async getUsers(domainId: string) {
-    return this.prisma.domain_users.findMany({
-      where: { domain_id: domainId },
-      include: {
-        user: true,
-      },
-    });
   }
 }

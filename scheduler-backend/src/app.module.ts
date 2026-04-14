@@ -13,6 +13,8 @@ import { RulesModule } from './rules/rules.module';
 import { HolidayModule } from './holiday/holiday.module';
 import { AuditModule } from './audit/audit.module';
 import { PermissionsModule } from './permissions/permissions.module';
+import { PermissionTypesModule } from './permission-types/permission-types.module';
+
 
 
 @Module({
@@ -33,6 +35,7 @@ import { PermissionsModule } from './permissions/permissions.module';
     HolidayModule,
     AuditModule,
     PermissionsModule,
+    PermissionTypesModule,
   ],
 })
 export class AppModule {}

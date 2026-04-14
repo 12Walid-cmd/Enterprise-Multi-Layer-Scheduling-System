@@ -6,8 +6,12 @@ import type{
 } from "../../types/org";
 
 export const TeamsAPI = {
-  getAll(): Promise<Team[]> {
-    return http.get("/teams").then(res => res.data);
+  getAll(search?: string): Promise<Team[]> {
+    return http
+      .get("/teams", {
+        params: { search },
+      })
+      .then((res) => res.data);
   },
 
   create(data: CreateTeamDto): Promise<Team> {

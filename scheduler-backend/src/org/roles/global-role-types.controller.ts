@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Delete, Body, Param, Query } from '@nestjs/common';
 import { GlobalRoleTypesService } from './global-role-types.service';
 import { CreateGlobalRoleTypeDto } from './dto/create-global-role-type.dto';
 import { UpdateGlobalRoleTypeDto } from './dto/update-global-role-type.dto';
@@ -7,14 +7,23 @@ import { UpdateGlobalRoleTypeDto } from './dto/update-global-role-type.dto';
 export class GlobalRoleTypesController {
     constructor(private readonly service: GlobalRoleTypesService) { }
 
+   
     @Post()
     create(@Body() dto: CreateGlobalRoleTypeDto) {
         return this.service.create(dto);
     }
 
     @Get()
-    findAll() {
-        return this.service.findAll();
+    findAll(@Query("search") search?: string) {
+        return this.service.findAll(search);
+    }
+
+     @Get("check-code")
+    checkCode(
+        @Query("code") code: string,
+        @Query("excludeId") excludeId?: string,
+    ) {
+        return this.service.checkCode(code, excludeId);
     }
 
     @Patch(':id')
@@ -32,4 +41,5 @@ export class GlobalRoleTypesController {
     remove(@Param('id') id: string) {
         return this.service.remove(id);
     }
+
 }

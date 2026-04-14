@@ -1,13 +1,46 @@
-import { AppBar, Toolbar, Typography, Box, Avatar, Button } from "@mui/material";
-import cgiLogo from "../assets/cgi-logo.png";
+import {
+  AppBar,
+  Toolbar,
+  Box,
+  Avatar,
+  Typography,
+  IconButton,
+  InputBase,
+  Paper,
+  Menu,
+  MenuItem,
+  Divider,
+} from "@mui/material";
+
+import SearchIcon from "@mui/icons-material/Search";
+import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 export default function Topbar() {
   const { user, logout } = useAuth();
 
-  const fullName = user ? `${user.first_name} ${user.last_name}` : "Guest";
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const fullName = user
+    ? `${user.first_name} ${user.last_name}`
+    : "Guest";
+
   const role = user?.roles?.[0] ?? "User";
-  const avatarLetter = user?.first_name?.[0]?.toUpperCase() ?? "U";
+
+  const avatarLetter =
+    user?.first_name?.[0]?.toUpperCase() ?? "U";
 
   return (
     <AppBar
@@ -19,56 +52,96 @@ export default function Topbar() {
         borderBottom: "1px solid #e5e7eb",
       }}
     >
-      <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+      <Toolbar sx={{ justifyContent: "space-between" }}>
+        {/* 🔍 Search */}
+        <Paper
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            px: 2,
+            py: 0.5,
+            width: 320,
+            borderRadius: 2,
+            bgcolor: "#f3f4f6",
+          }}
+        >
+          <SearchIcon fontSize="small" />
+          <InputBase
+            placeholder="Search users, teams, rotations..."
+            sx={{ ml: 1, flex: 1, fontSize: 14 }}
+          />
+        </Paper>
 
-        {/* Logo */}
-        <Box
-          component="img"
-          src={cgiLogo}
-          alt="Logo"
-          sx={{ height: 36, width: "auto" }}
-        />
-
-        {/* Right side */}
+        {/* Right Section */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          {/* Role + Name */}
+          {/* 🔔 Notifications */}
+          <IconButton>
+            <NotificationsNoneIcon />
+          </IconButton>
+
+          {/* 👤 User */}
           <Box
+            onClick={handleMenuOpen}
             sx={{
               display: "flex",
-              flexDirection: "row",   
-              alignItems: "center",   
-              gap: 2                 
+              alignItems: "center",
+              gap: 1,
+              cursor: "pointer",
+              px: 1,
+              py: 0.5,
+              borderRadius: 2,
+              "&:hover": {
+                bgcolor: "#f3f4f6",
+              },
             }}
           >
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ fontSize: "1.2rem" }}
-            >
-              {role}
-            </Typography>
+            <Avatar sx={{ width: 32, height: 32 }}>
+              {avatarLetter}
+            </Avatar>
 
-            <Typography
-              fontWeight={700}
-              sx={{ fontSize: "1.45rem", lineHeight: 1 }}
-            >
-              {fullName}
-            </Typography>
+            <Box>
+              <Typography fontSize={13} fontWeight={600}>
+                {fullName}
+              </Typography>
+              <Typography
+                fontSize={11}
+                color="text.secondary"
+              >
+                {role}
+              </Typography>
+            </Box>
+
+            <KeyboardArrowDownIcon fontSize="small" />
           </Box>
 
-
-
-
-          <Avatar sx={{ bgcolor: "primary.main" }}>{avatarLetter}</Avatar>
-
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={logout}
-            sx={{ textTransform: "none" }}
+          {/* Dropdown */}
+          <Menu
+            anchorEl={anchorEl}
+            open={open}
+            onClose={handleClose}
           >
-            Logout
-          </Button>
+            <MenuItem disabled>{fullName}</MenuItem>
+            <Divider />
+
+            <MenuItem onClick={handleClose}>
+              Profile
+            </MenuItem>
+
+            <MenuItem onClick={handleClose}>
+              Settings
+            </MenuItem>
+
+            <Divider />
+
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                logout();
+              }}
+            >
+              Logout
+            </MenuItem>
+          </Menu>
         </Box>
       </Toolbar>
     </AppBar>

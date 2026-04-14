@@ -1,4 +1,4 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsString, IsOptional, IsUUID } from 'class-validator';
 
 export class UpdateSubTeamDto {
   @IsOptional()
@@ -13,7 +13,12 @@ export class UpdateSubTeamDto {
   @IsString()
   timezone?: string;
 
-  // @IsOptional()
-  // @IsString()
-  // parent_team_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  lead_user_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  parent_team_id?: string;
 }

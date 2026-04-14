@@ -1,112 +1,350 @@
 import { useEffect, useState } from "react";
-import type { Group } from "../../../types/org";
-import { GroupsAPI } from "../../../api";
-import { useNavigate } from "react-router-dom";
-
-
-
 import {
   Box,
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  CircularProgress,
   Button,
+  CircularProgress,
+  IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TextField,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
+  Stack,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
+
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import AddIcon from "@mui/icons-material/Add";
+
+import { GroupsAPI } from "../../../api";
+import { http } from "../../../api/http";
+
+/* ================= TYPES ================= */
+interface User {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface Group {
+  id: string;
+  name: string;
+  description?: string;
+  timezone?: string;
+
+  _count?: {
+    teams: number;
+  };
+
+  owner?: User;
+}
+
+/* ================= TIMEZONE ================= */
+const TIMEZONES = [
+  "UTC",
+  "America/Halifax",
+  "America/Toronto",
+  "America/Vancouver",
+  "Europe/London",
+  "Asia/Shanghai",
+];
 
 export default function GroupsList() {
   const [groups, setGroups] = useState<Group[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const navigate = useNavigate();
+  const [users, setUsers] = useState<User[]>([]);
 
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [openDialog, setOpenDialog] = useState(false);
+  const [editGroup, setEditGroup] = useState<Group | null>(null);
+
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    timezone: "UTC",
+    owner_user_id: "",
+  });
+
+  /* ================= LOAD ================= */
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await GroupsAPI.getAll(search);
+      setGroups(data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUsers = async () => {
+    const res = await http.get("/users");
+    setUsers(res.data);
+  };
 
   useEffect(() => {
-    GroupsAPI.getAll()
-      .then((data) => {
-        setGroups(data);
-        setLoading(false);
-      })
-      .catch(() => {
-        setError("Failed to load groups.");
-        setLoading(false);
-      });
+    load();
+    loadUsers();
   }, []);
 
-  if (loading) {
-    return (
-      <Box display="flex" justifyContent="center" mt={10}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  /* ================= SEARCH DEBOUNCE ================= */
 
-  if (error) {
-    return (
-      <Box textAlign="center" mt={10}>
-        <Typography color="error">{error}</Typography>
-      </Box>
-    );
-  }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      load();
+    }, 300);
 
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  /* ================= CRUD ================= */
+  const openCreate = () => {
+    setEditGroup(null);
+    setForm({
+      name: "",
+      description: "",
+      timezone: "UTC",
+      owner_user_id: "",
+    });
+    setOpenDialog(true);
+  };
+
+  const openEdit = (g: Group) => {
+    setEditGroup(g);
+    setForm({
+      name: g.name,
+      description: g.description || "",
+      timezone: g.timezone || "UTC",
+      owner_user_id: g.owner?.id || "",
+    });
+    setOpenDialog(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) return;
+
+    if (editGroup) {
+      await GroupsAPI.update(editGroup.id, form);
+    } else {
+      await GroupsAPI.create(form);
+    }
+
+    setOpenDialog(false);
+    load();
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this group?")) return;
+    await GroupsAPI.delete(id);
+    load();
+  };
+
+  const truncate = (text?: string, max = 30) =>
+    text && text.length > max ? text.slice(0, max) + "..." : text;
+
+  /* ================= UI ================= */
   return (
-    <Box p={4}>
-      {/* Header */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" fontWeight="bold">
+    <Box p={3}>
+      {/* ===== HEADER ===== */}
+      <Box
+        display="flex"
+        alignItems="center"
+        justifyContent="space-between"
+        mb={3}
+      >
+        <Typography variant="h4" fontWeight={700}>
           Groups
         </Typography>
 
-        <Button variant="contained" size="large"
-        onClick={() => navigate("/groups/create")}>
-          Create Group
-        </Button>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <TextField
+            size="small"
+            placeholder="Search groups..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && load()}
+            sx={{ width: 260 }}
+          />
+
+          <Button variant="outlined" onClick={load}>
+            Search
+          </Button>
+
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openCreate}
+          >
+            Create
+          </Button>
+        </Box>
       </Box>
 
-      {/* Groups Grid */}
-      <Grid
-        container
-        columns={12}
-        spacing={3}
-        sx={{
-          display: "grid",
-          gridTemplateColumns: {
-            xs: "repeat(1, 1fr)",
-            sm: "repeat(2, 1fr)",
-            md: "repeat(3, 1fr)",
-          },
-        }}
-      >
-        {groups.map((group) => (
-          <Grid key={group.id}>
-            <Card elevation={3}>
-              <CardContent>
-                <Typography variant="h6" fontWeight="bold">
-                  {group.name}
-                </Typography>
+      {/* ===== LOADING ===== */}
+      {loading && (
+        <Box display="flex" justifyContent="center" mt={5}>
+          <CircularProgress />
+        </Box>
+      )}
 
-                <Typography variant="body2" color="text.secondary" mt={1}>
-                  {group.description}
-                </Typography>
+      {/* ===== TABLE ===== */}
+      {!loading && (
+        <TableContainer component={Paper}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell><b>Name</b></TableCell>
+                <TableCell><b>Description</b></TableCell>
+                <TableCell><b>Timezone</b></TableCell>
+                <TableCell><b>Owner</b></TableCell>
+                <TableCell><b>Teams</b></TableCell>
+                <TableCell align="right"><b>Actions</b></TableCell>
+              </TableRow>
+            </TableHead>
 
-                <Typography variant="body2" mt={2}>
-                  Timezone: {group.timezone}
-                </Typography>
+            <TableBody>
+              {groups.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    No groups
+                  </TableCell>
+                </TableRow>
+              )}
 
-                <Typography variant="body2">
-                  Teams: {group.teams?.length ?? 0}
-                </Typography>
+              {groups.map((g) => (
+                <TableRow key={g.id} hover>
+                  <TableCell>{g.name}</TableCell>
 
-                <Button variant="outlined" size="small" sx={{ mt: 2 }}
-                onClick={() => navigate(`/groups/${group.id}`)}>
-                  View Details
-                </Button>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+                  <TableCell>
+                    <Tooltip title={g.description || ""}>
+                      <span>{truncate(g.description || "-")}</span>
+                    </Tooltip>
+                  </TableCell>
+
+                  <TableCell>{g.timezone || "UTC"}</TableCell>
+
+                  <TableCell>
+                    {g.owner
+                      ? `${g.owner.first_name} ${g.owner.last_name}`
+                      : "-"}
+                  </TableCell>
+
+                  <TableCell>{g._count?.teams ?? 0}</TableCell>
+
+                  <TableCell align="right">
+                    {/* <Tooltip title="Manage Members">
+                      <IconButton color="primary" onClick={() => openMembers(d)}>
+                        <GroupIcon />
+                      </IconButton>
+                    </Tooltip> */}
+                    <Tooltip title="Edit">
+                      <IconButton color="secondary" onClick={() => openEdit(g)}>
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton color="error" onClick={() => handleDelete(g.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+
+      {/* ===== DIALOG ===== */}
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>
+          {editGroup ? "Edit Group" : "Create Group"}
+        </DialogTitle>
+
+        <DialogContent>
+          <Stack spacing={2} mt={1}>
+            <TextField
+              label="Name"
+              fullWidth
+              value={form.name}
+              onChange={(e) =>
+                setForm({ ...form, name: e.target.value })
+              }
+            />
+
+            <TextField
+              label="Description"
+              fullWidth
+              multiline
+              minRows={3}
+              value={form.description}
+              onChange={(e) =>
+                setForm({ ...form, description: e.target.value })
+              }
+            />
+
+            {/* TIMEZONE */}
+            <FormControl fullWidth>
+              <InputLabel>Timezone</InputLabel>
+              <Select
+                value={form.timezone}
+                label="Timezone"
+                onChange={(e) =>
+                  setForm({ ...form, timezone: e.target.value })
+                }
+              >
+                {TIMEZONES.map((tz) => (
+                  <MenuItem key={tz} value={tz}>
+                    {tz}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* OWNER */}
+            <FormControl fullWidth>
+              <InputLabel>Group Owner</InputLabel>
+              <Select
+                value={form.owner_user_id}
+                label="Group Owner"
+                onChange={(e) =>
+                  setForm({ ...form, owner_user_id: e.target.value })
+                }
+              >
+
+                {users.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    {u.first_name} {u.last_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
+        </DialogContent>
+
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)}>
+            Cancel
+          </Button>
+
+          <Button variant="contained" onClick={handleSave}>
+            {editGroup ? "Save" : "Create"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

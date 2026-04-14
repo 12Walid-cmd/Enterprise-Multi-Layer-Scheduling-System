@@ -1,24 +1,75 @@
 import { http } from "../http";
-import type{
+import type {
   SubTeam,
-  UpdateTeamDto,
-  CreateSubTeam
+  CreateSubTeam,
+  UpdateSubTeamDto,
+  Team,
 } from "../../types/org";
 
 export const SubTeamsAPI = {
-  getAll(teamId: string): Promise<SubTeam[]> {
-    return http.get(`/teams/${teamId}/sub-teams`).then(res => res.data);
+  // =========================
+  // 1. subteams（支持 search）
+  // GET /sub-teams?search=xxx
+  // =========================
+  getAll(search?: string): Promise<SubTeam[]> {
+    return http
+      .get("/sub-teams", {
+        params: search ? { search } : {},
+      })
+      .then((res) => res.data);
   },
 
-  create(teamId: string, payload: CreateSubTeam): Promise<SubTeam> {
-    return http.post(`/teams/${teamId}/sub-teams`, payload).then(res => res.data);
-  },
-
+  // =========================
+  // 2.  subteam
+  // GET /sub-teams/:id
+  // =========================
   getOne(subTeamId: string): Promise<SubTeam> {
-    return http.get(`/teams/sub-teams/${subTeamId}`).then(res => res.data);
+    return http
+      .get(`/sub-teams/${subTeamId}`)
+      .then((res) => res.data);
   },
 
-  update(subTeamId: string, payload: UpdateTeamDto): Promise<SubTeam> {
-    return http.put(`/teams/sub-teams/${subTeamId}`, payload).then(res => res.data);
+  // =========================
+  // 3.  subteam
+  // POST /sub-teams
+  // body: { name, description, timezone, parent_team_id, lead_user_id }
+  // =========================
+  create(payload: CreateSubTeam): Promise<SubTeam> {
+    return http
+      .post("/sub-teams", payload)
+      .then((res) => res.data);
+  },
+
+  // =========================
+  // 4. subteam
+  // PUT /sub-teams/:id
+  // =========================
+  update(
+    subTeamId: string,
+    payload: UpdateSubTeamDto
+  ): Promise<SubTeam> {
+    return http
+      .put(`/sub-teams/${subTeamId}`, payload)
+      .then((res) => res.data);
+  },
+
+  // =========================
+  // 5.  subteam
+  // DELETE /sub-teams/:id
+  // =========================
+  delete(subTeamId: string): Promise<void> {
+    return http
+      .delete(`/sub-teams/${subTeamId}`)
+      .then((res) => res.data);
+  },
+
+  // =========================
+  // 6. parent teams（root teams）
+  // GET /sub-teams/parent-teams
+  // =========================
+  getParentTeams(): Promise<Team[]> {
+    return http
+      .get("/sub-teams/parent-teams")
+      .then((res) => res.data);
   },
 };

@@ -7,22 +7,22 @@ export class CreateUserDto {
     password?: string;
 
     @IsString()
-    first_name!: string;
+    first_name: string;
 
     @IsString()
-    last_name!: string;
+    last_name: string;
 
     @IsEmail()
-    email!: string;
+    email: string;
 
     @IsString()
-    phone!: string;
+    phone: string;
 
     @IsString()
-    timezone!: string;
+    timezone: string;
 
     @IsBoolean()
-    is_active!: boolean;
+    is_active: boolean;
 
     @IsOptional()
     @IsEnum(working_mode_enum)

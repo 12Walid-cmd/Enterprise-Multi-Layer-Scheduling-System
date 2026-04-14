@@ -154,10 +154,53 @@ export class AuthService {
       domain_ids: fullUser.domainUsers.map(d => d.domain_id),
       domain_team_ids: fullUser.domainTeams.map(dt => dt.domain_team_id),
       roles: fullUser.user_roles.map(r => r.global_roles.code),
-      permissions: [],
+      permissions: [] as string[],
       scope,
     };
 
+    // ---------------------------------------------------------
+    // Build Final Permissions (GlobalRole + RBAC + Override)
+    // ---------------------------------------------------------
+    const finalPermissions = new Set<string>();
+
+    // 1. Global Roles → permissions
+    const globalRolePermissions = await this.prisma.global_role_permissions.findMany({
+      where: {
+        role_id: {
+          in: fullUser.user_roles.map(r => r.global_role_id),
+        },
+      },
+    });
+
+    globalRolePermissions.forEach(p => finalPermissions.add(p.permission));
+
+    // 2. RBAC Roles → permissions
+    const rbacAssignments = await this.prisma.role_assignments.findMany({
+      where: { user_id: userId },
+      include: {
+        role: {
+          include: { role_permissions: true },
+        },
+      },
+    });
+
+    rbacAssignments.forEach(ra => {
+      ra.role.role_permissions.forEach(rp => {
+        finalPermissions.add(rp.permission);
+      });
+    });
+
+    // 3. Override Permissions → user_permissions
+    const overridePermissions = await this.prisma.user_permissions.findMany({
+      where: { user_id: userId },
+    });
+
+    overridePermissions.forEach(op => finalPermissions.add(op.permission));
+
+    // ---------------------------------------------------------
+    // Add final permissions to JWT payload
+    // ---------------------------------------------------------
+    payload.permissions = Array.from(finalPermissions);
     // Session metadata
     const userAgent = req?.headers['user-agent'] ?? null;
     const ip =

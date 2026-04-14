@@ -49,7 +49,7 @@ export class RotationsService {
                 effective_date: dto.effective_date ?? new Date(),
                 freeze_date: dto.freeze_date ?? null,
 
-                owner_id: dto.owner_id ?? null,
+                owner_user_id: dto.owner_user_id ?? null,
                 description: dto.description ?? null,
 
                 is_active: dto.is_active ?? true,
@@ -124,7 +124,7 @@ export class RotationsService {
                 ...(dto.start_date !== undefined && { start_date: dto.start_date }),
                 ...(dto.end_date !== undefined && { end_date: dto.end_date }),
 
-                ...(dto.owner_id !== undefined && { owner_id: dto.owner_id }),
+                ...(dto.owner_user_id !== undefined && { owner_user_id: dto.owner_user_id }),
                 ...(dto.description !== undefined && { description: dto.description }),
                 ...(dto.is_active !== undefined && { is_active: dto.is_active }),
             },

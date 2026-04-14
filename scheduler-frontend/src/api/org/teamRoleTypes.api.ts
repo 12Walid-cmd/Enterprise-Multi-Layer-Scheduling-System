@@ -6,8 +6,10 @@ import type {
 } from "../../types/org";
 
 export const TeamRoleTypesAPI = {
-  getAll(): Promise<TeamRoleType[]> {
-    return http.get("/roles/team-types").then(res => res.data);
+  getAll(search?: string): Promise<TeamRoleType[]> {
+    return http.get("/roles/team-types", {
+      params: { search },
+    }).then(res => res.data);
   },
 
   getOne(id: string): Promise<TeamRoleType> {
@@ -25,4 +27,13 @@ export const TeamRoleTypesAPI = {
   delete(id: string): Promise<void> {
     return http.delete(`/roles/team-types/${id}`).then(res => res.data);
   },
+
+  checkCode(
+    code: string,
+    excludeId?: string
+  ): Promise<{ exists: boolean }> {
+    return http.get(`/roles/team-types/check-code`, {
+      params: { code, excludeId },
+    }).then(res => res.data);
+  }
 };

@@ -1,15 +1,40 @@
 import { Outlet } from "react-router-dom";
-import { Box } from "@mui/material";
+import { Box, CssBaseline } from "@mui/material";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
 export default function RootLayout() {
   return (
     <Box sx={{ display: "flex", height: "100vh", bgcolor: "background.default" }}>
+      <CssBaseline />
+
+      {/* Left Navigation */}
       <Sidebar />
-      <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+
+      {/* Main Content Area */}
+      <Box
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0, // prevents flex overflow
+        }}
+      >
+        {/* Top Navigation */}
         <Topbar />
-        <Box sx={{ flex: 1, overflow: "auto", p: 3 }}>
+
+        {/* Scrollable Content */}
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            overflowY: "auto",
+            p: 3,
+            bgcolor: "background.paper",
+            borderTop: 1,
+            borderColor: "divider",
+          }}
+        >
           <Outlet />
         </Box>
       </Box>
