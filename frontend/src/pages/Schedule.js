@@ -84,6 +84,88 @@ function rowHeight(row) {
   return row.type === "group" ? GROUP_H : row.type === "totals" ? TOTALS_H : ROW_H;
 }
 
+// ── MultiSelect dropdown ─────────────────────────────────────────
+function MultiSelect({ label, options, selected, onChange, valueKey = "id", labelKey = "name" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggle = (val) => {
+    onChange(prev =>
+      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+    );
+  };
+
+  const clearAll = (e) => { e.stopPropagation(); onChange([]); };
+
+  return (
+    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 12px", borderRadius: 8, cursor: "pointer",
+          border: selected.length > 0 ? "1.5px solid #5236ab" : "1.5px solid rgba(255,255,255,0.3)",
+          background: selected.length > 0 ? "#f5f3ff" : "rgba(255,255,255,0.12)",
+          color: selected.length > 0 ? "#5236ab" : "#ffffff",
+          fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+          whiteSpace: "nowrap", minWidth: 110,
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <span>{label}{selected.length > 0 ? ` (${selected.length})` : ""}</span>
+        {selected.length > 0 && (
+          <span onClick={clearAll} style={{ marginLeft: 2, opacity: 0.7, fontSize: 15, lineHeight: 1 }}>×</span>
+        )}
+        <span style={{ marginLeft: "auto", fontSize: 10, opacity: 0.6 }}>{open ? "▴" : "▾"}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 6px)", left: 0,
+          background: "#fff", border: "1px solid #e5e7eb",
+          borderRadius: 10, boxShadow: "0 8px 28px rgba(82,54,171,0.15)",
+          zIndex: 500, minWidth: 190, padding: 6,
+          maxHeight: 240, overflowY: "auto",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          {options.length === 0 && (
+            <div style={{ padding: "10px 12px", fontSize: 13, color: "#9ca3af" }}>No options</div>
+          )}
+          {options.map(opt => {
+            const val   = opt[valueKey];
+            const lbl   = opt[labelKey];
+            const isOn  = selected.includes(val);
+            return (
+              <label key={val} style={{
+                display: "flex", alignItems: "center", gap: 9,
+                padding: "8px 10px", borderRadius: 6, cursor: "pointer",
+                background: isOn ? "#f5f3ff" : "transparent",
+                color: isOn ? "#5236ab" : "#374151",
+                fontSize: 13, userSelect: "none",
+                transition: "background 0.12s",
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isOn}
+                  onChange={() => toggle(val)}
+                  style={{ width: 15, height: 15, accentColor: "#5236ab", cursor: "pointer", flexShrink: 0 }}
+                />
+                {lbl}
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Chip helpers ──────────────────────────────────────────────────
 function getChipForAssignment(a) {
   const t = (a.rotation_type || "").toUpperCase().replace(/-/g, "_");
@@ -770,8 +852,8 @@ export default function Schedule() {
   const [error,           setError]           = useState(null);
   const [showGenModal,    setShowGenModal]     = useState(false);
   const [search,          setSearch]          = useState("");
-  const [teamFilter,      setTeamFilter]      = useState("All");
-  const [typeFilter,      setTypeFilter]      = useState("All");
+  const [teamFilter,      setTeamFilter]      = useState([]);
+  const [typeFilter,      setTypeFilter]      = useState([]);
   const [panelOpen,       setPanelOpen]       = useState(false);
   const [popup,           setPopup]           = useState(null);
   const [activePaintChip, setActivePaintChip] = useState(null);
@@ -869,8 +951,8 @@ export default function Schedule() {
           startDate:    winStart,
           endDate:      winEnd,
           search:       searchVal || undefined,
-          teamId:       teamFilter !== "All" ? teamFilter : undefined,
-          rotationType: typeFilter !== "All" ? typeFilter : undefined,
+          teamId:       teamFilter.length > 0 ? teamFilter.join(",") : undefined,
+          rotationType: typeFilter.length > 0 ? typeFilter.join(",") : undefined,
         }
       });
       setData(res.data);
@@ -949,26 +1031,58 @@ export default function Schedule() {
   }, [data, allDates]);
 
   const grouped = useMemo(() => {
-    const g = {};
-    (data?.rotationMembers||[]).forEach(m => {
-      const grp=m.group_name||"Corporate IT", rot=m.rotation_name||"Unknown", uid=m.user_id;
-      if(!g[grp]) g[grp]={}; if(!g[grp][rot]) g[grp][rot]={};
-      if(!g[grp][rot][uid]) g[grp][rot][uid]={
-        userId:uid,firstName:m.first_name,lastName:m.last_name,
-        rotationType:m.rotation_type,rotationId:m.rotation_id,assignments:[],
-      };
+
+  const g = {};
+  const hasFilter = search.trim() || teamFilter.length > 0 || typeFilter.length > 0;
+
+  // When filters are active, only show users who appear in filtered assignments
+  const matchedUserIds = new Set(
+    (data?.assignments || []).map(a => a.user_id)
+  );
+
+  // Build rows from rotationMembers (gives us members with no assignments too)
+  (data?.rotationMembers || []).forEach(m => {
+    // Skip if filter active and this user has no matching assignments
+    if (hasFilter && !matchedUserIds.has(m.user_id)) return;
+
+    // Skip if type filter active and this member's rotation type doesn't match
+    if (typeFilter.length > 0 && !typeFilter.includes(m.rotation_type)) return;
+
+    const grp = m.group_name    || "Corporate IT";
+    const rot = m.rotation_name || "Unknown";
+    const uid = m.user_id;
+    if (!g[grp])           g[grp]           = {};
+    if (!g[grp][rot])      g[grp][rot]      = {};
+    if (!g[grp][rot][uid]) g[grp][rot][uid] = {
+      userId: uid, firstName: m.first_name, lastName: m.last_name,
+      rotationType: m.rotation_type, rotationId: m.rotation_id, assignments: [],
+    };
+  });
+
+  // Merge assignments into existing rows (or create row if not from rotationMembers)
+  (data?.assignments || []).forEach(a => {
+    const grp = a.group_name    || "Corporate IT";
+    const rot = a.rotation_name || "Unknown";
+    const uid = a.user_id;
+    if (!g[grp])           g[grp]           = {};
+    if (!g[grp][rot])      g[grp][rot]      = {};
+    if (!g[grp][rot][uid]) g[grp][rot][uid] = {
+      userId: uid, firstName: a.first_name, lastName: a.last_name,
+      rotationType: a.rotation_type, rotationId: a.rotation_id, assignments: [],
+    };
+    g[grp][rot][uid].assignments.push(a);
+  });
+
+  // Clean up empty rotation/group buckets
+  Object.keys(g).forEach(grp => {
+    Object.keys(g[grp]).forEach(rot => {
+      if (Object.keys(g[grp][rot]).length === 0) delete g[grp][rot];
     });
-    (data?.assignments||[]).forEach(a => {
-      const grp=a.group_name||"Corporate IT",rot=a.rotation_name||"Unknown",uid=a.user_id;
-      if(!g[grp]) g[grp]={}; if(!g[grp][rot]) g[grp][rot]={};
-      if(!g[grp][rot][uid]) g[grp][rot][uid]={
-        userId:uid,firstName:a.first_name,lastName:a.last_name,
-        rotationType:a.rotation_type,rotationId:a.rotation_id,assignments:[],
-      };
-      g[grp][rot][uid].assignments.push(a);
-    });
-    return g;
-  }, [data]);
+    if (Object.keys(g[grp]).length === 0) delete g[grp];
+  });
+
+  return g;
+}, [data, search, teamFilter, typeFilter]);
 
   const rows = useMemo(() => {
     const r = [];
@@ -1038,22 +1152,35 @@ export default function Schedule() {
           </div>
         </div>
         <div className="sch-topbar-right">
-          <input className="sch-filter-input" type="text" placeholder="🔍 Search..."
-            value={search} onChange={e=>setSearch(e.target.value)} />
-          <select className="sch-filter-select" value={teamFilter}
-            onChange={e=>setTeamFilter(e.target.value)}>
-            <option value="All">All Teams</option>
-            {(data?.teams||[]).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <select className="sch-filter-select" value={typeFilter}
-            onChange={e=>setTypeFilter(e.target.value)}>
-            <option value="All">All Types</option>
-            {(data?.rotationTypes||[]).map(rt=><option key={rt} value={rt}>{rt}</option>)}
-          </select>
-          <button className="sch-btn-ghost" onClick={()=>fetchSchedules(search)} title="Refresh">↻</button>
-          <button className={`sch-btn-ghost${panelOpen?" active":""}`}
-            onClick={()=>setPanelOpen(o=>!o)}>≡</button>
-          <button className="sch-btn-generate" onClick={()=>setShowGenModal(true)}>⚡ Generate</button>
+          <input
+            className="sch-filter-input"
+            placeholder="Search..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+
+          <MultiSelect
+            label="Team"
+            options={data?.teams || []}
+            selected={teamFilter}
+            onChange={setTeamFilter}
+            valueKey="id"
+            labelKey="name"
+          />
+          <MultiSelect
+            label="Type"
+            options={(data?.rotationTypes || []).map(rt => ({ id: rt, name: rt }))}
+            selected={typeFilter}
+            onChange={setTypeFilter}
+            valueKey="id"
+            labelKey="name"
+          />
+
+          <button className="sch-btn-ghost" onClick={() => fetchSchedules(search)} title="Refresh">↻</button>
+          <button className={`sch-btn-ghost${panelOpen ? " active" : ""}`}
+            onClick={() => setPanelOpen(o => !o)}>≡</button>
+          <button className="sch-btn-generate" onClick={() => setShowGenModal(true)}>⚡ Generate</button>
+
         </div>
       </div>
 

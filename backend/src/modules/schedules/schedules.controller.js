@@ -13,8 +13,28 @@ exports.getSchedules = async (req, res) => {
     let values  = [start, end];
     let idx     = 3;
 
-    if (teamId && teamId !== "All") { filters.push(`rot.team_id = $${idx}::uuid`); values.push(teamId); idx++; }
-    if (rotationType && rotationType !== "All") { filters.push(`rot.rotation_type = $${idx}`); values.push(rotationType); idx++; }
+    if (teamId && teamId !== "All") {
+      const ids = teamId.split(",").map(s => s.trim()).filter(Boolean);
+      if (ids.length === 1) {
+        filters.push(`rot.team_id = $${idx}::uuid`); values.push(ids[0]); idx++;
+      } else {
+        const placeholders = ids.map((_, i) => `$${idx + i}::uuid`).join(", ");
+        filters.push(`rot.team_id IN (${placeholders})`);
+        ids.forEach(id => values.push(id)); idx += ids.length;
+      }
+    }
+
+    if (rotationType && rotationType !== "All") {
+      const types = rotationType.split(",").map(s => s.trim()).filter(Boolean);
+      if (types.length === 1) {
+        filters.push(`rot.rotation_type = $${idx}`); values.push(types[0]); idx++;
+      } else {
+        const placeholders = types.map((_, i) => `$${idx + i}`).join(", ");
+        filters.push(`rot.rotation_type IN (${placeholders})`);
+        types.forEach(t => values.push(t)); idx += types.length;
+      }
+    }
+    
     if (search) { filters.push(`(u.first_name ILIKE $${idx} OR u.last_name ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
 
     const assignmentsResult = await pool.query(`
