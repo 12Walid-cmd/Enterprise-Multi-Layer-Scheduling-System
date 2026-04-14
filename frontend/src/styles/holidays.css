@@ -2,7 +2,7 @@
    PAGE
 =============================== */
 
-.teams-page {
+.holidays-page {
   padding: 18px;
   background: #f3f4f6;
   min-height: 100vh;
@@ -10,12 +10,11 @@
   overflow: hidden;
 }
 
-/* Main red shell like Rotation page */
-.teams-shell {
+.holidays-shell {
   min-height: calc(100vh - 36px);
   padding: 28px;
   box-sizing: border-box;
-  background: linear-gradient(135deg, #ff2e63 0%, #b31273 40%, #6a11cb 100%);
+  background: linear-gradient(135deg, #ff2e63 0%, #b31273 42%, #6a11cb 100%);
   border-radius: 0;
   overflow: hidden;
 }
@@ -24,7 +23,7 @@
    HEADER
 =============================== */
 
-.teams-header {
+.holidays-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -32,7 +31,7 @@
   margin-bottom: 26px;
 }
 
-.teams-header h1 {
+.holidays-header h1 {
   margin: 0;
   font-size: 36px;
   font-weight: 800;
@@ -40,7 +39,7 @@
   letter-spacing: -0.4px;
 }
 
-.teams-subtitle {
+.holidays-subtitle {
   margin: 8px 0 0 0;
   font-size: 15px;
   color: rgba(255, 255, 255, 0.92);
@@ -50,9 +49,9 @@
    HEADER BUTTON
 =============================== */
 
-.create-team-btn {
+.create-holiday-btn {
   background: #ffffff;
-  color: #c81e3a;
+  color: #b31273;
   border: none;
   padding: 13px 22px;
   border-radius: 12px;
@@ -60,10 +59,10 @@
   font-size: 15px;
   font-weight: 700;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.create-team-btn:hover {
+.create-holiday-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
 }
@@ -72,7 +71,7 @@
    MAIN LAYOUT
 =============================== */
 
-.teams-container {
+.holidays-container {
   display: flex;
   gap: 22px;
   align-items: stretch;
@@ -84,7 +83,7 @@
    SIDEBAR
 =============================== */
 
-.teams-sidebar {
+.holidays-sidebar {
   width: 330px;
   min-width: 330px;
   background: #ffffff;
@@ -96,14 +95,14 @@
   overflow: hidden;
 }
 
-.teams-sidebar h3 {
+.holidays-sidebar h3 {
   margin: 0 0 14px 0;
   font-size: 18px;
   font-weight: 800;
   color: #111827;
 }
 
-.team-search {
+.holiday-search {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid #dfe4ea;
@@ -116,12 +115,12 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.team-search:focus {
-  border-color: #c81e3a;
-  box-shadow: 0 0 0 3px rgba(200, 30, 58, 0.12);
+.holiday-search:focus {
+  border-color: #b31273;
+  box-shadow: 0 0 0 3px rgba(179, 18, 115, 0.12);
 }
 
-.team-list {
+.holiday-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -130,10 +129,10 @@
 }
 
 /* ===============================
-   TEAM LIST ITEMS
+   HOLIDAY LIST ITEMS
 =============================== */
 
-.team-item {
+.holiday-item {
   padding: 13px 14px;
   border-radius: 12px;
   cursor: pointer;
@@ -142,58 +141,44 @@
   transition: all 0.18s ease;
 }
 
-.team-item:hover {
-  background: #fff5f5;
-  border-color: #fecaca;
+.holiday-item:hover {
+  background: #fff5fb;
+  border-color: #f5c2df;
 }
 
-.team-item.active {
-  background: linear-gradient(135deg, #fff1f2, #ffe4e6);
-  border-color: #fda4af;
+.holiday-item.active {
+  background: linear-gradient(135deg, #fff1f8, #f4e8ff);
+  border-color: #d8b4fe;
 }
 
-.team-item-content {
+.holiday-item-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
 }
 
-.team-item-text {
+.holiday-item-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
 }
 
-.team-name {
+.holiday-name {
   font-size: 15px;
   line-height: 1.35;
+  font-weight: 800;
+  color: #111827;
   word-break: break-word;
 }
 
-.main-team-name {
-  font-weight: 800;
-  color: #111827;
-}
-
-.subteam-item {
-  margin-left: 16px;
-  border-left: 3px solid #fca5a5;
-  background: #fffafa;
-}
-
-.subteam-name {
-  font-weight: 800;
-  color: #b91c1c;
-}
-
-.team-parent-label {
+.holiday-date {
   margin-top: 4px;
   font-size: 12px;
   color: #6b7280;
 }
 
-.team-type-badge {
+.holiday-type-badge {
   flex-shrink: 0;
   font-size: 10px;
   font-weight: 800;
@@ -201,16 +186,8 @@
   letter-spacing: 0.4px;
   padding: 6px 9px;
   border-radius: 999px;
-}
-
-.main-badge {
-  background: #eef2ff;
-  color: #4338ca;
-}
-
-.subteam-badge {
-  background: #fee2e2;
-  color: #c81e3a;
+  background: #f3e8ff;
+  color: #7e22ce;
 }
 
 .empty-sidebar-text {
@@ -223,7 +200,7 @@
    DETAILS PANEL
 =============================== */
 
-.team-details {
+.holiday-details {
   flex: 1;
   background: #ffffff;
   border-radius: 18px;
@@ -232,24 +209,24 @@
   overflow-y: auto;
 }
 
-.team-details h2 {
+.holiday-details h2 {
   margin: 0 0 8px 0;
   font-size: 30px;
   font-weight: 800;
   color: #111827;
 }
 
-.team-description {
+.holiday-description {
   color: #6b7280;
   font-size: 15px;
   margin-bottom: 18px;
 }
 
 /* ===============================
-   TEAM INFO CARDS
+   HOLIDAY INFO CARDS
 =============================== */
 
-.team-info {
+.holiday-info {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
@@ -283,72 +260,47 @@
    ACTIONS
 =============================== */
 
-.team-actions {
+.holiday-actions {
   margin-bottom: 18px;
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.team-actions .create-team-btn {
-  background: linear-gradient(135deg,  #ff2e63, #6a11cb);
+.primary-btn,
+.submit-btn {
+  background: linear-gradient(135deg, #ff2e63, #6a11cb);
   color: #ffffff;
-  box-shadow: 0 8px 18px rgba(200, 30, 58, 0.22);
+  border: none;
+  box-shadow: 0 8px 18px rgba(106, 17, 203, 0.22);
 }
 
-.team-actions .create-team-btn:hover {
-  box-shadow: 0 12px 22px rgba(200, 30, 58, 0.28);
+.primary-btn:hover,
+.submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(106, 17, 203, 0.28);
 }
 
-/* ===============================
-   MEMBERS SECTION
-=============================== */
-
-.members-section {
-  margin-top: 8px;
+.danger-btn {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: none;
 }
 
-.members-section h3 {
-  margin: 0 0 14px 0;
-  font-size: 24px;
-  font-weight: 800;
-  color: #111827;
+.danger-btn:hover {
+  background: #fecaca;
 }
 
-.members-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #ffffff;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
-}
-
-.members-table thead {
-  background: linear-gradient(135deg, #b10f2e, #c81e3a);
-}
-
-.members-table th {
-  padding: 14px 12px;
-  text-align: left;
-  font-size: 13px;
-  font-weight: 800;
-  color: #ffffff;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.members-table td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #f1f5f9;
+.primary-btn,
+.danger-btn,
+.cancel-btn,
+.submit-btn {
+  border-radius: 12px;
+  padding: 12px 18px;
   font-size: 14px;
-  color: #374151;
-  background: #ffffff;
-  vertical-align: top;
-}
-
-.members-table tbody tr:hover td {
-  background: #fffafa;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
 }
 
 /* ===============================
@@ -368,7 +320,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(88, 28, 41, 0.24);
+  background: rgba(88, 28, 135, 0.24);
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
@@ -398,16 +350,6 @@
   color: #111827;
 }
 
-.subteam-parent-box {
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  color: #9f1239;
-  padding: 12px 14px;
-  border-radius: 12px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-
 /* ===============================
    MODAL FIELDS
 =============================== */
@@ -425,8 +367,7 @@
 }
 
 .modal-field input,
-.modal-field select,
-.modal-field textarea {
+.modal-field select {
   width: 100%;
   padding: 13px 14px;
   border: 1px solid #e5e7eb;
@@ -439,17 +380,11 @@
 }
 
 .modal-field input:focus,
-.modal-field select:focus,
-.modal-field textarea:focus {
+.modal-field select:focus {
   outline: none;
-  border-color: #c81e3a;
-  box-shadow: 0 0 0 4px rgba(200, 30, 58, 0.12);
+  border-color: #b31273;
+  box-shadow: 0 0 0 4px rgba(179, 18, 115, 0.12);
   background: #ffffff;
-}
-
-.modal-field input:disabled {
-  background: #f3f4f6;
-  color: #6b7280;
 }
 
 /* ===============================
@@ -463,76 +398,14 @@
   margin-top: 22px;
 }
 
-.cancel-btn,
-.submit-btn {
-  border: none;
-  border-radius: 12px;
-  padding: 12px 18px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
 .cancel-btn {
   background: #f3f4f6;
   color: #374151;
-}
-
-.status-select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 14px;
-  background: #ffffff;
-  color: #111827;
-  font-weight: 600;
-  outline: none;
-}
-
-.status-select:focus {
-  border-color: #c81e3a;
-  box-shadow: 0 0 0 3px rgba(200, 30, 58, 0.12);
+  border: none;
 }
 
 .cancel-btn:hover {
   background: #e5e7eb;
-}
-
-.status-toggle {
-  border: none;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 14px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
-}
-
-.status-toggle.active {
-  background-color: #16a34a;
-  color: white;
-}
-
-.status-toggle.inactive {
-  background-color: #dc2626;
-  color: white;
-}
-
-.status-toggle:hover {
-  opacity: 0.85;
-}
-
-.submit-btn {
-  background: linear-gradient(135deg,  #ff2e63, #6a11cb);
-  color: #ffffff;
-  box-shadow: 0 8px 18px rgba(200, 30, 58, 0.2);
-}
-
-.submit-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 22px rgba(200, 30, 58, 0.26);
 }
 
 /* ===============================
@@ -540,32 +413,32 @@
 =============================== */
 
 @media (max-width: 1100px) {
-  .teams-container {
+  .holidays-container {
     flex-direction: column;
     height: auto;
   }
 
-  .teams-sidebar {
+  .holidays-sidebar {
     width: 100%;
     min-width: unset;
   }
 
-  .team-details {
+  .holiday-details {
     min-height: 500px;
   }
 }
 
 @media (max-width: 640px) {
-  .teams-shell {
+  .holidays-shell {
     padding: 18px;
   }
 
-  .teams-header {
+  .holidays-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .teams-header h1 {
+  .holidays-header h1 {
     font-size: 28px;
   }
 
@@ -578,14 +451,11 @@
     font-size: 22px;
   }
 
-  .team-info {
+  .holiday-info {
     flex-direction: column;
   }
 
   .info-card {
     min-width: unset;
   }
-  .card {
-  backdrop-filter: blur(10px);
-}
 }
