@@ -9,7 +9,7 @@ export class DomainsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditWriter,
-  ) {}
+  ) { }
 
   /* ================= CREATE ================= */
   async create(dto: CreateDomainDto, userId: string) {
@@ -36,21 +36,21 @@ export class DomainsService {
 
         ...(search
           ? {
-              OR: [
-                {
-                  name: {
-                    contains: search,
-                    mode: 'insensitive',
-                  },
+            OR: [
+              {
+                name: {
+                  contains: search,
+                  mode: 'insensitive',
                 },
-                {
-                  description: {
-                    contains: search,
-                    mode: 'insensitive',
-                  },
+              },
+              {
+                description: {
+                  contains: search,
+                  mode: 'insensitive',
                 },
-              ],
-            }
+              },
+            ],
+          }
           : {}),
       },
 
@@ -61,8 +61,8 @@ export class DomainsService {
         exclusive: true,
         is_active: true,
         created_at: true,
+        type: true,
 
-      
         owner: {
           select: {
             id: true,
@@ -71,7 +71,7 @@ export class DomainsService {
           },
         },
 
-      
+
         _count: {
           select: {
             domain_teams: true,

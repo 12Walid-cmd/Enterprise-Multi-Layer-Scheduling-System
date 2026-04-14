@@ -157,7 +157,7 @@ export default function DomainMemberDialog({
     /* ================= UI ================= */
 
     return (
-        <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
 
             <DialogTitle>
                 Domain Members {domainName ? `- ${domainName}` : ""}

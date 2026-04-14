@@ -79,7 +79,8 @@ export default function DomainFormDialog({
                 description: initialData.description || "",
                 exclusive: initialData.exclusive,
                 owner_user_id: initialData.owner?.id || "",
-                type: initialData.type,
+                type: initialData.type ?? "CAPABILITY",
+
             });
         } else {
             setForm({

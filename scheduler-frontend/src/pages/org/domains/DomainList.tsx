@@ -181,7 +181,6 @@ export default function DomainsPage() {
               {domains.map((d) => (
                 <TableRow key={d.id} hover>
                   <TableCell>{d.name}</TableCell>
-
                   <TableCell>
                     {d.type === "CAPABILITY" ? (
                       <span style={{ color: "#1976d2", fontWeight: 600 }}>Capability Domain</span>

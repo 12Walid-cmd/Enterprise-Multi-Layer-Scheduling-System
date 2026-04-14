@@ -17,8 +17,6 @@ import GlobalRoleTypesList from "./pages/org/roles/global-types/GlobalRoleTypesL
 
 // Users
 import UsersList from "./pages/user/UsersList";
-import CreateUserPage from "./pages/user/CreateUserPage";
-import EditUserPage from "./pages/user/EditUserPage";
 import UserDetail from "./pages/user/UserDetail";
 
 import UserScopePage from "./pages/user/UserScopePage";
@@ -109,9 +107,7 @@ export const router = createBrowserRouter([
 
       // Users
       { path: "users", element: <UsersList /> },
-      { path: "users/create", element: <CreateUserPage /> },
       { path: "users/:id", element: <UserDetail /> },
-      { path: "users/:id/edit", element: <EditUserPage /> },
    
       { path: "users/:id/permissions", element: <UserPermissionsPage /> },
       { path: "users/:id/scope", element: <UserScopePage /> },
