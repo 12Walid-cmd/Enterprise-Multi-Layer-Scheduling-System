@@ -82,6 +82,8 @@ function SortableMemberItem({ member, onRemove, index }) {
 
 function Rotations() {
   const [activeTab, setActiveTab] = useState('rotations');
+  const role = localStorage.getItem('role') || 'Individual';
+  const canCreateRotation = role === 'Administrator' || role === 'Rotation Owner';
 
   // Toast from global context
   const { showToast } = useToastContext();
@@ -355,6 +357,10 @@ function Rotations() {
   };
 
   const handleUseTemplate = (template) => {
+    if (!canCreateRotation) {
+      showToast('Only Administrator and Rotation Owner can create rotations.', 'error');
+      return;
+    }
     setNewRotation({
       name: template.name,
       rotation_type: template.rotation_type,
@@ -369,6 +375,11 @@ function Rotations() {
   };
 
   const handleCreateRotation = async () => {
+    if (!canCreateRotation) {
+      showToast('Only Administrator and Rotation Owner can create rotations.', 'error');
+      return;
+    }
+
     if (!newRotation.name || !newRotation.rotation_type || !newRotation.cadence_type) {
       showToast("Please fill in all required fields (marked with *)", "error");
       return;
@@ -559,7 +570,7 @@ function Rotations() {
           <h1 className="page-title">Rotation Management</h1>
           <p className="page-subtitle">Create and manage rotation pools for your teams</p>
         </div>
-        {activeTab === 'rotations' && (
+        {activeTab === 'rotations' && canCreateRotation && (
           <button className="primary-button" onClick={(e) => { e.stopPropagation(); setShowModal(true); }}>
             <span className="btn-icon">＋</span>Create Rotation
           </button>
@@ -761,7 +772,7 @@ function Rotations() {
       )}
 
       {/* ── CREATE ROTATION MODAL ─────────────────────────── */}
-      {showModal && (
+      {showModal && canCreateRotation && (
         <div className="create-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="create-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="create-modal-header">

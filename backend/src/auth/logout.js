@@ -3,10 +3,10 @@ const router = express.Router();
 const { revokeRefreshToken } = require('./auth');
 
 // POST /api/logout
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
 	const { email } = req.body;
 	if (email) {
-		revokeRefreshToken(email);
+		await revokeRefreshToken(email);
 	}
 	res.json({ success: true });
 });
