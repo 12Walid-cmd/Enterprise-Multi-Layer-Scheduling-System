@@ -29,20 +29,36 @@ import type { Group, Team } from "../../types/org";
 import type { Domain } from "../../types/domain";
 import type { RotationDefinition as Rotation } from "../../types/rotation";
 
-type ScopeKey = "group" | "domain" | "team" | "rotation";
+type ScopeKey =
+    | "group"
+    | "domain"
+    | "team"
+    | "subteam"
+    | "rotation"
+    | "leaveTeam"
+    | "leaveGroup"
+    | "holidayGroup";
 
 interface SelectedState {
     group: string;
     domain: string;
     team: string;
+    subteam: string;
     rotation: string;
+    leaveTeam: string;
+    leaveGroup: string;
+    holidayGroup: string;
 }
 
 const scopeKeyToIdKey = {
     group: "group_ids",
     domain: "domain_ids",
     team: "team_ids",
+    subteam: "subteam_ids",
     rotation: "rotation_ids",
+    leaveTeam: "leave_approval_team_ids",
+    leaveGroup: "leave_approval_group_ids",
+    holidayGroup: "holiday_group_ids",
 } as const;
 
 export default function UserScopePage() {
@@ -54,7 +70,12 @@ export default function UserScopePage() {
         group_ids: [],
         domain_ids: [],
         team_ids: [],
+        subteam_ids: [],
         rotation_ids: [],
+        leave_approval_team_ids: [],
+        leave_approval_group_ids: [],
+        holiday_group_ids: [],
+        holiday_global: false,
     });
 
     const [groups, setGroups] = useState<Group[]>([]);
@@ -66,24 +87,36 @@ export default function UserScopePage() {
         group: "",
         domain: "",
         team: "",
+        subteam: "",
         rotation: "",
+        leaveTeam: "",
+        leaveGroup: "",
+        holidayGroup: "",
     });
 
     /** ---------------------------
      *  Strongly typed API mapping
      *  --------------------------- */
     const addScopeAPI: Record<ScopeKey, (userId: string, id: string) => Promise<any>> = {
-        group: (userId, id) => UserScopeAPI.addGroup(userId, id),
-        domain: (userId, id) => UserScopeAPI.addDomain(userId, id),
-        team: (userId, id) => UserScopeAPI.addTeam(userId, id),
-        rotation: (userId, id) => UserScopeAPI.addRotation(userId, id),
+        group: (u, id) => UserScopeAPI.addGroup(u, id),
+        domain: (u, id) => UserScopeAPI.addDomain(u, id),
+        team: (u, id) => UserScopeAPI.addTeam(u, id),
+        subteam: (u, id) => UserScopeAPI.addSubteam(u, id),
+        rotation: (u, id) => UserScopeAPI.addRotation(u, id),
+        leaveTeam: (u, id) => UserScopeAPI.addLeaveTeam(u, id),
+        leaveGroup: (u, id) => UserScopeAPI.addLeaveGroup(u, id),
+        holidayGroup: (u, id) => UserScopeAPI.addHolidayGroup(u, id),
     };
 
     const removeScopeAPI: Record<ScopeKey, (userId: string, id: string) => Promise<any>> = {
-        group: (userId, id) => UserScopeAPI.removeGroup(userId, id),
-        domain: (userId, id) => UserScopeAPI.removeDomain(userId, id),
-        team: (userId, id) => UserScopeAPI.removeTeam(userId, id),
-        rotation: (userId, id) => UserScopeAPI.removeRotation(userId, id),
+        group: (u, id) => UserScopeAPI.removeGroup(u, id),
+        domain: (u, id) => UserScopeAPI.removeDomain(u, id),
+        team: (u, id) => UserScopeAPI.removeTeam(u, id),
+        subteam: (u, id) => UserScopeAPI.removeSubteam(u, id),
+        rotation: (u, id) => UserScopeAPI.removeRotation(u, id),
+        leaveTeam: (u, id) => UserScopeAPI.removeLeaveTeam(u, id),
+        leaveGroup: (u, id) => UserScopeAPI.removeLeaveGroup(u, id),
+        holidayGroup: (u, id) => UserScopeAPI.removeHolidayGroup(u, id),
     };
 
     /** ---------------------------
@@ -106,7 +139,12 @@ export default function UserScopePage() {
                 group_ids: scopeData.group_ids ?? [],
                 domain_ids: scopeData.domain_ids ?? [],
                 team_ids: scopeData.team_ids ?? [],
+                subteam_ids: scopeData.subteam_ids ?? [],
                 rotation_ids: scopeData.rotation_ids ?? [],
+                leave_approval_team_ids: scopeData.leave_approval_team_ids ?? [],
+                leave_approval_group_ids: scopeData.leave_approval_group_ids ?? [],
+                holiday_group_ids: scopeData.holiday_group_ids ?? [],
+                holiday_global: scopeData.holiday_global ?? false,
             });
 
             setGroups(groupsData);
@@ -231,6 +269,42 @@ export default function UserScopePage() {
         </Card>
     );
 
+    const renderGlobalHoliday = () => (
+        <Card sx={{ mb: 3 }}>
+            <CardContent>
+                <Typography variant="h6">Global Holiday Permission</Typography>
+
+                <Typography color="text.secondary" sx={{ mb: 2 }}>
+                    {scope.holiday_global
+                        ? "User CAN configure global holidays."
+                        : "User CANNOT configure global holidays."}
+                </Typography>
+
+                {scope.holiday_global ? (
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={async () => {
+                            await UserScopeAPI.removeHolidayGlobal(userId!);
+                            setScope((prev) => ({ ...prev, holiday_global: false }));
+                        }}
+                    >
+                        Remove Global Holiday Permission
+                    </Button>
+                ) : (
+                    <Button
+                        variant="contained"
+                        onClick={async () => {
+                            await UserScopeAPI.addHolidayGlobal(userId!);
+                            setScope((prev) => ({ ...prev, holiday_global: true }));
+                        }}
+                    >
+                        Grant Global Holiday Permission
+                    </Button>
+                )}
+            </CardContent>
+        </Card>
+    );
     /** ---------------------------
      *  Render Page
      *  --------------------------- */
@@ -243,7 +317,16 @@ export default function UserScopePage() {
             {renderSection("Group Scope", scope.group_ids, groups, "group")}
             {renderSection("Domain Scope", scope.domain_ids, domains, "domain")}
             {renderSection("Team Scope", scope.team_ids, teams, "team")}
+            {renderSection("Subteam Scope", scope.subteam_ids, teams, "subteam")}
             {renderSection("Rotation Scope", scope.rotation_ids, rotations, "rotation")}
+
+            {renderSection("Leave Approval (Team)", scope.leave_approval_team_ids, teams, "leaveTeam")}
+            {renderSection("Leave Approval (Group)", scope.leave_approval_group_ids, groups, "leaveGroup")}
+
+            {renderSection("Holiday (Group)", scope.holiday_group_ids, groups, "holidayGroup")}
+
+            {/* Global Holiday Permission */}
+            {renderGlobalHoliday()}
         </Box>
     );
 }

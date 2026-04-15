@@ -8,7 +8,7 @@ import type {
 
 export const SubTeamsAPI = {
   // =========================
-  // 1. subteams（支持 search）
+  // 1. subteams（ search）
   // GET /sub-teams?search=xxx
   // =========================
   getAll(search?: string): Promise<SubTeam[]> {

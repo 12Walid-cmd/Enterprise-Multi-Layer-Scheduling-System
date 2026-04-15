@@ -20,12 +20,16 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import GroupIcon from "@mui/icons-material/Group";
+import KeyIcon from "@mui/icons-material/Key";
+import AccountTreeIcon from "@mui/icons-material/AccountTree";
 
 import { UsersAPI } from "../../api";
 
 import UserFormDialog from "./UserFormDialog";
 import type { User } from "../../types/user";
 import UserGlobalRolesDialog from "./UserGlobalRolesDialog";
+import UserPermissionsDialog from "./UserPermissionsDialog";
+import UserScopeDialog from "./UserScopeDialog";
 
 
 
@@ -43,6 +47,10 @@ export default function UsersList() {
 
     const [globalRoleOpen, setGlobalRoleOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+    const [permissionOpen, setPermissionOpen] = useState(false);
+    const [scopeOpen, setScopeOpen] = useState(false);
+
 
     /* ================= LOAD ================= */
 
@@ -87,6 +95,16 @@ export default function UsersList() {
     const openGlobalRoles = (user: User) => {
         setSelectedUser(user);
         setGlobalRoleOpen(true);
+    };
+
+    const openPermissions = (user: User) => {
+        setSelectedUser(user);
+        setPermissionOpen(true);
+    };
+
+    const openScope = (user: User) => {
+        setSelectedUser(user);
+        setScopeOpen(true);
     };
 
     const handleSave = async (data: any) => {
@@ -177,7 +195,7 @@ export default function UsersList() {
                                 <TableCell><b>Team Role</b></TableCell>
                                 <TableCell><b>Global Role</b></TableCell>
                                 <TableCell><b>Permissions</b></TableCell>
-                                <TableCell><b>Scope</b></TableCell>
+                                <TableCell><b>Resource Scope</b></TableCell>
 
                                 <TableCell><b>Timezone</b></TableCell>
                                 <TableCell><b>Active</b></TableCell>
@@ -217,8 +235,10 @@ export default function UsersList() {
 
                                     {/* Permissions */}
                                     <TableCell>
-                                        <Tooltip title={(u.permissions || []).join(", ")}>
-                                            <span>{truncate((u.permissions || []).join(", ")) || "-"}</span>
+                                        <Tooltip title={(u.permissionMeta || []).map(p => p.name).join(", ")}>
+                                            <span>
+                                                {truncate((u.permissionMeta || []).map(p => p.name).join(", ")) || "-"}
+                                            </span>
                                         </Tooltip>
                                     </TableCell>
 
@@ -238,6 +258,19 @@ export default function UsersList() {
                                         <Tooltip title="Assign Global Role">
                                             <IconButton color="primary" onClick={() => openGlobalRoles(u)}>
                                                 <GroupIcon />
+                                            </IconButton>
+                                        </Tooltip>
+
+
+                                        <Tooltip title="Assign Permissions">
+                                            <IconButton color="primary" onClick={() => openPermissions(u)}>
+                                                <KeyIcon />
+                                            </IconButton>
+                                        </Tooltip>
+
+                                        <Tooltip title="Assign Resource Scope">
+                                            <IconButton color="primary" onClick={() => openScope(u)}>
+                                                <AccountTreeIcon />
                                             </IconButton>
                                         </Tooltip>
 
@@ -271,9 +304,25 @@ export default function UsersList() {
 
             <UserGlobalRolesDialog
                 open={globalRoleOpen}
-                onClose={() => {setGlobalRoleOpen(false); load();}}
+                onClose={() => { setGlobalRoleOpen(false); load(); }}
                 userId={selectedUser?.id || null}
+                userName={`${selectedUser?.first_name} ${selectedUser?.last_name}`}
             />
+
+            <UserScopeDialog
+                open={scopeOpen}
+                onClose={() => setScopeOpen(false)}
+                userId={selectedUser?.id || null}
+                userName={`${selectedUser?.first_name} ${selectedUser?.last_name}`}
+            />
+
+            <UserPermissionsDialog
+                open={permissionOpen}
+                onClose={() => setPermissionOpen(false)}
+                userId={selectedUser?.id || null}
+                userName={`${selectedUser?.first_name} ${selectedUser?.last_name}`}
+            />
+
         </Box>
     );
 }

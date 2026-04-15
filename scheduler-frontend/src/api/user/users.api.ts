@@ -6,7 +6,17 @@ export const UsersAPI = {
   getAll(search?: string): Promise<User[]> {
     return http.get("/users", {
       params: { search },
-    }).then(res => res.data);
+    }).then(res =>
+      res.data.map((u: any) => ({
+        ...u,
+        permissions: u.userPermissions?.map((p: any) => p.permission) || [],
+        permissionMeta: u.userPermissions?.map((p: any) => ({
+          code: p.permission,
+          name: p.permission_types?.name || p.permission,
+          description: p.permission_types?.description || "",
+        })) || []
+      }))
+    );
   },
 
   getOne(id: string | number) {

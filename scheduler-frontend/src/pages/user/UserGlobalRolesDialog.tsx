@@ -21,6 +21,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   userId: string | null;
+  userName?: string;
 }
 
 /* ================= COMPONENT ================= */
@@ -29,6 +30,7 @@ export default function UserGlobalRoleDialog({
   open,
   onClose,
   userId,
+  userName
 }: Props) {
   const [roleTypes, setRoleTypes] = useState<GlobalRoleType[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState("");
@@ -59,7 +61,7 @@ export default function UserGlobalRoleDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Assign Global Role</DialogTitle>
+      <DialogTitle>Assign Global Role {userName ? `- ${userName}` : ""}</DialogTitle>
 
       <DialogContent>
         <Stack spacing={3} mt={1}>

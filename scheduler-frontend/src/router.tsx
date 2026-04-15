@@ -20,7 +20,7 @@ import UsersList from "./pages/user/UsersList";
 import UserDetail from "./pages/user/UserDetail";
 
 import UserScopePage from "./pages/user/UserScopePage";
-import UserPermissionsPage from "./pages/user/UserPermissionsPage";
+
 
 // Sub-teams
 import SubTeamList from "./pages/org/sub-teams/SubTeamList";
@@ -108,8 +108,6 @@ export const router = createBrowserRouter([
       // Users
       { path: "users", element: <UsersList /> },
       { path: "users/:id", element: <UserDetail /> },
-   
-      { path: "users/:id/permissions", element: <UserPermissionsPage /> },
       { path: "users/:id/scope", element: <UserScopePage /> },
 
       // Rotations

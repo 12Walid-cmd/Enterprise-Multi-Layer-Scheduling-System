@@ -19,18 +19,38 @@ export interface User {
 
     permissions?: string[];
 
+    permissionMeta?: {
+        code: string;
+        name: string;
+        description: string;
+    }[];
+
     scope?: {
-        group_ids?: string[];
-        domain_ids?: string[];
-        team_ids?: string[];
-        rotation_ids?: string[];
+        group_ids: string[];
+        team_ids: string[];
+        subteam_ids: string[];
+        domain_ids: string[];
+        rotation_ids: string[];
+
+        leave_approval_team_ids: string[];
+        leave_approval_group_ids: string[];
+
+        holiday_group_ids: string[];
+        holiday_global: boolean;
     };
 }
 
-export interface UserScope {
-  group_ids: string[];
-  domain_ids: string[];
-  team_ids: string[];
-  rotation_ids: string[];
-}
 
+export interface UserScope {
+    group_ids: string[];
+    team_ids: string[];
+    subteam_ids: string[];
+    domain_ids: string[];
+    rotation_ids: string[];
+
+    leave_approval_team_ids: string[];
+    leave_approval_group_ids: string[];
+
+    holiday_group_ids: string[];
+    holiday_global: boolean;
+}

@@ -40,15 +40,11 @@ export class UsersService {
         : undefined,
       orderBy: { created_at: 'desc' },
       include: {
-        team_members: {
+        team_members: { include: { teams: true, team_roles: true } },
+        user_roles: { include: { global_roles: true } },
+        userPermissions: {
           include: {
-            teams: true,
-            team_roles: true,
-          },
-        },
-        user_roles: {
-          include: {
-            global_roles: true,
+            permission_types: true,    
           },
         },
       },

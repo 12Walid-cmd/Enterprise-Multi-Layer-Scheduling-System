@@ -1,7 +1,7 @@
 import { http } from "../http";
 
 export const UserPermissionsAPI = {
-  getByUser(userId: string): Promise<string[]> {
+  getByUser(userId: string): Promise<{ user_id: string; permission: string }[]> {
     return http.get(`/admin/users/${userId}/permissions`)
       .then(res => res.data);
   },
