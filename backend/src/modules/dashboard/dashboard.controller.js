@@ -22,11 +22,24 @@ exports.getDashboardStats = async (req, res) => {
       "SELECT COUNT(*) FROM ems.conflicts WHERE status = 'OPEN'"
     );
 
+    const conflictRows = await pool.query(`
+      SELECT c.id, c.conflict_type, c.severity, c.details,
+             u.first_name, u.last_name,
+             rot.name AS rotation_name
+      FROM ems.conflicts c
+      JOIN ems.users u       ON c.user_id     = u.id
+      JOIN ems.rotations rot ON c.rotation_id = rot.id
+      WHERE c.status = 'OPEN'
+      ORDER BY CASE c.severity WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END
+      LIMIT 10
+    `);
+
     res.json({
       totalTeams: parseInt(totalTeams.rows[0].count),
       activeRotations: parseInt(activeRotations.rows[0].count),
       pendingApprovals: parseInt(pendingApprovals.rows[0].count),
       activeConflicts: parseInt(activeConflicts.rows[0].count),
+      conflicts: conflictRows.rows,
     });
 
   } catch (error) {
