@@ -1,5 +1,7 @@
 const pool = require("../../config/db");
 
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'admin@example.com').toLowerCase();
+
 
 // ===============================
 // GET MEMBERS
@@ -15,6 +17,11 @@ exports.getMembers = async (req, res) => {
     let filters = [];
     let values = [];
     let index = 1;
+
+    // Always hide the super-admin account
+    filters.push(`LOWER(u.email) != $${index}`);
+    values.push(SUPER_ADMIN_EMAIL);
+    index++;
 
     if (search) {
       filters.push(`(u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index} OR u.username ILIKE $${index})`);
@@ -128,7 +135,7 @@ exports.getMembers = async (req, res) => {
       [...values, limit, offset]
     );
 
-    // Global stats (no filters)
+    // Global stats (exclude super-admin)
     const statsQuery = `
       SELECT
         COUNT(*) AS total_employees,
@@ -136,8 +143,9 @@ exports.getMembers = async (req, res) => {
         COUNT(*) FILTER (WHERE is_active = false) AS inactive,
         COUNT(*) FILTER (WHERE working_mode = 'REMOTE') AS remote
       FROM ems.users
+      WHERE LOWER(email) != $1
     `;
-    const statsResult = await pool.query(statsQuery);
+    const statsResult = await pool.query(statsQuery, [SUPER_ADMIN_EMAIL]);
 
     res.json({
       data: employeesResult.rows,

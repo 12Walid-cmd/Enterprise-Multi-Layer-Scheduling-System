@@ -1,5 +1,8 @@
 const pool = require('../../config/db');
 
+// Super-admin email — this user always keeps Administrator and cannot be demoted.
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'admin@example.com').toLowerCase();
+
 let roleAuditTableReadyPromise;
 
 function ensureRoleAuditTable() {
@@ -100,6 +103,19 @@ exports.setUserAppRoles = async (req, res) => {
     }
     const teamMemberId = tmRes.rows[0].id;
 
+    // Prevent demoting the super-admin
+    const emailRes = await client.query('SELECT email FROM ems.users WHERE id = $1', [userId]);
+    if (emailRes.rowCount > 0 && emailRes.rows[0].email.toLowerCase() === SUPER_ADMIN_EMAIL) {
+      const adminRoleRes = await client.query(
+        "SELECT id::text FROM ems.account_roles WHERE LOWER(code) = 'admin' LIMIT 1"
+      );
+      const adminRoleId = adminRoleRes.rows[0]?.id;
+      if (adminRoleId && !roleIds.includes(adminRoleId)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Cannot remove Administrator role from the super-admin account' });
+      }
+    }
+
     // Never leave a user without any app role; fallback to Individual.
     if (roleIds.length === 0) {
       const individualRole = await getIndividualRole(client);
@@ -178,6 +194,20 @@ exports.getUserAppRoles = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user roles' });
   } finally {
     client.release();
+  }
+};
+
+// GET /api/users/super-admin — returns the super-admin user id
+exports.getSuperAdmin = async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id FROM ems.users WHERE LOWER(email) = $1 LIMIT 1',
+      [SUPER_ADMIN_EMAIL]
+    );
+    res.json({ userId: result.rows[0]?.id || null });
+  } catch (err) {
+    console.error('getSuperAdmin error:', err);
+    res.status(500).json({ error: 'Failed to fetch super-admin' });
   }
 };
 

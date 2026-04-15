@@ -49,8 +49,8 @@ function Login() {
     localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("identifier", loginIdentifier);
     try {
-      const userRes = await api.get(`/members?search=${encodeURIComponent(loginIdentifier)}&limit=1`);
-      const user = userRes.data.data && userRes.data.data[0];
+      const userRes = await api.get(`/login/me`, { params: { identifier: loginIdentifier } });
+      const user = userRes.data;
       if (user) {
         localStorage.setItem("firstName", user.first_name || "");
         localStorage.setItem("lastName", user.last_name || "");

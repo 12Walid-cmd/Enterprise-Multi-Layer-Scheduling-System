@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const pool = require('../config/db');
 const {
 	getOrCreateTempPassword,
 	verifyTempPassword,
@@ -123,6 +124,30 @@ router.post('/change-password', async (req, res) => {
 	await setUserPassword(email, newPassword);
 	await clearFailedLoginAttempts(email);
 	return res.json({ success: true, message: 'Password updated successfully' });
+});
+
+// GET /api/login/me — return current user info from identifier (bypasses members filter)
+router.get('/me', async (req, res) => {
+	const { identifier } = req.query;
+	if (!identifier) return res.status(400).json({ message: 'Identifier required' });
+
+	const email = await resolveEmail(identifier);
+	if (!email) return res.status(404).json({ message: 'User not found' });
+
+	try {
+		const userRes = await pool.query(
+			`SELECT u.id, u.first_name, u.last_name, u.email, u.username
+			 FROM ems.users u
+			 WHERE LOWER(u.email) = LOWER($1)
+			 LIMIT 1`,
+			[email]
+		);
+		if (userRes.rowCount === 0) return res.status(404).json({ message: 'User not found' });
+		res.json(userRes.rows[0]);
+	} catch (err) {
+		console.error('login/me error:', err);
+		res.status(500).json({ message: 'Server error' });
+	}
 });
 
 module.exports = router;

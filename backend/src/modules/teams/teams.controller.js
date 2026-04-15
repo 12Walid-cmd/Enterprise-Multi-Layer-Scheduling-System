@@ -109,6 +109,17 @@ exports.createTeam = async (req, res) => {
  */
 exports.getTeams = async (req, res) => {
   try {
+    const { userId, role } = req.query;
+
+    let teamFilter = '';
+    const params = [];
+
+    // Team Leaders only see teams they belong to
+    if (role === 'Team Leader' && userId) {
+      params.push(userId);
+      teamFilter = `WHERE t.id IN (SELECT team_id FROM ems.team_members WHERE user_id = $${params.length})`;
+    }
+
     const result = await pool.query(`
       SELECT 
         t.*,
@@ -117,8 +128,9 @@ exports.getTeams = async (req, res) => {
       FROM ems.teams t
       LEFT JOIN ems.groups g ON t.group_id = g.id
       LEFT JOIN ems.teams pt ON t.parent_team_id = pt.id
+      ${teamFilter}
       ORDER BY t.name
-    `);
+    `, params);
 
     res.json(result.rows);
   } catch (err) {
