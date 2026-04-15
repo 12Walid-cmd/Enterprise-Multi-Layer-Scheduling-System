@@ -155,6 +155,22 @@ export default function Topbar() {
       setPasswordError("All password fields are required.");
       return;
     }
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      setPasswordError("Password must contain at least one uppercase letter.");
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setPasswordError("Password must contain at least one lowercase letter.");
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      setPasswordError("Password must contain at least one number.");
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setPasswordError("New password and confirmation do not match.");
       return;
@@ -595,6 +611,46 @@ export default function Topbar() {
               <div className="tb-field">
                 <label htmlFor="tb-confirm-password">Confirm New Password</label>
                 <input id="tb-confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              </div>
+              <div style={{
+                background: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                borderRadius: 8,
+                padding: "12px 14px",
+                fontSize: 13,
+                color: "#6b7280",
+              }}>
+                <div style={{ fontWeight: 600, color: "#374151", marginBottom: 6, fontSize: 13 }}>Password requirements:</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: newPassword.length >= 8 ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {newPassword.length >= 8 ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: newPassword.length >= 8 ? "#16a34a" : undefined }}>Minimum 8 characters</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: /[A-Z]/.test(newPassword) ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {/[A-Z]/.test(newPassword) ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: /[A-Z]/.test(newPassword) ? "#16a34a" : undefined }}>At least one uppercase letter</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: /[a-z]/.test(newPassword) ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {/[a-z]/.test(newPassword) ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: /[a-z]/.test(newPassword) ? "#16a34a" : undefined }}>At least one lowercase letter</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: /[0-9]/.test(newPassword) ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {/[0-9]/.test(newPassword) ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: /[0-9]/.test(newPassword) ? "#16a34a" : undefined }}>At least one number</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ color: newPassword && confirmPassword && newPassword === confirmPassword ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {newPassword && confirmPassword && newPassword === confirmPassword ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: newPassword && confirmPassword && newPassword === confirmPassword ? "#16a34a" : undefined }}>Passwords match</span>
+                </div>
               </div>
               {passwordError && <div className="tb-error">{passwordError}</div>}
               {passwordSuccess && <div className="tb-success">{passwordSuccess}</div>}

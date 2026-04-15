@@ -10,6 +10,7 @@ const {
 	getLoginLockout,
 	recordFailedLoginAttempt,
 	clearFailedLoginAttempts,
+	checkMustChangePassword,
 	resolveEmail,
 } = require('./auth');
 
@@ -56,10 +57,11 @@ router.post('/validate', async (req, res) => {
 	const valid = await verifyTempPassword(email, password);
 	if (valid) {
 		await clearFailedLoginAttempts(loginIdentifier);
+		const mustChangePassword = await checkMustChangePassword(email);
 		// Issue JWT and refresh token
 		const token = await generateJWT(email);
 		const refreshToken = await generateRefreshToken(email);
-		return res.json({ success: true, token, refreshToken });
+		return res.json({ success: true, token, refreshToken, mustChangePassword });
 	} else {
 		const failedAttempt = await recordFailedLoginAttempt(loginIdentifier);
 		if (failedAttempt.lockoutUntil) return sendLockoutResponse(res, failedAttempt.lockoutUntil);

@@ -98,6 +98,12 @@ function Rotations() {
   const [showModal, setShowModal] = useState(false);
   const [showMembersModal, setShowMembersModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingRotation, setEditingRotation] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '', rotation_type: '', group_id: '', team_id: '',
+    cadence_type: '', cadence_interval: 1, min_assignees: 1
+  });
   const [selectedRotation, setSelectedRotation] = useState(null);
   const [detailsRotation, setDetailsRotation] = useState(null);
   const [detailsMembers, setDetailsMembers] = useState([]);
@@ -276,6 +282,79 @@ function Rotations() {
       showToast("Failed to load rotation details", "error");
     } finally {
       setDetailsMembersLoading(false);
+    }
+  };
+
+  // Edit Rotation
+  const handleOpenEdit = (rotation) => {
+    setEditingRotation(rotation);
+    setEditForm({
+      name: rotation.name,
+      rotation_type: rotation.rotation_type,
+      group_id: rotation.group_id || '',
+      team_id: rotation.team_id || '',
+      cadence_type: rotation.cadence_type,
+      cadence_interval: rotation.cadence_interval,
+      min_assignees: rotation.min_assignees
+    });
+    setOpenMenuId(null);
+    setShowEditModal(true);
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!editForm.name || !editForm.rotation_type || !editForm.cadence_type) {
+      showToast("Please fill in all required fields (marked with *)", "error");
+      return;
+    }
+    if (editForm.name.trim().length === 0) {
+      showToast("Rotation name cannot be empty or just spaces", "error");
+      return;
+    }
+    if (editForm.cadence_interval < 1 || editForm.cadence_interval > 365) {
+      showToast("Cadence interval must be between 1 and 365", "error");
+      return;
+    }
+    if (editForm.min_assignees < 1 || editForm.min_assignees > 100) {
+      showToast("Minimum assignees must be between 1 and 100", "error");
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await api.patch(`/rotations/${editingRotation.id}`, {
+        name: editForm.name.trim(),
+        rotation_type: editForm.rotation_type,
+        group_id: editForm.group_id || null,
+        team_id: editForm.team_id || null,
+        cadence_type: editForm.cadence_type,
+        cadence_interval: editForm.cadence_interval,
+        min_assignees: editForm.min_assignees
+      });
+      setShowEditModal(false);
+      setEditingRotation(null);
+      await fetchRotations();
+      showToast("Rotation updated successfully!");
+    } catch (error) {
+      console.error("Error updating rotation:", error);
+      showToast(error.response?.data?.error || "Failed to update rotation", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete Rotation
+  const handleDeleteRotation = async (rotation) => {
+    const ok = await showConfirm(
+      `Are you sure you want to delete "${rotation.name}"? This action cannot be undone and will remove all members from this rotation.`
+    );
+    if (!ok) return;
+    try {
+      await api.delete(`/rotations/${rotation.id}`);
+      await fetchRotations();
+      setOpenMenuId(null);
+      showToast("Rotation deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting rotation:", error);
+      showToast("Failed to delete rotation", "error");
     }
   };
 
@@ -691,8 +770,9 @@ function Rotations() {
                       {openMenuId === rotation.id && (
                         <div className="rotation-dropdown-menu">
                           <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); handleToggleRotationStatus(rotation); }}>{rotation.is_active ? 'Deactivate Rotation' : 'Activate Rotation'}</button>
-                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); showToast("Edit coming soon!", "info"); setOpenMenuId(null); }}>Edit Rotation</button>
+                          <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); handleOpenEdit(rotation); }}>Edit Rotation</button>
                           <button className="dropdown-menu-item" onClick={(e) => { e.stopPropagation(); handleSaveAsTemplate(rotation); }}>Save as Template</button>
+                          <button className="dropdown-menu-item danger" onClick={(e) => { e.stopPropagation(); handleDeleteRotation(rotation); }}>Delete Rotation</button>
                         </div>
                       )}
                     </div>
@@ -828,6 +908,68 @@ function Rotations() {
             <div className="create-modal-footer">
               <button className="secondary-button" onClick={() => setShowModal(false)} disabled={isSubmitting}>Cancel</button>
               <button className="primary-button" onClick={handleCreateRotation} disabled={isSubmitting}>{isSubmitting ? 'Creating...' : 'Create Rotation'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT ROTATION MODAL ───────────────────────────── */}
+      {showEditModal && editingRotation && (
+        <div className="create-modal-overlay" onClick={() => setShowEditModal(false)}>
+          <div className="create-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="create-modal-header">
+              <h2 className="create-modal-title">Edit Rotation</h2>
+              <button className="create-modal-close" onClick={() => setShowEditModal(false)}>×</button>
+            </div>
+            <div className="create-modal-body">
+              <div className="form-group">
+                <label className="form-label">Rotation Name *</label>
+                <input type="text" className="form-input" placeholder="e.g., CDO On-Call Rotation" value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} maxLength="255" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Rotation Type *</label>
+                <select className="form-select" value={editForm.rotation_type} onChange={(e) => setEditForm({ ...editForm, rotation_type: e.target.value })}>
+                  <option value="">Select rotation type</option>
+                  {availableRotationTypes.map(type => (<option key={type.id} value={type.name}>{type.name}</option>))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Group</label>
+                <select className="form-select" value={editForm.group_id} onChange={(e) => setEditForm({ ...editForm, group_id: e.target.value })}>
+                  <option value="">Select group...(optional)</option>
+                  {availableGroups.map(group => (<option key={group.id} value={group.id}>{group.name}</option>))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Team</label>
+                <select className="form-select" value={editForm.team_id} onChange={(e) => setEditForm({ ...editForm, team_id: e.target.value })}>
+                  <option value="">Select team...(optional)</option>
+                  {availableTeams.map(team => (<option key={team.id} value={team.id}>{team.name}</option>))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Cadence Type *</label>
+                <select className="form-select" value={editForm.cadence_type} onChange={(e) => setEditForm({ ...editForm, cadence_type: e.target.value })}>
+                  <option value="">Select cadence</option>
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="BI_WEEKLY">Bi-Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Cadence Interval *</label>
+                <input type="number" className="form-input" min="1" max="365" value={editForm.cadence_interval} onChange={(e) => setEditForm({ ...editForm, cadence_interval: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })} />
+                <small style={{ color: '#6b7280', fontSize: '12px' }}>Every {editForm.cadence_interval || 1} {editForm.cadence_type?.toLowerCase() || 'period'}(s)</small>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Minimum Assignees *</label>
+                <input type="number" className="form-input" min="1" max="100" value={editForm.min_assignees} onChange={(e) => setEditForm({ ...editForm, min_assignees: e.target.value === '' ? '' : parseInt(e.target.value) || 1 })} />
+              </div>
+            </div>
+            <div className="create-modal-footer">
+              <button className="secondary-button" onClick={() => setShowEditModal(false)} disabled={isSubmitting}>Cancel</button>
+              <button className="primary-button" onClick={handleSubmitEdit} disabled={isSubmitting}>{isSubmitting ? 'Saving...' : 'Save Changes'}</button>
             </div>
           </div>
         </div>
@@ -997,40 +1139,23 @@ function Rotations() {
             <div className="create-modal-header">
               <div>
                 <h2 className="create-modal-title">{detailsRotation.name}</h2>
-                <p style={{ color: 'rgba(255,255,255,0.72)', margin: '4px 0 0', fontSize: '14px', fontFamily: "'DM Sans', sans-serif" }}>
-                  Rotation Details
-                </p>
+                <p style={{ color: 'rgba(255,255,255,0.72)', margin: '4px 0 0', fontSize: '14px', fontFamily: "'DM Sans', sans-serif" }}>Rotation Details</p>
               </div>
               <button className="create-modal-close" onClick={() => setShowDetailsModal(false)}>×</button>
             </div>
             <div className="create-modal-body">
-
-              {/* Rotation Info Grid */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '16px',
-                marginBottom: '24px',
-                padding: '20px',
-                background: '#f9fafb',
-                borderRadius: '10px',
-                border: '1px solid #e5e7eb'
-              }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px', padding: '20px', background: '#f9fafb', borderRadius: '10px', border: '1px solid #e5e7eb' }}>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Rotation Type</div>
                   <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{detailsRotation.rotation_type}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Status</div>
-                  <span className={`status-badge ${detailsRotation.is_active ? 'status-active' : 'status-inactive'}`}>
-                    {detailsRotation.is_active ? 'ACTIVE' : 'INACTIVE'}
-                  </span>
+                  <span className={`status-badge ${detailsRotation.is_active ? 'status-active' : 'status-inactive'}`}>{detailsRotation.is_active ? 'ACTIVE' : 'INACTIVE'}</span>
                 </div>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Cadence</div>
-                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>
-                    Every {detailsRotation.cadence_interval} {cadenceLabel(detailsRotation.cadence_type, detailsRotation.cadence_interval)}
-                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>Every {detailsRotation.cadence_interval} {cadenceLabel(detailsRotation.cadence_type, detailsRotation.cadence_interval)}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.6px', color: '#6b7280', marginBottom: '4px' }}>Min Assignees</div>
@@ -1049,8 +1174,6 @@ function Rotations() {
                   </div>
                 )}
               </div>
-
-              {/* Members List */}
               <h3 className="members-section-title">Members ({detailsMembers.length})</h3>
               {detailsMembersLoading ? (
                 <div style={{ textAlign: 'center', padding: '30px', color: '#6b7280', fontSize: '14px' }}>Loading members...</div>
@@ -1064,9 +1187,7 @@ function Rotations() {
                   {detailsMembers.map((member, index) => (
                     <div key={member.id} className="current-member-item">
                       <div className="member-info-wrapper">
-                        <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#374151', minWidth: '28px' }}>
-                          {index + 1}.
-                        </div>
+                        <div style={{ fontWeight: 'bold', fontSize: '15px', color: '#374151', minWidth: '28px' }}>{index + 1}.</div>
                         <div className="member-avatar-circle">{member.initials}</div>
                         <div className="member-info-text">
                           <div className="member-name-text">{member.name}</div>

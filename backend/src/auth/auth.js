@@ -182,7 +182,7 @@ async function setUserPassword(identifier, password) {
 	await pool.query(
 		`INSERT INTO temp_passwords (email, hash, temp_password, created_at)
 		 VALUES ($1, $2, NULL, NOW())
-		 ON CONFLICT (email) DO UPDATE SET hash = $2, created_at = NOW()`,
+		 ON CONFLICT (email) DO UPDATE SET hash = $2, temp_password = NULL, created_at = NOW()`,
 		[email, hash]
 	);
 }
@@ -232,6 +232,19 @@ async function verifyTempPassword(identifier, password) {
 	);
 	if (result.rows.length === 0) return false;
 	return argon2.verify(result.rows[0].hash, password);
+}
+
+// Check if user must change their password (temp_password still set means it hasn't been changed)
+async function checkMustChangePassword(identifier) {
+	await ensureTempPasswordSchema();
+	const email = await resolveEmail(identifier);
+	if (!email) return false;
+	const result = await pool.query(
+		`SELECT temp_password FROM temp_passwords WHERE email = $1 ORDER BY created_at DESC LIMIT 1`,
+		[email]
+	);
+	if (result.rows.length === 0) return false;
+	return result.rows[0].temp_password != null;
 }
 
 async function generateJWT(identifier) {
@@ -310,6 +323,7 @@ module.exports = {
 	getOrCreateTempPassword,
 	getTempPassword,
 	verifyTempPassword,
+	checkMustChangePassword,
 	generateStrongPassword,
 	generateJWT,
 	generateRefreshToken,

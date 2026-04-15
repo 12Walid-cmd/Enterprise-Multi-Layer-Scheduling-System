@@ -5,7 +5,7 @@ import { NavLink } from "react-router-dom";
 const S = {
   sidebar: (open) => ({
     width: open ? 240 : 64,
-    minHeight: "calc(100vh - 70px)",
+    minHeight: 0,
     background: "#ffffff",
     borderRight: "1px solid #ede9fe",
     display: "flex",
@@ -369,9 +369,9 @@ const FILTERED_NAV = (role) => {
   // Admin can see everything
   if (role === "Administrator") return NAV_ITEMS;
   // Rotation Owner
-  if (role === "Rotation Owner") return NAV_ITEMS.filter(item => ["Rotations", "Schedules", "Teams", "Holidays"].includes(item.label));
+  if (role === "Rotation Owner") return NAV_ITEMS.filter(item => ["Dashboard", "Rotations", "Schedules", "Teams", "Holidays"].includes(item.label));
   // Team Leader
-  if (role === "Team Leader") return NAV_ITEMS.filter(item => ["Teams", "Schedules", "Holidays", "Rotations"].includes(item.label));
+  if (role === "Team Leader") return NAV_ITEMS.filter(item => ["Dashboard", "Teams", "Schedules", "Holidays", "Rotations"].includes(item.label));
   // Individual
-  return NAV_ITEMS.filter(item => ["Schedules", "Holidays"].includes(item.label));
+  return NAV_ITEMS.filter(item => ["Dashboard", "Schedules", "Holidays"].includes(item.label));
 };

@@ -217,11 +217,34 @@ small { font-size: 13px; display: block; margin-top: 4px; }
 
 .dashboard-card, .card { animation: fadeInUp 0.5s ease; }
 
+.individual-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.individual-action-btn {
+  border: 1px solid #c4b5fd;
+  background: #ffffff;
+  color: #5236ab;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.individual-action-btn:hover {
+  background: #f5f3ff;
+  border-color: #7c3aed;
+  transform: translateY(-1px);
+}
+
 /* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 768px) {
   .stat-number { font-size: 32px; }
   .quick-action-box { padding: 20px 12px; font-size: 14px; }
   h2.fw-bold { font-size: 28px; }
+  .individual-actions-row { flex-direction: column; }
 }
 
 /* ── Loading ─────────────────────────────────────────── */
@@ -235,4 +258,57 @@ small { font-size: 13px; display: block; margin-top: 4px; }
 @keyframes loading {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ── Pagination (matches Members page style) ─────────── */
+.dashboard-pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-top: 1px solid var(--gray-100, #f3f4f6);
+  background: #fff;
+}
+
+.dashboard-pagination-info {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--gray-600, #6b7280);
+}
+
+.dashboard-pagination-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.dashboard-page-button {
+  padding: 7px 13px;
+  border: 1.5px solid var(--gray-200, #e5e7eb);
+  background: #fff;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #374151;
+  min-width: 38px;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.dashboard-page-button:hover:not(:disabled) {
+  border-color: var(--cgi-purple, #5236ab);
+  color: var(--cgi-purple, #5236ab);
+}
+
+.dashboard-page-button.active {
+  background: var(--cgi-gradient-r, linear-gradient(90deg, #5236ab 0%, #e41937 100%));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(82, 54, 171, 0.3);
+}
+
+.dashboard-page-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }

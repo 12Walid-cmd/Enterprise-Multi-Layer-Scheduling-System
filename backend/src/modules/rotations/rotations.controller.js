@@ -1,6 +1,7 @@
 const pool = require('../../config/db');
 const { v4: uuidv4 } = require('uuid');
 
+// ── Create Rotation ───────────────────────────────────
 exports.createRotation = async (req, res) => {
   try {
     const {
@@ -18,24 +19,19 @@ exports.createRotation = async (req, res) => {
        (id, name, rotation_type, group_id, team_id, cadence_type, cadence_interval, min_assignees, is_active)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
        RETURNING *`,
-      [
-        uuidv4(),
-        name,
-        rotation_type,
-        group_id,
-        team_id,
-        cadence_type,
-        cadence_interval,
-        min_assignees
-      ]
+      [uuidv4(), name, rotation_type, group_id, team_id, cadence_type, cadence_interval, min_assignees]
     );
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'A rotation with this name already exists' });
+    }
     res.status(500).json({ error: err.message });
   }
 };
 
+// ── Get All Rotations ─────────────────────────────────
 exports.getRotations = async (req, res) => {
   try {
     const result = await pool.query(`
@@ -54,6 +50,7 @@ exports.getRotations = async (req, res) => {
   }
 };
 
+// ── Get Rotation Types ────────────────────────────────
 exports.getRotationTypes = async (req, res) => {
   try {
     const result = await pool.query(
@@ -65,17 +62,26 @@ exports.getRotationTypes = async (req, res) => {
   }
 };
 
+// ── Update Rotation ───────────────────────────────────
 exports.updateRotation = async (req, res) => {
   try {
     const { rotationId } = req.params;
-    const { is_active } = req.body;
+    const { is_active, name, rotation_type, group_id, team_id, cadence_type, cadence_interval, min_assignees } = req.body;
 
     const result = await pool.query(
       `UPDATE ems.rotations 
-       SET is_active = $1 
-       WHERE id = $2 
+       SET 
+         is_active = COALESCE($1, is_active),
+         name = COALESCE($2, name),
+         rotation_type = COALESCE($3, rotation_type),
+         group_id = COALESCE($4, group_id),
+         team_id = COALESCE($5, team_id),
+         cadence_type = COALESCE($6, cadence_type),
+         cadence_interval = COALESCE($7, cadence_interval),
+         min_assignees = COALESCE($8, min_assignees)
+       WHERE id = $9 
        RETURNING *`,
-      [is_active, rotationId]
+      [is_active, name, rotation_type, group_id, team_id, cadence_type, cadence_interval, min_assignees, rotationId]
     );
 
     if (result.rows.length === 0) {
@@ -84,10 +90,41 @@ exports.updateRotation = async (req, res) => {
 
     res.json(result.rows[0]);
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ error: 'A rotation with this name already exists' });
+    }
     res.status(500).json({ error: err.message });
   }
 };
 
+// ── Delete Rotation ───────────────────────────────────
+exports.deleteRotation = async (req, res) => {
+  try {
+    const { rotationId } = req.params;
+
+    // First delete all rotation members
+    await pool.query(
+      'DELETE FROM ems.rotation_members WHERE rotation_id = $1',
+      [rotationId]
+    );
+
+    // Then delete the rotation itself
+    const result = await pool.query(
+      'DELETE FROM ems.rotations WHERE id = $1 RETURNING *',
+      [rotationId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Rotation not found' });
+    }
+
+    res.json({ message: 'Rotation deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// ── Get Rotation Members ──────────────────────────────
 exports.getRotationMembers = async (req, res) => {
   try {
     const { rotationId } = req.params;
@@ -128,6 +165,7 @@ exports.getRotationMembers = async (req, res) => {
   }
 };
 
+// ── Add Rotation Member ───────────────────────────────
 exports.addRotationMember = async (req, res) => {
   try {
     const { rotationId } = req.params;
@@ -141,7 +179,7 @@ exports.addRotationMember = async (req, res) => {
       );
       let currentOrder = maxOrderResult.rows[0].max_order;
 
-      // Insert each user
+      // Insert each user individually
       for (const userId of userIds) {
         currentOrder++;
         await pool.query(
@@ -152,38 +190,38 @@ exports.addRotationMember = async (req, res) => {
       }
 
       res.status(201).json({ message: 'Members added successfully' });
-      } else if (type === 'team' && teamId) {
+
+    } else if (type === 'team' && teamId) {
       // Fetch all members of the team
       const teamMembers = await pool.query(
-       `SELECT tm.user_id 
-       FROM ems.team_members tm
-       WHERE tm.team_id = $1`,
-      [teamId]
+        `SELECT tm.user_id FROM ems.team_members tm WHERE tm.team_id = $1`,
+        [teamId]
       );
 
       if (teamMembers.rows.length === 0) {
-      return res.status(400).json({ error: 'This team has no members to add' });
+        return res.status(400).json({ error: 'This team has no members to add' });
       }
 
       // Get current max rotation_order
       const maxOrderResult = await pool.query(
-      'SELECT COALESCE(MAX(rotation_order), 0) as max_order FROM ems.rotation_members WHERE rotation_id = $1',
-      [rotationId]
+        'SELECT COALESCE(MAX(rotation_order), 0) as max_order FROM ems.rotation_members WHERE rotation_id = $1',
+        [rotationId]
       );
-  let currentOrder = maxOrderResult.rows[0].max_order;
+      let currentOrder = maxOrderResult.rows[0].max_order;
 
-  // Insert each team member individually
-  for (const member of teamMembers.rows) {
-    currentOrder++;
-    await pool.query(
-      `INSERT INTO ems.rotation_members (id, rotation_id, user_id, member_type, rotation_order)
-       VALUES ($1, $2, $3, 'individual', $4)`,
-      [uuidv4(), rotationId, member.user_id, currentOrder]
-    );
-  }
+      // Insert each team member individually
+      for (const member of teamMembers.rows) {
+        currentOrder++;
+        await pool.query(
+          `INSERT INTO ems.rotation_members (id, rotation_id, user_id, member_type, rotation_order)
+           VALUES ($1, $2, $3, 'individual', $4)`,
+          [uuidv4(), rotationId, member.user_id, currentOrder]
+        );
+      }
 
-  res.status(201).json({ message: 'Team members added successfully' });
-  } else {
+      res.status(201).json({ message: 'Team members added successfully' });
+
+    } else {
       res.status(400).json({ error: 'Invalid request' });
     }
   } catch (err) {
@@ -191,6 +229,7 @@ exports.addRotationMember = async (req, res) => {
   }
 };
 
+// ── Remove Rotation Member ────────────────────────────
 exports.removeRotationMember = async (req, res) => {
   try {
     const { rotationId, memberId } = req.params;
@@ -210,6 +249,7 @@ exports.removeRotationMember = async (req, res) => {
   }
 };
 
+// ── Reorder Rotation Members ──────────────────────────
 exports.reorderRotationMembers = async (req, res) => {
   try {
     const { rotationId } = req.params;
@@ -233,54 +273,11 @@ exports.reorderRotationMembers = async (req, res) => {
   }
 };
 
-exports.createRotation = async (req, res) => {
-  try {
-    const {
-      name,
-      rotation_type,
-      group_id,
-      team_id,
-      cadence_type,
-      cadence_interval,
-      min_assignees
-    } = req.body;
-
-    const result = await pool.query(
-      `INSERT INTO ems.rotations 
-       (id, name, rotation_type, group_id, team_id, cadence_type, cadence_interval, min_assignees, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
-       RETURNING *`,
-      [
-        uuidv4(),
-        name,
-        rotation_type,
-        group_id,
-        team_id,
-        cadence_type,
-        cadence_interval,
-        min_assignees
-      ]
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (err) {
-    // Handle duplicate name error (unique constraint violation)
-    if (err.code === '23505') {
-      return res.status(400).json({ 
-        error: 'A rotation with this name already exists' 
-      });
-    }
-    res.status(500).json({ error: err.message });
-  }
-};
-
-// GET ALL TEMPLATES
+// ── Get All Templates ─────────────────────────────────
 exports.getTemplates = async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT *
-      FROM ems.rotation_templates
-      ORDER BY created_at DESC
+      SELECT * FROM ems.rotation_templates ORDER BY created_at DESC
     `);
     res.json(result.rows);
   } catch (err) {
@@ -289,7 +286,7 @@ exports.getTemplates = async (req, res) => {
   }
 };
 
-// CREATE TEMPLATE
+// ── Create Template ───────────────────────────────────
 exports.createTemplate = async (req, res) => {
   try {
     const { name, rotation_type, cadence_type, cadence_interval, min_assignees, is_private } = req.body;
@@ -309,7 +306,7 @@ exports.createTemplate = async (req, res) => {
   }
 };
 
-// UPDATE TEMPLATE
+// ── Update Template ───────────────────────────────────
 exports.updateTemplate = async (req, res) => {
   try {
     const { id } = req.params;
@@ -340,7 +337,7 @@ exports.updateTemplate = async (req, res) => {
   }
 };
 
-// DELETE TEMPLATE
+// ── Delete Template ───────────────────────────────────
 exports.deleteTemplate = async (req, res) => {
   try {
     const { id } = req.params;
