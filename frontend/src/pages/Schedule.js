@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import api from "../api/api";
 import "../styles/schedules.css";
+import { useToastContext } from "../context/ToastContext";
 
-// ── Constants ─────────────────────────────────────────────────────
 const MONTHS = ["January","February","March","April","May","June",
   "July","August","September","October","November","December"];
 const COL_W    = 48;
@@ -24,35 +24,25 @@ const LEGEND_CHIPS = [
   { cls: "ccd",  label: "CD", text: "CDO" },
   { cls: "ces",  label: "ES", text: "Escalation" },
   { cls: "cmt",  label: "MT", text: "Mountain" },
-  { cls: "cmt2", label: "mt", text: "AM leave" },
+  { cls: "cmt2", label: "mv", text: "AM leave" },
   { cls: "csd",  label: "SD", text: "Service Desk" },
 ];
 
 // ── Date helpers ──────────────────────────────────────────────────
 function pad(n) { return String(n).padStart(2, "0"); }
-
-function ymd(year, month1, day) {
-  return `${year}-${pad(month1)}-${pad(day)}`;
-}
-
+function ymd(year, month1, day) { return `${year}-${pad(month1)}-${pad(day)}`; }
 function parseYMD(dateStr) {
   const [y, m, d] = (dateStr || "").substring(0, 10).split("-").map(Number);
   return { y, m, d };
 }
-
 function todayStr() {
   const n = new Date();
   return ymd(n.getFullYear(), n.getMonth() + 1, n.getDate());
 }
-
-function monthStart(year, month1) {
-  return ymd(year, month1, 1);
-}
-
+function monthStart(year, month1) { return ymd(year, month1, 1); }
 function monthEnd(year, month1) {
   return ymd(year, month1, new Date(year, month1, 0).getDate());
 }
-
 function getDatesInRange(start, end) {
   if (!start || !end) return [];
   const { y: sy, m: sm, d: sd } = parseYMD(start);
@@ -66,29 +56,24 @@ function getDatesInRange(start, end) {
   }
   return dates;
 }
-
 function isWeekend(dateStr) {
   const { y, m, d } = parseYMD(dateStr);
   return new Date(y, m - 1, d).getDay() % 6 === 0;
 }
-
 function dateInRange(dateStr, start, end) {
   const d = (dateStr || "").substring(0, 10);
   return d >= (start || "").substring(0, 10) && d <= (end || "").substring(0, 10);
 }
-
 function fmtShort(dateStr) {
   const { y, m, d } = parseYMD(dateStr);
   return new Date(y, m - 1, d).toLocaleDateString("en-US",
     { month: "short", day: "numeric", year: "numeric" });
 }
-
 function fmtFull(dateStr) {
   const { y, m, d } = parseYMD(dateStr);
   return new Date(y, m - 1, d).toLocaleDateString("en-US",
     { weekday: "long", month: "long", day: "numeric", year: "numeric" });
 }
-
 function getWindow(year, month1, span) {
   const start = monthStart(year, month1);
   let endMonth = month1 + span - 1;
@@ -96,9 +81,90 @@ function getWindow(year, month1, span) {
   while (endMonth > 12) { endMonth -= 12; endYear++; }
   return { start, end: monthEnd(endYear, endMonth) };
 }
-
 function rowHeight(row) {
   return row.type === "group" ? GROUP_H : row.type === "totals" ? TOTALS_H : ROW_H;
+}
+
+// ── MultiSelect dropdown ─────────────────────────────────────────
+function MultiSelect({ label, options, selected, onChange, valueKey = "id", labelKey = "name" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const toggle = (val) => {
+    onChange(prev =>
+      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+    );
+  };
+
+  const clearAll = (e) => { e.stopPropagation(); onChange([]); };
+
+  return (
+    <div ref={ref} style={{ position: "relative", flexShrink: 0 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 6,
+          padding: "7px 12px", borderRadius: 8, cursor: "pointer",
+          border: selected.length > 0 ? "1.5px solid #5236ab" : "1.5px solid rgba(255,255,255,0.3)",
+          background: selected.length > 0 ? "#f5f3ff" : "rgba(255,255,255,0.12)",
+          color: selected.length > 0 ? "#5236ab" : "#ffffff",
+          fontSize: 13, fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+          whiteSpace: "nowrap", minWidth: 110,
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <span>{label}{selected.length > 0 ? ` (${selected.length})` : ""}</span>
+        {selected.length > 0 && (
+          <span onClick={clearAll} style={{ marginLeft: 2, opacity: 0.7, fontSize: 15, lineHeight: 1 }}>×</span>
+        )}
+        <span style={{ marginLeft: "auto", fontSize: 10, opacity: 0.6 }}>{open ? "▴" : "▾"}</span>
+      </button>
+
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 6px)", left: 0,
+          background: "#fff", border: "1px solid #e5e7eb",
+          borderRadius: 10, boxShadow: "0 8px 28px rgba(82,54,171,0.15)",
+          zIndex: 500, minWidth: 190, padding: 6,
+          maxHeight: 240, overflowY: "auto",
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          {options.length === 0 && (
+            <div style={{ padding: "10px 12px", fontSize: 13, color: "#9ca3af" }}>No options</div>
+          )}
+          {options.map(opt => {
+            const val   = opt[valueKey];
+            const lbl   = opt[labelKey];
+            const isOn  = selected.includes(val);
+            return (
+              <label key={val} style={{
+                display: "flex", alignItems: "center", gap: 9,
+                padding: "8px 10px", borderRadius: 6, cursor: "pointer",
+                background: isOn ? "#f5f3ff" : "transparent",
+                color: isOn ? "#5236ab" : "#374151",
+                fontSize: 13, userSelect: "none",
+                transition: "background 0.12s",
+              }}>
+                <input
+                  type="checkbox"
+                  checked={isOn}
+                  onChange={() => toggle(val)}
+                  style={{ width: 15, height: 15, accentColor: "#5236ab", cursor: "pointer", flexShrink: 0 }}
+                />
+                {lbl}
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Chip helpers ──────────────────────────────────────────────────
@@ -156,7 +222,7 @@ function cellKey(userId, rotationId, date) {
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ScheduleCanvas — outside main component so search never loses focus
+// ScheduleCanvas
 // ══════════════════════════════════════════════════════════════════
 function ScheduleCanvas({
   allDates, rows, holidayMap, gapMap, leaveByUser,
@@ -168,13 +234,18 @@ function ScheduleCanvas({
   const hoverRow   = useRef(-1);
   const hoverCol   = useRef(-1);
   const rafRef     = useRef(null);
-  const isPainting = useRef(false);
+  const isPainting        = useRef(false);
+  const wasDragging       = useRef(false);
+  const dragStartCell     = useRef(null);
+  const dragPaintedCells  = useRef(new Set());
   const today      = todayStr();
   const canvasW    = allDates.length * COL_W;
 
+  // paintedCellsRef mirrors state so draw() always has latest without re-creating
+  const paintedCellsRef = useRef(paintedCells);
+  useEffect(() => { paintedCellsRef.current = paintedCells; }, [paintedCells]);
+
   const draw = useCallback(() => {
-
-
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = requestAnimationFrame(() => {
       const canvas = canvasRef.current;
@@ -184,6 +255,7 @@ function ScheduleCanvas({
       const vh  = canvas.height / dpr;
       const sx  = scrollX.current;
       const ctx = canvas.getContext("2d");
+      const pc  = paintedCellsRef.current;
 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, vw, vh);
@@ -234,7 +306,7 @@ function ScheduleCanvas({
         ry += rh;
       });
 
-      // Header gradient
+      // Header
       const hGrad = ctx.createLinearGradient(0, 0, vw, 0);
       hGrad.addColorStop(0, "#5236ab"); hGrad.addColorStop(1, "#e41937");
       ctx.fillStyle = hGrad; ctx.fillRect(0, 0, vw, HEAD_H);
@@ -267,23 +339,20 @@ function ScheduleCanvas({
         const dt  = new Date(y, m - 1, day);
         const num = dt.getDate();
         const nam = dt.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
-        const isT = d === today;
-        const isW = isWeekend(d);
+        const isT = d === today, isW = isWeekend(d);
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.font = "600 8px 'DM Sans', system-ui, sans-serif";
         ctx.fillStyle = isT ? "#ffd0d8" : isW ? "rgba(255,255,255,0.4)" : "rgba(255,255,255,0.7)";
         ctx.fillText(nam, cx + COL_W / 2, MONTH_H + 12);
         if (isT) {
           ctx.fillStyle = "rgba(255,255,255,0.25)";
-          ctx.beginPath();
-          ctx.arc(cx + COL_W / 2, MONTH_H + DAY_H - 14, 13, 0, Math.PI * 2);
-          ctx.fill();
+          ctx.beginPath(); ctx.arc(cx + COL_W/2, MONTH_H+DAY_H-14, 13, 0, Math.PI*2); ctx.fill();
           ctx.fillStyle = "#ffffff";
         } else {
           ctx.fillStyle = isW ? "rgba(255,255,255,0.45)" : "#ffffff";
         }
-        ctx.font = `${isT ? "800" : "700"} 13px 'DM Sans', system-ui, sans-serif`;
-        ctx.fillText(num, cx + COL_W / 2, MONTH_H + DAY_H - 14);
+        ctx.font = `${isT?"800":"700"} 13px 'DM Sans', system-ui, sans-serif`;
+        ctx.fillText(num, cx + COL_W/2, MONTH_H+DAY_H-14);
       });
 
       ctx.fillStyle = "rgba(0,0,0,0.08)"; ctx.fillRect(0, HEAD_H, vw, 2);
@@ -300,7 +369,7 @@ function ScheduleCanvas({
             if (cx + COL_W < 0 || cx > vw) return;
             const val = oooPerDate[d] || 0;
             ctx.fillStyle = val >= 4 ? CC.totHi : CC.totText;
-            ctx.fillText(val, cx + COL_W / 2, ry + rh / 2);
+            ctx.fillText(val, cx + COL_W/2, ry + rh/2);
           });
         } else if (row.type === "member") {
           const { userRow } = row;
@@ -317,22 +386,22 @@ function ScheduleCanvas({
                 chips.push(getChipForLeave(lr));
             });
             const key = cellKey(userRow.userId, userRow.rotationId, d);
-            (paintedCells[key] || []).forEach(p => chips.push(p));
+            (pc[key] || []).forEach(p => chips.push(p));
 
             const isGap = userRow.rotationId
               ? (gapMap[d]?.includes(userRow.rotationId) ?? false) : false;
 
             if (isGap && chips.length === 0) {
-              const gw = 32, gy = ry + (ROW_H - CHIP_H) / 2, gx = cx + (COL_W - gw) / 2;
+              const gw = 32, gy = ry+(ROW_H-CHIP_H)/2, gx = cx+(COL_W-gw)/2;
               roundRect(ctx, gx, gy, gw, CHIP_H, 4);
               ctx.fillStyle = "#fff0f3"; ctx.fill();
               ctx.strokeStyle = "#fca5a5"; ctx.lineWidth = 1; ctx.stroke();
               ctx.font = "700 9px 'DM Sans', system-ui, sans-serif";
               ctx.fillStyle = "#e41937"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-              ctx.fillText("GAP", gx + gw / 2, gy + CHIP_H / 2);
+              ctx.fillText("GAP", gx+gw/2, gy+CHIP_H/2);
             } else if (chips.length > 0) {
-              const painted = paintedCells[key] || [];
-              const totalH  = chips.length > 1 ? CHIP_H * 2 + 3 : CHIP_H;
+              const painted = pc[key] || [];
+              const totalH  = chips.length > 1 ? CHIP_H*2+3 : CHIP_H;
               chips.slice(0, 2).forEach((chip, idx) => {
                 const col = chipColors(chip.cls);
                 ctx.font  = "700 10px 'DM Sans', system-ui, sans-serif";
@@ -347,7 +416,7 @@ function ScheduleCanvas({
                   ctx.globalAlpha = 0.5; ctx.stroke(); ctx.globalAlpha = 1;
                 }
                 ctx.fillStyle = col.fg; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-                ctx.fillText(chip.label, chx + cw / 2, chy + CHIP_H / 2);
+                ctx.fillText(chip.label, chx+cw/2, chy+CHIP_H/2);
               });
             }
           });
@@ -356,9 +425,10 @@ function ScheduleCanvas({
       });
     });
   }, [allDates, rows, holidayMap, gapMap, leaveByUser, oooPerDate,
-      monthSpans, today, activePaintChip, paintedCells]);
+      monthSpans, today, activePaintChip]);
+  // Note: paintedCells intentionally NOT in deps — we use paintedCellsRef instead
+  // so that drag painting doesn't recreate draw() on every cell stamp
 
-  // Resize observer
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -377,7 +447,9 @@ function ScheduleCanvas({
 
   useEffect(() => { draw(); }, [draw]);
 
-  // Wheel — horizontal only, let vertical pass through to container
+  // Also redraw when paintedCells changes (e.g. on load or delete)
+  useEffect(() => { draw(); }, [paintedCells, draw]);
+
   const onWheel = useCallback(e => {
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY) * 1.5) {
       e.preventDefault();
@@ -404,15 +476,13 @@ function ScheduleCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const mx   = clientX - rect.left;
-    const my   = clientY - rect.top;
+    const mx = clientX - rect.left, my = clientY - rect.top;
     if (mx < 0 || my < HEAD_H) return null;
     const ci = Math.floor((mx + scrollX.current) / COL_W);
     if (ci < 0 || ci >= allDates.length) return null;
     let ry2 = HEAD_H;
     for (let ri = 0; ri < rows.length; ri++) {
-      const row = rows[ri];
-      const rh  = rowHeight(row);
+      const row = rows[ri], rh = rowHeight(row);
       if (my >= ry2 && my < ry2 + rh) {
         if (row.type === "member")
           return { rowIndex: ri, colIndex: ci, userRow: row.userRow, date: allDates[ci] };
@@ -423,38 +493,49 @@ function ScheduleCanvas({
     return null;
   }, [allDates, rows]);
 
-  const onMouseMove = useCallback(e => {
-    const hit    = hitTest(e.clientX, e.clientY);
-    const newRow = hit ? hit.rowIndex : -1;
-    const newCol = hit ? hit.colIndex : -1;
-    if (newRow !== hoverRow.current || newCol !== hoverCol.current) {
-      hoverRow.current = newRow; hoverCol.current = newCol; draw();
+const onMouseMove = useCallback(e => {
+  const hit    = hitTest(e.clientX, e.clientY);
+  const newRow = hit ? hit.rowIndex : -1;
+  const newCol = hit ? hit.colIndex : -1;
+  if (newRow !== hoverRow.current || newCol !== hoverCol.current) {
+    hoverRow.current = newRow; hoverCol.current = newCol; draw();
+  }
+  if (isPainting.current && hit && activePaintChip) {
+    const cellId = `${hit.rowIndex}-${hit.colIndex}`;
+    if (!dragPaintedCells.current.has(cellId)) {
+      dragPaintedCells.current.add(cellId);
+      wasDragging.current = true;
+      onCellClick(hit);
     }
-    if (isPainting.current && hit && activePaintChip) onCellClick(hit);
-  }, [hitTest, draw, activePaintChip, onCellClick]);
+  }
+}, [hitTest, draw, activePaintChip, onCellClick]);
 
-  const onMouseDown = useCallback(e => {
-    if (e.button !== 0) return;
-    isPainting.current = true;
-  }, []);
+const onMouseDown = useCallback(e => {
+  if (e.button !== 0) return;
+  isPainting.current = true;
+  wasDragging.current = false;
+  dragStartCell.current = null;
+  dragPaintedCells.current = new Set();
+}, []);
 
-  const onMouseUp = useCallback(() => {
-    isPainting.current = false;
-  }, []);
+  const onMouseUp = useCallback(() => { isPainting.current = false; }, []);
 
   const onMouseLeave = useCallback(() => {
     hoverRow.current = -1; hoverCol.current = -1; draw();
   }, [draw]);
 
-  const onClick = useCallback(e => {
-    const hit = hitTest(e.clientX, e.clientY);
-    if (!hit) return;
-    if (activePaintChip) {
-      onCellClick(hit);
-    } else {
-      onCellClick({ ...hit, showPopup: true, screenX: e.clientX, screenY: e.clientY });
-    }
-  }, [hitTest, onCellClick, activePaintChip]);
+const onClick = useCallback(e => {
+  const hit = hitTest(e.clientX, e.clientY);
+  if (!hit) return;
+  if (activePaintChip) {
+    if (!wasDragging.current) onCellClick(hit);
+    wasDragging.current = false;
+    dragStartCell.current = null;
+    dragPaintedCells.current = new Set();
+  } else {
+    onCellClick({ ...hit, showPopup: true, screenX: e.clientX, screenY: e.clientY });
+  }
+}, [hitTest, onCellClick, activePaintChip]);
 
   const onContextMenu = useCallback(e => {
     e.preventDefault();
@@ -472,13 +553,8 @@ function ScheduleCanvas({
       onMouseUp={onMouseUp}
       onClick={onClick}
       onContextMenu={onContextMenu}
-      style={{
-        width: "100%",
-        height: canvasH + "px",
-        display: "block",
-        cursor: activePaintChip ? "crosshair" : "pointer",
-        flexShrink: 0,
-      }}
+      style={{ width:"100%", height:canvasH+"px", display:"block",
+        cursor: activePaintChip ? "crosshair" : "pointer", flexShrink:0 }}
     />
   );
 }
@@ -487,76 +563,72 @@ function ScheduleCanvas({
 function FrozenCols({ rows, canvasH }) {
   return (
     <div style={{
-      position: "absolute", top: 0, left: 0,
-      width: FROZEN_W,
-      height: canvasH + "px",
-      pointerEvents: "none", zIndex: 10,
-      display: "flex", flexDirection: "column",
-      fontFamily: "'DM Sans', system-ui, sans-serif",
-      boxShadow: "6px 0 20px rgba(82,54,171,0.12)",
-      overflow: "hidden",
+      position:"absolute", top:0, left:0, width:FROZEN_W, height:canvasH+"px",
+      pointerEvents:"none", zIndex:10, display:"flex", flexDirection:"column",
+      fontFamily:"'DM Sans', system-ui, sans-serif",
+      boxShadow:"6px 0 20px rgba(82,54,171,0.12)", overflow:"hidden",
     }}>
-      <div style={{ height: HEAD_H, flexShrink: 0, display: "flex" }}>
-        {[["Rotation", ROT_W], ["Member", MEM_W]].map(([lbl, w]) => (
+      <div style={{ height:HEAD_H, flexShrink:0, display:"flex" }}>
+        {[["Rotation",ROT_W],["Member",MEM_W]].map(([lbl,w]) => (
           <div key={lbl} style={{
-            width: w, flexShrink: 0,
-            background: "linear-gradient(135deg, #5236ab, #e41937)",
-            display: "flex", alignItems: "flex-end", padding: "0 14px 10px",
-            fontSize: 9, fontWeight: 700, textTransform: "uppercase",
-            letterSpacing: "0.8px", color: "rgba(255,255,255,0.7)",
-            borderRight: "1px solid rgba(255,255,255,0.12)",
+            width:w, flexShrink:0,
+            background:"linear-gradient(135deg,#5236ab,#e41937)",
+            display:"flex", alignItems:"flex-end", padding:"0 14px 10px",
+            fontSize:9, fontWeight:700, textTransform:"uppercase",
+            letterSpacing:"0.8px", color:"rgba(255,255,255,0.7)",
+            borderRight:"1px solid rgba(255,255,255,0.12)",
           }}>{lbl}</div>
         ))}
       </div>
       {rows.map((row, ri) => {
         if (row.type === "group") return (
           <div key={ri} style={{
-            height: GROUP_H, flexShrink: 0, width: FROZEN_W,
-            background: "linear-gradient(90deg, #ede9fe, #fdf2f8)",
-            borderBottom: "1px solid #c4b5fd",
-            display: "flex", alignItems: "center", padding: "0 14px", gap: 8,
+            height:GROUP_H, flexShrink:0, width:FROZEN_W,
+            background:"linear-gradient(90deg,#ede9fe,#fdf2f8)",
+            borderBottom:"1px solid #c4b5fd",
+            display:"flex", alignItems:"center", padding:"0 14px", gap:8,
           }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%",
-              background: "linear-gradient(135deg, #5236ab, #e41937)", flexShrink: 0 }} />
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#5236ab",
-              textTransform: "uppercase", letterSpacing: "0.7px" }}>{row.label}</span>
+            <div style={{ width:6,height:6,borderRadius:"50%",
+              background:"linear-gradient(135deg,#5236ab,#e41937)",flexShrink:0 }} />
+            <span style={{ fontSize:11,fontWeight:700,color:"#5236ab",
+              textTransform:"uppercase",letterSpacing:"0.7px" }}>{row.label}</span>
           </div>
         );
         if (row.type === "totals") return (
           <div key={ri} style={{
-            height: TOTALS_H, flexShrink: 0, width: FROZEN_W,
-            background: "#f3f4f6", borderTop: "2px solid #e5e7eb",
-            display: "flex", alignItems: "center", padding: "0 14px",
+            height:TOTALS_H, flexShrink:0, width:FROZEN_W,
+            background:"#f3f4f6", borderTop:"2px solid #e5e7eb",
+            display:"flex", alignItems:"center", padding:"0 14px",
           }}>
-            <span style={{ fontSize: 10, fontWeight: 600, color: "#9ca3af",
-              textTransform: "uppercase", letterSpacing: "0.5px" }}>OOO / day</span>
+            <span style={{ fontSize:10,fontWeight:600,color:"#9ca3af",
+              textTransform:"uppercase",letterSpacing:"0.5px" }}>OOO / day</span>
           </div>
         );
         return (
           <div key={ri} style={{
-            height: ROW_H, flexShrink: 0, display: "flex", alignItems: "center",
-            background: ri % 2 === 0 ? "#ffffff" : "#fafafa",
-            borderBottom: "1px solid #e5e7eb", borderRight: "1px solid #e5e7eb",
+            height:ROW_H, flexShrink:0, display:"flex", alignItems:"center",
+            background: ri%2===0 ? "#ffffff" : "#fafafa",
+            borderBottom:"1px solid #e5e7eb", borderRight:"1px solid #e5e7eb",
           }}>
-            <div style={{ width: ROT_W, flexShrink: 0, padding: "0 12px",
-              fontSize: 11, fontWeight: 500, color: "#6b7280",
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-              borderRight: "1px solid #f0f0f0" }}>{row.rotName}</div>
-            <div style={{ width: MEM_W, padding: "0 10px",
-              display: "flex", alignItems: "center", gap: 8, overflow: "hidden" }}>
-              <div style={{ width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                background: "linear-gradient(135deg, #5236ab, #e41937)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 11, fontWeight: 700, color: "#fff",
-                boxShadow: "0 2px 8px rgba(82,54,171,0.35)" }}>
+            <div style={{ width:ROT_W,flexShrink:0,padding:"0 12px",
+              fontSize:11,fontWeight:500,color:"#6b7280",
+              whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
+              borderRight:"1px solid #f0f0f0" }}>{row.rotName}</div>
+            <div style={{ width:MEM_W,padding:"0 10px",
+              display:"flex",alignItems:"center",gap:8,overflow:"hidden" }}>
+              <div style={{ width:30,height:30,borderRadius:"50%",flexShrink:0,
+                background:"linear-gradient(135deg,#5236ab,#e41937)",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                fontSize:11,fontWeight:700,color:"#fff",
+                boxShadow:"0 2px 8px rgba(82,54,171,0.35)" }}>
                 {`${row.userRow.firstName?.[0]||""}${row.userRow.lastName?.[0]||""}`.toUpperCase()}
               </div>
-              <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#111827",
-                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              <div style={{ overflow:"hidden" }}>
+                <div style={{ fontSize:12,fontWeight:600,color:"#111827",
+                  whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis" }}>
                   {row.userRow.firstName} {row.userRow.lastName}
                 </div>
-                <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>
+                <div style={{ fontSize:10,color:"#9ca3af",marginTop:1 }}>
                   {row.userRow.rotationType || ""}
                 </div>
               </div>
@@ -573,11 +645,9 @@ function CellPopup({ info, leaveByUser, paintedCells, onClose }) {
   if (!info) return null;
   const { userRow, date, screenX, screenY } = info;
   const assignments = userRow.assignments.filter(a =>
-    dateInRange(date, a.assigned_start, a.assigned_end)
-  );
+    dateInRange(date, a.assigned_start, a.assigned_end));
   const leaves = (leaveByUser[userRow.userId] || []).filter(lr =>
-    dateInRange(date, lr.start_date, lr.end_date)
-  );
+    dateInRange(date, lr.start_date, lr.end_date));
   const key     = cellKey(userRow.userId, userRow.rotationId, date);
   const painted = paintedCells[key] || [];
   const popW = 280, popH = 240;
@@ -587,7 +657,7 @@ function CellPopup({ info, leaveByUser, paintedCells, onClose }) {
 
   return (
     <>
-      <div style={{ position: "fixed", inset: 0, zIndex: 999 }} onClick={onClose} />
+      <div style={{ position:"fixed",inset:0,zIndex:999 }} onClick={onClose} />
       <div className="sch-popup" style={{ left, top }}>
         <div className="sch-popup-header">
           <div className="sch-popup-avatar">
@@ -600,16 +670,15 @@ function CellPopup({ info, leaveByUser, paintedCells, onClose }) {
           <button className="sch-popup-close" onClick={onClose}>×</button>
         </div>
         <div className="sch-popup-body">
-          {assignments.length === 0 && leaves.length === 0 && painted.length === 0 ? (
+          {assignments.length===0 && leaves.length===0 && painted.length===0 ? (
             <div className="sch-popup-empty">No assignments or leave on this day</div>
           ) : (
             <>
-              {assignments.map((a, i) => {
-                const chip = getChipForAssignment(a);
-                const col  = chipColors(chip.cls);
+              {assignments.map((a,i) => {
+                const chip=getChipForAssignment(a), col=chipColors(chip.cls);
                 return (
                   <div key={i} className="sch-popup-item">
-                    <div className="sch-popup-chip" style={{ background: col.bg, color: col.fg }}>{chip.label}</div>
+                    <div className="sch-popup-chip" style={{background:col.bg,color:col.fg}}>{chip.label}</div>
                     <div className="sch-popup-item-detail">
                       <div className="sch-popup-item-title">{a.rotation_name}</div>
                       <div className="sch-popup-item-sub">{fmtShort(a.assigned_start)} → {fmtShort(a.assigned_end)}</div>
@@ -618,28 +687,27 @@ function CellPopup({ info, leaveByUser, paintedCells, onClose }) {
                   </div>
                 );
               })}
-              {leaves.map((lr, i) => {
-                const chip = getChipForLeave(lr);
-                const col  = chipColors(chip.cls);
+              {leaves.map((lr,i) => {
+                const chip=getChipForLeave(lr), col=chipColors(chip.cls);
                 return (
                   <div key={i} className="sch-popup-item">
-                    <div className="sch-popup-chip" style={{ background: col.bg, color: col.fg }}>{chip.label}</div>
+                    <div className="sch-popup-chip" style={{background:col.bg,color:col.fg}}>{chip.label}</div>
                     <div className="sch-popup-item-detail">
-                      <div className="sch-popup-item-title">{lr.status === "PENDING" ? "Pending Vacation" : "Vacation"}</div>
+                      <div className="sch-popup-item-title">{lr.status==="PENDING"?"Pending Vacation":"Vacation"}</div>
                       <div className="sch-popup-item-sub">{fmtShort(lr.start_date)} → {fmtShort(lr.end_date)}</div>
                       {lr.leave_period && <div className="sch-popup-item-sub">{lr.leave_period}</div>}
                     </div>
                   </div>
                 );
               })}
-              {painted.map((p, i) => {
-                const col = chipColors(p.cls);
+              {painted.map((p,i) => {
+                const col=chipColors(p.cls);
                 return (
-                  <div key={`p${i}`} className="sch-popup-item" style={{ borderColor: "#c4b5fd" }}>
-                    <div className="sch-popup-chip" style={{ background: col.bg, color: col.fg }}>{p.label}</div>
+                  <div key={`p${i}`} className="sch-popup-item" style={{borderColor:"#c4b5fd"}}>
+                    <div className="sch-popup-chip" style={{background:col.bg,color:col.fg}}>{p.label}</div>
                     <div className="sch-popup-item-detail">
                       <div className="sch-popup-item-title">{chipLabel(p.cls)}</div>
-                      <div className="sch-popup-item-sub" style={{ color: "#a78bfa" }}>Manually added</div>
+                      <div className="sch-popup-item-sub" style={{color:"#a78bfa"}}>Manually added</div>
                     </div>
                   </div>
                 );
@@ -653,15 +721,25 @@ function CellPopup({ info, leaveByUser, paintedCells, onClose }) {
 }
 
 // ── Generate Modal ────────────────────────────────────────────────
-function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
+function GenerateModal({ onClose, onGenerated, windowStart }) {
+  const { showToast } = useToastContext();
   const [rotations,   setRotations]   = useState([]);
   const [selectedRot, setSelectedRot] = useState("");
-  const windowStart = monthStart(currentYear, currentMonth);
-  const windowEnd   = monthEnd(currentYear, currentMonth);
   const [loading,     setLoading]     = useState(false);
   const [result,      setResult]      = useState(null);
   const [error,       setError]       = useState(null);
   const [loadingRots, setLoadingRots] = useState(true);
+
+  // Default to a 12-month window starting from the current view start
+  const defaultEnd = (() => {
+    const { y, m } = parseYMD(windowStart);
+    let endM = m + 11;
+    let endY  = y;
+    while (endM > 12) { endM -= 12; endY++; }
+    return monthEnd(endY, endM);
+  })();
+  const [genStart, setGenStart] = useState(windowStart);
+  const [genEnd,   setGenEnd]   = useState(defaultEnd);
 
   useEffect(() => {
     api.get("/schedules/rotations")
@@ -673,13 +751,18 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
 
   const handleGenerate = async () => {
     if (!selectedRot) { setError("Please select a rotation"); return; }
+    if (!genStart || !genEnd) { setError("Please set a start and end date"); return; }
+    if (genStart > genEnd)    { setError("Start date must be before end date"); return; }
     setLoading(true); setError(null); setResult(null);
     try {
       const res = await api.post("/schedules/generate",
-        { rotationId: selectedRot, windowStart, windowEnd });
+        { rotationId: selectedRot, windowStart: genStart, windowEnd: genEnd });
       setResult(res.data); onGenerated();
+      showToast("Schedule generated!", "success");
     } catch (err) {
-      setError(err.response?.data?.message || "Generation failed");
+      const msg = err.response?.data?.message || "Generation failed";
+      setError(msg);
+      showToast(msg, "error");
     } finally { setLoading(false); }
   };
 
@@ -689,7 +772,7 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
         <div className="sch-modal-header">
           <div>
             <h2>⚡ Generate Schedule</h2>
-            <p>Generating for {MONTHS[currentMonth - 1]} {currentYear}</p>
+            <p>Generating for {genStart} → {genEnd}</p>
           </div>
           <button className="sch-modal-close" onClick={onClose}>×</button>
         </div>
@@ -700,18 +783,18 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
               <h3>Schedule Generated!</h3>
               <div className="sch-gen-stats">
                 {[
-                  { val: result.assignments, lbl: "Assignments" },
-                  { val: result.conflicts,   lbl: "Conflicts", warn: result.conflicts > 0 },
-                  { val: result.gaps,        lbl: "Gaps",      warn: result.gaps > 0 },
-                ].map((s, i) => (
+                  { val:result.assignments, lbl:"Assignments" },
+                  { val:result.conflicts,   lbl:"Conflicts", warn:result.conflicts>0 },
+                  { val:result.gaps,        lbl:"Gaps",      warn:result.gaps>0 },
+                ].map((s,i) => (
                   <div key={i} className="sch-gen-stat">
-                    <span className={`sch-gen-stat-val${s.warn ? " warn" : ""}`}>{s.val}</span>
+                    <span className={`sch-gen-stat-val${s.warn?" warn":""}`}>{s.val}</span>
                     <span className="sch-gen-stat-lbl">{s.lbl}</span>
                   </div>
                 ))}
               </div>
-              {result.conflicts > 0 && <div className="sch-gen-warning">⚠ {result.conflicts} conflict(s)</div>}
-              {result.gaps      > 0 && <div className="sch-gen-warning">⚠ {result.gaps} gap(s)</div>}
+              {result.conflicts>0 && <div className="sch-gen-warning">⚠ {result.conflicts} conflict(s)</div>}
+              {result.gaps>0      && <div className="sch-gen-warning">⚠ {result.gaps} gap(s)</div>}
               <div className="sch-modal-footer">
                 <button className="sch-btn-primary" onClick={onClose}>View Schedule</button>
               </div>
@@ -719,25 +802,51 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
           ) : (
             <>
               <div className="sch-form-group">
+                <label>Generation Window</label>
+                <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4, flex:1 }}>
+                    <span style={{ fontSize:11, color:"#6b7280", fontWeight:600 }}>Start</span>
+                    <input
+                      type="date"
+                      value={genStart}
+                      onChange={e => setGenStart(e.target.value)}
+                      style={{ padding:"7px 10px", borderRadius:8, border:"1.5px solid #e5e7eb",
+                        fontSize:13, fontFamily:"'DM Sans', sans-serif", color:"#374151" }}
+                    />
+                  </div>
+                  <span style={{ marginTop:18, color:"#9ca3af" }}>→</span>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4, flex:1 }}>
+                    <span style={{ fontSize:11, color:"#6b7280", fontWeight:600 }}>End</span>
+                    <input
+                      type="date"
+                      value={genEnd}
+                      onChange={e => setGenEnd(e.target.value)}
+                      style={{ padding:"7px 10px", borderRadius:8, border:"1.5px solid #e5e7eb",
+                        fontSize:13, fontFamily:"'DM Sans', sans-serif", color:"#374151" }}
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className="sch-form-group">
                 <label>Select Rotation <span className="req">*</span></label>
                 {loadingRots ? <div className="sch-gen-loading">Loading rotations...</div> : (
                   <div className="sch-rot-list">
                     {rotations.map(rot => (
                       <div key={rot.id}
-                        className={`sch-rot-item${selectedRot === rot.id ? " selected" : ""}`}
+                        className={`sch-rot-item${selectedRot===rot.id?" selected":""}`}
                         onClick={() => setSelectedRot(rot.id)}>
                         <div className="sch-rot-item-top">
                           <span className="sch-rot-name">{rot.name}</span>
                           <span className="sch-rot-badge">{rot.rotation_type}</span>
                         </div>
                         <div className="sch-rot-item-meta">
-                          <span>👥 {rot.team_name || rot.group_name || "No team"}</span>
+                          <span>👥 {rot.team_name||rot.group_name||"No team"}</span>
                           <span>🔄 {rot.cadence_type} · {rot.cadence_interval}x</span>
                           <span>👤 {rot.member_count} member(s)</span>
                         </div>
                       </div>
                     ))}
-                    {rotations.length === 0 && <div className="sch-gen-empty">No active rotations found.</div>}
+                    {rotations.length===0 && <div className="sch-gen-empty">No active rotations found.</div>}
                   </div>
                 )}
               </div>
@@ -750,7 +859,7 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
                     <div><span>Min Assignees</span><strong>{selectedRotData.min_assignees}</strong></div>
                     <div><span>Members</span><strong>{selectedRotData.member_count}</strong></div>
                   </div>
-                  {parseInt(selectedRotData.member_count) === 0 && (
+                  {parseInt(selectedRotData.member_count)===0 && (
                     <div className="sch-gen-warning">⚠ This rotation has no members.</div>
                   )}
                 </div>
@@ -758,9 +867,8 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
               {error && <div className="sch-gen-error">❌ {error}</div>}
               <div className="sch-modal-footer">
                 <button className="sch-btn-secondary" onClick={onClose}>Cancel</button>
-                <button className="sch-btn-primary" onClick={handleGenerate}
-                  disabled={loading || !selectedRot}>
-                  {loading ? "⏳ Generating..." : "⚡ Generate Schedule"}
+                <button className="sch-btn-primary" onClick={handleGenerate} disabled={loading||!selectedRot}>
+                  {loading?"⏳ Generating...":"⚡ Generate Schedule"}
                 </button>
               </div>
             </>
@@ -789,8 +897,8 @@ export default function Schedule() {
   const [error,           setError]           = useState(null);
   const [showGenModal,    setShowGenModal]     = useState(false);
   const [search,          setSearch]          = useState("");
-  const [teamFilter,      setTeamFilter]      = useState("All");
-  const [typeFilter,      setTypeFilter]      = useState("All");
+  const [teamFilter,      setTeamFilter]      = useState([]);
+  const [typeFilter,      setTypeFilter]      = useState([]);
   const [panelOpen,       setPanelOpen]       = useState(false);
   const [popup,           setPopup]           = useState(null);
   const [activePaintChip, setActivePaintChip] = useState(null);
@@ -798,53 +906,82 @@ export default function Schedule() {
 
   const fetchTimerRef = useRef(null);
 
+  // paintedCellsRef — lets handleCellClick read latest state without being in its deps
+  const paintedCellsRef = useRef(paintedCells);
+  useEffect(() => { paintedCellsRef.current = paintedCells; }, [paintedCells]);
+
   const { start: winStart, end: winEnd } = useMemo(
     () => getWindow(year, month, span), [year, month, span]
   );
   const winKey = `${winStart}-${winEnd}`;
 
   const goPrev = useCallback(() => {
-    setMonth(m => {
-      if (m === 1) { setYear(y => y - 1); return 12; }
-      return m - 1;
-    });
+    setMonth(m => { if (m===1) { setYear(y=>y-1); return 12; } return m-1; });
   }, []);
-
   const goNext = useCallback(() => {
-    setMonth(m => {
-      if (m === 12) { setYear(y => y + 1); return 1; }
-      return m + 1;
-    });
+    setMonth(m => { if (m===12) { setYear(y=>y+1); return 1; } return m+1; });
   }, []);
 
   useEffect(() => {
-    const onKey = e => { if (e.key === "Escape") setActivePaintChip(null); };
+    const onKey = e => { if (e.key==="Escape") setActivePaintChip(null); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   const handleLegendChipClick = useCallback((chip) => {
-    setActivePaintChip(prev => prev?.cls === chip.cls ? null : chip);
+    setActivePaintChip(prev => prev?.cls===chip.cls ? null : chip);
     setPopup(null);
   }, []);
 
+  // Paint a cell — update state immediately for smooth rendering, save to DB async
   const handleCellClick = useCallback((hit) => {
     if (activePaintChip) {
       const key = cellKey(hit.userRow.userId, hit.userRow.rotationId, hit.date);
-      setPaintedCells(prev => {
-        const existing = prev[key] || [];
-        if (existing.find(p => p.cls === activePaintChip.cls)) return prev;
-        return { ...prev, [key]: [...existing, activePaintChip] };
-      });
+      // Check ref to avoid stale closure without re-creating callback
+      const existing = paintedCellsRef.current[key] || [];
+      if (existing.find(p => p.cls === activePaintChip.cls)) return;
+
+      // Immediately update state for smooth canvas rendering
+      const newChip = { ...activePaintChip };
+      setPaintedCells(prev => ({
+        ...prev,
+        [key]: [...(prev[key] || []), newChip],
+      }));
+
+      // Save to DB in background — no await so it doesn't block paint
+      api.post("/schedules/overrides", {
+        userId:       hit.userRow.userId,
+        rotationId:   hit.userRow.rotationId,
+        overrideDate: hit.date,
+        chipCls:      activePaintChip.cls,
+        chipLabel:    activePaintChip.label,
+      }).then(res => {
+        // Store DB id on the chip for future deletion
+        setPaintedCells(prev => {
+          const chips = (prev[key] || []).map(p =>
+            p.cls === activePaintChip.cls && !p.id
+              ? { ...p, id: res.data.id } : p
+          );
+          return { ...prev, [key]: chips };
+        });
+      }).catch(err => console.error("Failed to save override:", err));
+
     } else if (hit.showPopup) {
       setPopup(hit);
     }
   }, [activePaintChip]);
 
-  const handleCellRightClick = useCallback((hit) => {
+  const handleCellRightClick = useCallback(async (hit) => {
     const key = cellKey(hit.userRow.userId, hit.userRow.rotationId, hit.date);
+    const chips = paintedCellsRef.current[key] || [];
+    if (chips.length === 0) return;
+    for (const chip of chips) {
+      if (chip.id) {
+        try { await api.delete(`/schedules/overrides/${chip.id}`); }
+        catch (err) { console.error("Failed to delete override:", err); }
+      }
+    }
     setPaintedCells(prev => {
-      if (!prev[key] || prev[key].length === 0) return prev;
       const updated = { ...prev };
       delete updated[key];
       return updated;
@@ -858,8 +995,8 @@ export default function Schedule() {
         startDate:    winStart,
         endDate:      winEnd,
         search:       searchVal || undefined,
-        teamId:       teamFilter !== "All" ? teamFilter : undefined,
-        rotationType: typeFilter !== "All" ? typeFilter : undefined,
+        teamId:       teamFilter.length > 0 ? teamFilter.join(",") : undefined,
+        rotationType: typeFilter.length > 0 ? typeFilter.join(",") : undefined,
       };
       // Scope schedule data by role
       if (currentUserId && (role === "Individual" || role === "Team Leader")) {
@@ -873,18 +1010,34 @@ export default function Schedule() {
     } finally { setLoading(false); }
   }, [winStart, winEnd, teamFilter, typeFilter, currentUserId, role]);
 
+  // Single debounced fetch effect — no duplicate
   useEffect(() => {
     if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current);
     fetchTimerRef.current = setTimeout(() => { fetchSchedules(search); }, 400);
     return () => clearTimeout(fetchTimerRef.current);
   }, [fetchSchedules, search]);
 
+  // Load saved overrides from DB when window changes
+  useEffect(() => {
+    api.get("/schedules/overrides", {
+      params: { startDate: winStart, endDate: winEnd }
+    }).then(res => {
+      const cells = {};
+      res.data.forEach(o => {
+        const dateStr = (o.override_date || "").substring(0, 10);
+        const key = cellKey(o.user_id, o.rotation_id, dateStr);
+        if (!cells[key]) cells[key] = [];
+        cells[key].push({ cls: o.chip_cls, label: o.chip_label, id: o.id });
+      });
+      setPaintedCells(cells);
+    }).catch(err => console.error("Failed to load overrides:", err));
+  }, [winStart, winEnd]);
+
   const periodLabel = useMemo(() => {
-    if (span === 1) return `${MONTHS[month - 1]} ${year}`;
-    let endMonth = month + span - 1;
-    let endYear  = year;
-    if (endMonth > 12) { endMonth -= 12; endYear++; }
-    if (endYear === year) return `${MONTHS[month-1]} – ${MONTHS[endMonth-1]} ${year}`;
+    if (span===1) return `${MONTHS[month-1]} ${year}`;
+    let endMonth = month+span-1, endYear = year;
+    if (endMonth>12) { endMonth-=12; endYear++; }
+    if (endYear===year) return `${MONTHS[month-1]} – ${MONTHS[endMonth-1]} ${year}`;
     return `${MONTHS[month-1]} ${year} – ${MONTHS[endMonth-1]} ${endYear}`;
   }, [year, month, span]);
 
@@ -892,28 +1045,25 @@ export default function Schedule() {
 
   const holidayMap = useMemo(() => {
     const m = {};
-    (data?.holidays || []).forEach(h => {
-      const k = (h.holiday_date || "").substring(0, 10);
-      if (k) m[k] = h;
+    (data?.holidays||[]).forEach(h => {
+      const k=(h.holiday_date||"").substring(0,10); if(k) m[k]=h;
     });
     return m;
   }, [data]);
 
   const gapMap = useMemo(() => {
     const m = {};
-    (data?.coverageGaps || []).forEach(g => {
-      getDatesInRange(
-        (g.gap_start || "").substring(0, 10),
-        (g.gap_end   || "").substring(0, 10)
-      ).forEach(d => { if (!m[d]) m[d] = []; m[d].push(g.rotation_id); });
+    (data?.coverageGaps||[]).forEach(g => {
+      getDatesInRange((g.gap_start||"").substring(0,10),(g.gap_end||"").substring(0,10))
+        .forEach(d => { if(!m[d]) m[d]=[]; m[d].push(g.rotation_id); });
     });
     return m;
   }, [data]);
 
   const leaveByUser = useMemo(() => {
     const m = {};
-    (data?.leaveRequests || []).forEach(lr => {
-      if (!m[lr.user_id]) m[lr.user_id] = [];
+    (data?.leaveRequests||[]).forEach(lr => {
+      if(!m[lr.user_id]) m[lr.user_id]=[];
       m[lr.user_id].push(lr);
     });
     return m;
@@ -921,68 +1071,91 @@ export default function Schedule() {
 
   const oooPerDate = useMemo(() => {
     const m = {};
-    allDates.forEach(d => { m[d] = 0; });
-    (data?.leaveRequests || []).filter(lr => lr.status === "APPROVED").forEach(lr => {
-      getDatesInRange(
-        (lr.start_date || "").substring(0, 10),
-        (lr.end_date   || "").substring(0, 10)
-      ).forEach(d => { if (m[d] !== undefined) m[d]++; });
+    allDates.forEach(d => { m[d]=0; });
+    (data?.leaveRequests||[]).filter(lr=>lr.status==="APPROVED").forEach(lr => {
+      getDatesInRange((lr.start_date||"").substring(0,10),(lr.end_date||"").substring(0,10))
+        .forEach(d => { if(m[d]!==undefined) m[d]++; });
     });
     return m;
   }, [data, allDates]);
 
   const grouped = useMemo(() => {
-    const g = {};
-    (data?.rotationMembers || []).forEach(m => {
-      const grp = m.group_name || "Corporate IT";
-      const rot = m.rotation_name || "Unknown";
-      const uid = m.user_id;
-      if (!g[grp]) g[grp] = {};
-      if (!g[grp][rot]) g[grp][rot] = {};
-      if (!g[grp][rot][uid]) g[grp][rot][uid] = {
-        userId: uid, firstName: m.first_name, lastName: m.last_name,
-        rotationType: m.rotation_type, rotationId: m.rotation_id, assignments: [],
-      };
+
+  const g = {};
+  const hasFilter = search.trim() || teamFilter.length > 0 || typeFilter.length > 0;
+
+  // When filters are active, only show users who appear in filtered assignments
+  const matchedUserIds = new Set(
+    (data?.assignments || []).map(a => a.user_id)
+  );
+
+  // Build rows from rotationMembers (gives us members with no assignments too)
+  (data?.rotationMembers || []).forEach(m => {
+    // Skip if filter active and this user has no matching assignments
+    if (hasFilter && !matchedUserIds.has(m.user_id)) return;
+
+    // Skip if type filter active and this member's rotation type doesn't match
+    if (typeFilter.length > 0 && !typeFilter.includes(m.rotation_type)) return;
+
+    const grp = m.group_name    || "Corporate IT";
+    const rot = m.rotation_name || "Unknown";
+    const uid = m.user_id;
+    if (!g[grp])           g[grp]           = {};
+    if (!g[grp][rot])      g[grp][rot]      = {};
+    if (!g[grp][rot][uid]) g[grp][rot][uid] = {
+      userId: uid, firstName: m.first_name, lastName: m.last_name,
+      rotationType: m.rotation_type, rotationId: m.rotation_id, assignments: [],
+    };
+  });
+
+  // Merge assignments into existing rows (or create row if not from rotationMembers)
+  (data?.assignments || []).forEach(a => {
+    const grp = a.group_name    || "Corporate IT";
+    const rot = a.rotation_name || "Unknown";
+    const uid = a.user_id;
+    if (!g[grp])           g[grp]           = {};
+    if (!g[grp][rot])      g[grp][rot]      = {};
+    if (!g[grp][rot][uid]) g[grp][rot][uid] = {
+      userId: uid, firstName: a.first_name, lastName: a.last_name,
+      rotationType: a.rotation_type, rotationId: a.rotation_id, assignments: [],
+    };
+    g[grp][rot][uid].assignments.push(a);
+  });
+
+  // Clean up empty rotation/group buckets
+  Object.keys(g).forEach(grp => {
+    Object.keys(g[grp]).forEach(rot => {
+      if (Object.keys(g[grp][rot]).length === 0) delete g[grp][rot];
     });
-    (data?.assignments || []).forEach(a => {
-      const grp = a.group_name || "Corporate IT";
-      const rot = a.rotation_name || "Unknown";
-      const uid = a.user_id;
-      if (!g[grp]) g[grp] = {};
-      if (!g[grp][rot]) g[grp][rot] = {};
-      if (!g[grp][rot][uid]) g[grp][rot][uid] = {
-        userId: uid, firstName: a.first_name, lastName: a.last_name,
-        rotationType: a.rotation_type, rotationId: a.rotation_id, assignments: [],
-      };
-      g[grp][rot][uid].assignments.push(a);
-    });
-    return g;
-  }, [data]);
+    if (Object.keys(g[grp]).length === 0) delete g[grp];
+  });
+
+  return g;
+}, [data, search, teamFilter, typeFilter]);
 
   const rows = useMemo(() => {
     const r = [];
     Object.entries(grouped).forEach(([groupName, rotations]) => {
-      r.push({ type: "group", label: groupName });
+      r.push({ type:"group", label:groupName });
       Object.entries(rotations).forEach(([rotName, users]) => {
         Object.values(users).forEach((userRow, ri) => {
-          r.push({ type: "member", rotName: ri === 0 ? rotName : "", userRow });
+          r.push({ type:"member", rotName:ri===0?rotName:"", userRow });
         });
       });
     });
-    r.push({ type: "totals" });
+    r.push({ type:"totals" });
     return r;
   }, [grouped]);
 
   const canvasH = useMemo(() =>
-    HEAD_H + rows.reduce((sum, row) => sum + rowHeight(row), 0),
-  [rows]);
+    HEAD_H + rows.reduce((sum,row) => sum+rowHeight(row), 0), [rows]);
 
   const monthSpans = useMemo(() => allDates.reduce((acc, d) => {
     const { y, m } = parseYMD(d);
-    const lbl  = `${MONTHS[m - 1]} ${y}`;
-    const last = acc[acc.length - 1];
-    if (last && last.month === lbl) last.count++;
-    else acc.push({ month: lbl, count: 1, startX: acc.reduce((s, ms) => s + ms.count * COL_W, 0) });
+    const lbl = `${MONTHS[m-1]} ${y}`;
+    const last = acc[acc.length-1];
+    if (last && last.month===lbl) last.count++;
+    else acc.push({ month:lbl, count:1, startX:acc.reduce((s,ms)=>s+ms.count*COL_W,0) });
     return acc;
   }, []), [allDates]);
 
@@ -991,12 +1164,12 @@ export default function Schedule() {
 
   if (loading) return (
     <div className="schedules-container">
-      <div className="sch-loading"><div className="sch-spinner" /><span>Loading schedules...</span></div>
+      <div className="sch-loading"><div className="sch-spinner"/><span>Loading schedules...</span></div>
     </div>
   );
   if (error) return (
     <div className="schedules-container">
-      <div className="sch-error">{error}<button onClick={() => fetchSchedules(search)}>Retry</button></div>
+      <div className="sch-error">{error}<button onClick={()=>fetchSchedules(search)}>Retry</button></div>
     </div>
   );
 
@@ -1005,7 +1178,7 @@ export default function Schedule() {
 
       {activePaintChip && (
         <div className="sch-paint-banner">
-          <span>🖌 Paint mode: <strong>{activePaintChip.text || chipLabel(activePaintChip.cls)}</strong> — click or drag to stamp · right-click to erase · Esc to cancel</span>
+          <span>🖌 Paint mode: <strong>{activePaintChip.text||chipLabel(activePaintChip.cls)}</strong> — click or drag to stamp · right-click to erase · Esc to cancel</span>
           <button onClick={() => setActivePaintChip(null)}>✕ Cancel</button>
         </div>
       )}
@@ -1019,37 +1192,39 @@ export default function Schedule() {
             <button className="sch-nav-btn" onClick={goNext}>›</button>
           </div>
         </div>
-
         <div className="sch-topbar-center">
           <div className="sch-view-toggle">
-            {[{ s: 1, label: "Month" }, { s: 12, label: "Year" }].map(({ s, label }) => (
-              <button key={s}
-                className={`sch-view-btn${span === s ? " active" : ""}`}
-                onClick={() => setSpan(s)}>
-                {label}
-              </button>
+            {[{s:1,label:"Month"},{s:12,label:"Year"}].map(({s,label}) => (
+              <button key={s} className={`sch-view-btn${span===s?" active":""}`}
+                onClick={() => setSpan(s)}>{label}</button>
             ))}
           </div>
         </div>
-
         <div className="sch-topbar-right">
           <input
             className="sch-filter-input"
-            type="text"
-            placeholder="🔍 Search..."
+            placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
-          <select className="sch-filter-select" value={teamFilter}
-            onChange={e => setTeamFilter(e.target.value)}>
-            <option value="All">All Teams</option>
-            {(data?.teams || []).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
-          <select className="sch-filter-select" value={typeFilter}
-            onChange={e => setTypeFilter(e.target.value)}>
-            <option value="All">All Types</option>
-            {(data?.rotationTypes || []).map(rt => <option key={rt} value={rt}>{rt}</option>)}
-          </select>
+
+          <MultiSelect
+            label="Team"
+            options={data?.teams || []}
+            selected={teamFilter}
+            onChange={setTeamFilter}
+            valueKey="id"
+            labelKey="name"
+          />
+          <MultiSelect
+            label="Type"
+            options={(data?.rotationTypes || []).map(rt => ({ id: rt, name: rt }))}
+            selected={typeFilter}
+            onChange={setTypeFilter}
+            valueKey="id"
+            labelKey="name"
+          />
+
           <button className="sch-btn-ghost" onClick={() => fetchSchedules(search)} title="Refresh">↻</button>
           <button className={`sch-btn-ghost${panelOpen ? " active" : ""}`}
             onClick={() => setPanelOpen(o => !o)}>≡</button>
@@ -1061,14 +1236,14 @@ export default function Schedule() {
 
       <div className="sch-stats-strip">
         {[
-          { lbl: "OOO",       val: stats.ooo_count          || 0, sub: "this period" },
-          { lbl: "On Call",   val: stats.on_call_today       || 0, sub: "today" },
-          { lbl: "Gaps",      val: stats.coverage_gaps       || 0, sub: "coverage", danger: parseInt(stats.coverage_gaps) > 0 },
-          { lbl: "Pending",   val: stats.pending_approvals   || 0, sub: "requests" },
-          { lbl: "Rotations", val: stats.active_rotations    || 0, sub: "active" },
-        ].map((s, i) => (
+          {lbl:"OOO",       val:stats.ooo_count        ||0, sub:"this period"},
+          {lbl:"On Call",   val:stats.on_call_today     ||0, sub:"today"},
+          {lbl:"Gaps",      val:stats.coverage_gaps     ||0, sub:"coverage", danger:parseInt(stats.coverage_gaps)>0},
+          {lbl:"Pending",   val:stats.pending_approvals ||0, sub:"requests"},
+          {lbl:"Rotations", val:stats.active_rotations  ||0, sub:"active"},
+        ].map((s,i) => (
           <div key={i} className="sch-stat-pill">
-            <span className={`sch-stat-pill-val${s.danger ? " danger" : ""}`}>{s.val}</span>
+            <span className={`sch-stat-pill-val${s.danger?" danger":""}`}>{s.val}</span>
             <span className="sch-stat-pill-label">{s.lbl}</span>
             <span className="sch-stat-pill-sub">{s.sub}</span>
           </div>
@@ -1092,26 +1267,26 @@ export default function Schedule() {
               </div>
             </div>
           ) : (
-    <div style={{ position: "relative", width: "100%", height: canvasH + "px" }}>
-  <div style={{ marginLeft: FROZEN_W, height: canvasH + "px" }}>
-    <ScheduleCanvas
-      allDates={allDates}
-      rows={rows}
-      holidayMap={holidayMap}
-      gapMap={gapMap}
-      leaveByUser={leaveByUser}
-      oooPerDate={oooPerDate}
-      monthSpans={monthSpans}
-      onCellClick={handleCellClick}
-      onCellRightClick={handleCellRightClick}
-      activePaintChip={activePaintChip}
-      paintedCells={paintedCells}
-      winKey={winKey}
-      canvasH={canvasH}
-    />
-  </div>
-  <FrozenCols rows={rows} canvasH={canvasH} />
-</div>
+            <div style={{position:"relative",width:"100%",height:canvasH+"px"}}>
+              <div style={{marginLeft:FROZEN_W,height:canvasH+"px"}}>
+                <ScheduleCanvas
+                  allDates={allDates}
+                  rows={rows}
+                  holidayMap={holidayMap}
+                  gapMap={gapMap}
+                  leaveByUser={leaveByUser}
+                  oooPerDate={oooPerDate}
+                  monthSpans={monthSpans}
+                  onCellClick={handleCellClick}
+                  onCellRightClick={handleCellRightClick}
+                  activePaintChip={activePaintChip}
+                  paintedCells={paintedCells}
+                  winKey={winKey}
+                  canvasH={canvasH}
+                />
+              </div>
+              <FrozenCols rows={rows} canvasH={canvasH} />
+            </div>
           )}
         </div>
 
@@ -1123,60 +1298,63 @@ export default function Schedule() {
                 <div className="sch-paint-hint">Click or drag cells to stamp · right-click to erase</div>
               )}
               <div className="sch-legend-grid">
-                {LEGEND_CHIPS.map((l, i) => {
-                  const isActive = activePaintChip?.cls === l.cls;
+                {LEGEND_CHIPS.map((l,i) => {
+                  const isActive = activePaintChip?.cls===l.cls;
                   return (
                     <div key={i}
-                      className={`sch-li sch-li-clickable${isActive ? " sch-li-active" : ""}`}
+                      className={`sch-li sch-li-clickable${isActive?" sch-li-active":""}`}
                       onClick={() => handleLegendChipClick(l)}
-                      title={isActive ? "Click again or Esc to deactivate" : `Click to paint ${l.text}`}>
-                      <div className={`sch-lc ${l.cls}${isActive ? " sch-lc-active" : ""}`}>{l.label}</div>
+                      title={isActive?"Click again or Esc to deactivate":`Click to paint ${l.text}`}>
+                      <div className={`sch-lc ${l.cls}${isActive?" sch-lc-active":""}`}>{l.label}</div>
                       <span>{l.text}</span>
                       {isActive && <span className="sch-li-active-dot">●</span>}
                     </div>
                   );
                 })}
               </div>
-              <div className="sch-leg-divider" />
+              <div className="sch-leg-divider"/>
               <div className="sch-legend-grid">
-                <div className="sch-li"><div className="sch-ls" style={{ background: "#fef3e2" }} /><span>CA holiday</span></div>
-                <div className="sch-li"><div className="sch-ls" style={{ background: "#eff6ff" }} /><span>US holiday</span></div>
-                <div className="sch-li"><div className="sch-ls" style={{ background: "#f8f9fb", border: "1px solid #e5e7eb" }} /><span>Weekend</span></div>
-                <div className="sch-li"><div className="sch-ls" style={{ background: "#fff0f3", border: "1px solid #fca5a5" }} /><span>Gap</span></div>
+                <div className="sch-li"><div className="sch-ls" style={{background:"#fef3e2"}}/><span>CA holiday</span></div>
+                <div className="sch-li"><div className="sch-ls" style={{background:"#eff6ff"}}/><span>US holiday</span></div>
+                <div className="sch-li"><div className="sch-ls" style={{background:"#f8f9fb",border:"1px solid #e5e7eb"}}/><span>Weekend</span></div>
+                <div className="sch-li"><div className="sch-ls" style={{background:"#fff0f3",border:"1px solid #fca5a5"}}/><span>Gap</span></div>
               </div>
             </div>
 
             <div className="sch-panel-section">
               <div className="sch-panel-title">Summary</div>
               {[
-                { l: "OOO this period",  v: stats.ooo_count          || 0 },
-                { l: "On call today",    v: stats.on_call_today       || 0 },
-                { l: "Coverage gaps",    v: stats.coverage_gaps       || 0, cls: parseInt(stats.coverage_gaps)     > 0 ? "danger" : "" },
-                { l: "Pending PV",       v: stats.pending_approvals   || 0, cls: parseInt(stats.pending_approvals) > 0 ? "warn"   : "" },
-                { l: "Active rotations", v: stats.active_rotations    || 0 },
-              ].map((s, i) => (
+                {l:"OOO this period",  v:stats.ooo_count        ||0},
+                {l:"On call today",    v:stats.on_call_today     ||0},
+                {l:"Coverage gaps",    v:stats.coverage_gaps     ||0, cls:parseInt(stats.coverage_gaps)    >0?"danger":""},
+                {l:"Pending PV",       v:stats.pending_approvals ||0, cls:parseInt(stats.pending_approvals)>0?"warn":""},
+                {l:"Active rotations", v:stats.active_rotations  ||0},
+              ].map((s,i) => (
                 <div key={i} className="sch-si">
                   <span className="sch-sl">{s.l}</span>
-                  <span className={`sch-sv${s.cls ? " " + s.cls : ""}`}>{s.v}</span>
+                  <span className={`sch-sv${s.cls?" "+s.cls:""}`}>{s.v}</span>
                 </div>
               ))}
             </div>
 
             <div className="sch-panel-section">
-              <div className="sch-panel-title" style={{ color: "#e41937" }}>
-                ⚠ Conflicts ({data?.conflicts?.length || 0})
+              <div className="sch-panel-title" style={{color:"#e41937"}}>
+                ⚠ Conflicts ({data?.conflicts?.length||0})
               </div>
-              {(data?.conflicts || []).length === 0 ? (
-                <div style={{ fontSize: 12, color: "#6b7280" }}>No open conflicts</div>
+              {(data?.conflicts||[]).length===0 ? (
+                <div style={{fontSize:12,color:"#6b7280"}}>No open conflicts</div>
               ) : (
-                (data?.conflicts || []).map(c => (
+                (data?.conflicts||[]).map(c => (
                   <div key={c.id} className="sch-ci">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
                       <span className="sch-cn">{c.first_name} {c.last_name}</span>
-                      <span className={`sch-sev-badge sch-sev-${(c.severity || "").toLowerCase()}`}>{c.severity}</span>
+                      <span className={`sch-sev-badge sch-sev-${(c.severity||"").toLowerCase()}`}>{c.severity}</span>
                     </div>
-                    <span style={{ fontSize: 11, color: "#9ca3af" }}>{c.conflict_type}</span><br />
-                    <span style={{ fontSize: 12 }}>{c.rotation_name}</span>
+                    <span style={{fontSize:11,color:"#9ca3af"}}>{c.conflict_type}</span><br/>
+                    <span style={{fontSize:12}}>{c.rotation_name}</span>
+                    {c.details?.description && (
+                      <div style={{fontSize:11,color:"#e41937",marginTop:2}}>{c.details.description}</div>
+                    )}
                   </div>
                 ))
               )}
@@ -1189,15 +1367,14 @@ export default function Schedule() {
         info={popup}
         leaveByUser={leaveByUser}
         paintedCells={paintedCells}
-        onClose={() => setPopup(null)}
+        onClose={()=>setPopup(null)}
       />
 
       {isAdmin && showGenModal && (
         <GenerateModal
           onClose={() => setShowGenModal(false)}
           onGenerated={() => fetchSchedules(search)}
-          currentYear={year}
-          currentMonth={month}
+          windowStart={winStart}
         />
       )}
     </div>

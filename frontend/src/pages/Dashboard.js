@@ -35,7 +35,8 @@ function Dashboard() {
     totalTeams: 0,
     activeRotations: 0,
     pendingApprovals: 0,
-    activeConflicts: 0
+    activeConflicts: 0,
+    conflicts: [],
   });
   const [adminConflicts, setAdminConflicts] = useState([]);
   const [adminActivity, setAdminActivity] = useState([]);

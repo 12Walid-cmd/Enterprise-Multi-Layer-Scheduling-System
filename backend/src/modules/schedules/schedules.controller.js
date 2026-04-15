@@ -38,8 +38,28 @@ exports.getSchedules = async (req, res) => {
     let values  = [start, end];
     let idx     = 3;
 
-    if (teamId && teamId !== "All") { filters.push(`rot.team_id = $${idx}::uuid`); values.push(teamId); idx++; }
-    if (rotationType && rotationType !== "All") { filters.push(`rot.rotation_type = $${idx}`); values.push(rotationType); idx++; }
+    if (teamId && teamId !== "All") {
+      const ids = teamId.split(",").map(s => s.trim()).filter(Boolean);
+      if (ids.length === 1) {
+        filters.push(`rot.team_id = $${idx}::uuid`); values.push(ids[0]); idx++;
+      } else {
+        const placeholders = ids.map((_, i) => `$${idx + i}::uuid`).join(", ");
+        filters.push(`rot.team_id IN (${placeholders})`);
+        ids.forEach(id => values.push(id)); idx += ids.length;
+      }
+    }
+
+    if (rotationType && rotationType !== "All") {
+      const types = rotationType.split(",").map(s => s.trim()).filter(Boolean);
+      if (types.length === 1) {
+        filters.push(`rot.rotation_type = $${idx}`); values.push(types[0]); idx++;
+      } else {
+        const placeholders = types.map((_, i) => `$${idx + i}`).join(", ");
+        filters.push(`rot.rotation_type IN (${placeholders})`);
+        types.forEach(t => values.push(t)); idx += types.length;
+      }
+    }
+    
     if (search) { filters.push(`(u.first_name ILIKE $${idx} OR u.last_name ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
     if (scopedUserIds) { filters.push(`a.user_id = ANY($${idx}::uuid[])`); values.push(scopedUserIds); idx++; }
 
@@ -277,15 +297,15 @@ exports.generateSchedule = async (req, res) => {
     const rotation = rotResult.rows[0];
 
     // ── Remove existing schedule for same window ───────────────
-    const existing = await client.query(
-      `SELECT id FROM ems.schedules
-       WHERE rotation_id=$1 AND window_start=$2 AND window_end=$3`,
-      [rotationId, windowStart, windowEnd]
-    );
-    if (existing.rows.length > 0) {
-      await client.query(`DELETE FROM ems.assignments WHERE schedule_id=$1`, [existing.rows[0].id]);
-      await client.query(`DELETE FROM ems.schedules   WHERE id=$1`,          [existing.rows[0].id]);
-    }
+
+const existing = await client.query(
+  `SELECT id FROM ems.schedules WHERE rotation_id=$1`,
+  [rotationId]
+);
+for (const row of existing.rows) {
+  await client.query(`DELETE FROM ems.assignments WHERE schedule_id=$1`, [row.id]);
+  await client.query(`DELETE FROM ems.schedules   WHERE id=$1`,          [row.id]);
+}
 
     // ── Create schedule record ─────────────────────────────────
     const schedResult = await client.query(
@@ -469,28 +489,46 @@ exports.generateSchedule = async (req, res) => {
     }
 
     // ── Detect overlapping-assignment conflicts ────────────────
-    await client.query(`DELETE FROM ems.conflicts WHERE schedule_id=$1`, [scheduleId]);
+    // Check the newly generated assignments (a1) against ALL assignments
+    // across every rotation (a2) — catches cross-rotation overlaps too.
+    // Clear ALL overlap conflicts for the users in this schedule — not just
+    // this schedule's own conflicts — so cross-rotation duplicates don't accumulate
+    // each time any of the involved rotations is regenerated.
+    await client.query(`
+      DELETE FROM ems.conflicts
+      WHERE conflict_type = 'OVERLAPPING_ROTATION'
+        AND user_id IN (
+          SELECT DISTINCT user_id FROM ems.assignments WHERE schedule_id = $1
+        )
+    `, [scheduleId]);
 
     const overlaps = await client.query(`
-      SELECT DISTINCT a1.user_id, u.first_name || ' ' || u.last_name AS uname
+      SELECT DISTINCT
+        a1.user_id,
+        u.first_name || ' ' || u.last_name AS uname,
+        rot2.name AS other_rotation
       FROM ems.assignments a1
       JOIN ems.assignments a2
-        ON  a1.user_id  = a2.user_id
-        AND a1.id      <> a2.id
-        AND a1.assigned_start < a2.assigned_end
-        AND a1.assigned_end   > a2.assigned_start
-      JOIN ems.users u ON a1.user_id = u.id
+        ON  a1.user_id              = a2.user_id
+        AND a1.id                  <> a2.id
+        AND a1.assigned_start::date <= a2.assigned_end::date
+        AND a1.assigned_end::date   >= a2.assigned_start::date
+      JOIN ems.users u        ON a1.user_id      = u.id
+      LEFT JOIN ems.rotations rot2 ON a2.rotation_id = rot2.id
       WHERE a1.schedule_id = $1
     `, [scheduleId]);
 
     for (const ov of overlaps.rows) {
+      const desc = ov.other_rotation
+        ? `${ov.uname} overlaps with "${ov.other_rotation}"`
+        : `${ov.uname} has overlapping assignments`;
       await client.query(`
         INSERT INTO ems.conflicts
           (schedule_id, rotation_id, user_id, conflict_type, severity, details, status)
         VALUES ($1, $2, $3, 'OVERLAPPING_ROTATION', 'HIGH', $4::jsonb, 'OPEN')
       `, [
         scheduleId, rotationId, ov.user_id,
-        JSON.stringify({ description: `${ov.uname} has overlapping assignments` }),
+        JSON.stringify({ description: desc }),
       ]);
     }
 
@@ -569,5 +607,73 @@ exports.deleteSchedule = async (req, res) => {
   } catch (error) {
     console.error("deleteSchedule error:", error);
     res.status(500).json({ message: "Server Error" });
+  }
+};
+
+// ================================================================
+// GET OVERRIDES
+// ================================================================
+exports.getOverrides = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const result = await pool.query(`
+      SELECT id, user_id, rotation_id,
+             override_date::date AS override_date,
+             chip_cls, chip_label
+      FROM ems.schedule_overrides
+      WHERE override_date BETWEEN $1 AND $2
+      ORDER BY override_date
+    `, [startDate, endDate]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error("getOverrides error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// ================================================================
+// SAVE OVERRIDE
+// ================================================================
+exports.saveOverride = async (req, res) => {
+  try {
+    const { userId, rotationId, overrideDate, chipCls, chipLabel } = req.body;
+    if (!userId || !overrideDate || !chipCls || !chipLabel)
+      return res.status(400).json({ message: "userId, overrideDate, chipCls, chipLabel are required" });
+
+    // Prevent duplicate — same user/rotation/date/chip
+    const existing = await pool.query(`
+      SELECT id FROM ems.schedule_overrides
+      WHERE user_id=$1 AND override_date=$2 AND chip_cls=$3
+        AND (rotation_id=$4 OR (rotation_id IS NULL AND $4::uuid IS NULL))
+    `, [userId, overrideDate, chipCls, rotationId || null]);
+
+    if (existing.rows.length > 0)
+      return res.json({ id: existing.rows[0].id, duplicate: true });
+
+    const result = await pool.query(`
+      INSERT INTO ems.schedule_overrides
+        (user_id, rotation_id, override_date, chip_cls, chip_label)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id
+    `, [userId, rotationId || null, overrideDate, chipCls, chipLabel]);
+
+    res.json({ id: result.rows[0].id });
+  } catch (error) {
+    console.error("saveOverride error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
+
+// ================================================================
+// DELETE OVERRIDE
+// ================================================================
+exports.deleteOverride = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await pool.query(`DELETE FROM ems.schedule_overrides WHERE id=$1`, [id]);
+    res.json({ message: "Override deleted" });
+  } catch (error) {
+    console.error("deleteOverride error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
