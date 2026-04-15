@@ -680,7 +680,7 @@ model user_resource_scope {
   id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   user_id       String @db.Uuid
   resource_type String 
-  resource_id   String @db.Uuid
+  resource_id   String? @db.Uuid
 
   users users @relation(fields: [user_id], references: [id])
 

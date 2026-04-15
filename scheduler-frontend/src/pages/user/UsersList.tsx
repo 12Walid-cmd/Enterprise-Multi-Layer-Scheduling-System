@@ -244,10 +244,76 @@ export default function UsersList() {
 
                                     {/* Scope */}
                                     <TableCell>
-                                        {(u.scope?.team_ids?.length || 0) +
-                                            (u.scope?.group_ids?.length || 0) +
-                                            (u.scope?.domain_ids?.length || 0) +
-                                            (u.scope?.rotation_ids?.length || 0)}
+                                        {(() => {
+                                            const scope = u.scope ?? {
+                                                group_ids: [],
+                                                team_ids: [],
+                                                subteam_ids: [],
+                                                domain_ids: [],
+                                                rotation_ids: [],
+                                                leave_approval_team_ids: [],
+                                                leave_approval_group_ids: [],
+                                                holiday_group_ids: [],
+                                                holiday_global: false
+                                            };
+
+                                            // ⭐ Summary（顯示數字 + 逗號分隔）
+                                            const summary = [
+                                                scope.group_ids.length > 0 && `Group(${scope.group_ids.length})`,
+                                                scope.team_ids.length > 0 && `Team(${scope.team_ids.length})`,
+                                                scope.subteam_ids.length > 0 && `Subteam(${scope.subteam_ids.length})`,
+                                                scope.domain_ids.length > 0 && `Domain(${scope.domain_ids.length})`,
+                                                scope.rotation_ids.length > 0 && `Rotation(${scope.rotation_ids.length})`,
+                                                scope.leave_approval_team_ids.length > 0 &&
+                                                `LeaveTeam(${scope.leave_approval_team_ids.length})`,
+                                                scope.leave_approval_group_ids.length > 0 &&
+                                                `LeaveGroup(${scope.leave_approval_group_ids.length})`,
+                                                scope.holiday_group_ids.length > 0 &&
+                                                `HolidayGroup(${scope.holiday_group_ids.length})`,
+                                                scope.holiday_global && `Holiday(Global)`
+                                            ]
+                                                .filter(Boolean)
+                                                .join(", ") || "—";
+
+                                            // ⭐ Tooltip（每行一個 + 顯示數字）
+                                            const details = [
+                                                scope.group_ids.length > 0 && `Group: ${scope.group_ids.length}`,
+                                                scope.team_ids.length > 0 && `Team: ${scope.team_ids.length}`,
+                                                scope.subteam_ids.length > 0 && `Subteam: ${scope.subteam_ids.length}`,
+                                                scope.domain_ids.length > 0 && `Domain: ${scope.domain_ids.length}`,
+                                                scope.rotation_ids.length > 0 && `Rotation: ${scope.rotation_ids.length}`,
+                                                scope.leave_approval_team_ids.length > 0 &&
+                                                `Leave Approval (Team): ${scope.leave_approval_team_ids.length}`,
+                                                scope.leave_approval_group_ids.length > 0 &&
+                                                `Leave Approval (Group): ${scope.leave_approval_group_ids.length}`,
+                                                scope.holiday_group_ids.length > 0 &&
+                                                `Holiday (Group): ${scope.holiday_group_ids.length}`,
+                                                scope.holiday_global && `Holiday (Global)`
+                                            ]
+                                                .filter(Boolean)
+                                                .join("\n");
+
+                                            return (
+                                                <Tooltip
+                                                    title={<Box whiteSpace="pre-line">{details || "No assigned scope"}</Box>}
+                                                    arrow
+                                                    placement="top"
+                                                >
+                                                    <span
+                                                        style={{
+                                                            cursor: "pointer",
+                                                            whiteSpace: "nowrap",
+                                                            overflow: "hidden",
+                                                            textOverflow: "ellipsis",
+                                                            display: "inline-block",
+                                                            maxWidth: "100%" // ⭐ 跟 Permissions 一樣，自然省略
+                                                        }}
+                                                    >
+                                                        {summary}
+                                                    </span>
+                                                </Tooltip>
+                                            );
+                                        })()}
                                     </TableCell>
 
                                     <TableCell>{u.timezone}</TableCell>
@@ -311,14 +377,14 @@ export default function UsersList() {
 
             <UserScopeDialog
                 open={scopeOpen}
-                onClose={() => setScopeOpen(false)}
+                onClose={() => { setScopeOpen(false); load(); }}
                 userId={selectedUser?.id || null}
                 userName={`${selectedUser?.first_name} ${selectedUser?.last_name}`}
             />
 
             <UserPermissionsDialog
                 open={permissionOpen}
-                onClose={() => setPermissionOpen(false)}
+                onClose={() => { setPermissionOpen(false); load(); }}
                 userId={selectedUser?.id || null}
                 userName={`${selectedUser?.first_name} ${selectedUser?.last_name}`}
             />

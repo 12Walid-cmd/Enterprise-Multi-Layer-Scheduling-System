@@ -120,11 +120,11 @@ export class UserScopeController {
   // -------------------------
   @Post('holiday-global')
   addHolidayGlobal(@Param('userId') userId: string) {
-    return this.service.addScope(userId, 'HOLIDAY_GLOBAL', '*');
+    return this.service.addScope(userId, 'HOLIDAY_GLOBAL', null);
   }
 
   @Delete('holiday-global')
   removeHolidayGlobal(@Param('userId') userId: string) {
-    return this.service.removeScope(userId, 'HOLIDAY_GLOBAL', '*');
+    return this.service.removeScope(userId, 'HOLIDAY_GLOBAL', null);
   }
 }

@@ -2,10 +2,12 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserScopeService } from './user-scope.service';
+
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService, private readonly userScopeService: UserScopeService,) { }
 
   async create(dto: CreateUserDto) {
     const exists = await this.prisma.users.findUnique({
@@ -26,7 +28,7 @@ export class UsersService {
   async findAll(params?: { search?: string; skip?: number; take?: number }) {
     const { search, skip = 0, take = 50 } = params ?? {};
 
-    return this.prisma.users.findMany({
+    const users = await this.prisma.users.findMany({
       skip,
       take,
       where: search
@@ -42,13 +44,14 @@ export class UsersService {
       include: {
         team_members: { include: { teams: true, team_roles: true } },
         user_roles: { include: { global_roles: true } },
-        userPermissions: {
-          include: {
-            permission_types: true,    
-          },
-        },
+        userPermissions: { include: { permission_types: true } },
+        userResourceScopes: true,
       },
     });
+    return users.map(u => ({
+      ...u,
+      scope: this.userScopeService.buildScope(u.userResourceScopes),
+    }));
   }
 
   async findOne(id: string) {

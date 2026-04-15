@@ -225,11 +225,11 @@ export default function UserScopeDialog({
 
         switch (current.key) {
             case "team":
+            case "leaveTeam":
                 return i.groups?.name ? ` (Group: ${i.groups.name})` : "";
-
             case "subteam":
-                return i.parent_team?.name
-                    ? ` (Parent Team: ${i.parent_team.name})`
+                return i.teams?.name
+                    ? ` (Parent Team: ${i.teams.name})`
                     : "";
 
             default:

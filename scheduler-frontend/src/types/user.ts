@@ -25,19 +25,7 @@ export interface User {
         description: string;
     }[];
 
-    scope?: {
-        group_ids: string[];
-        team_ids: string[];
-        subteam_ids: string[];
-        domain_ids: string[];
-        rotation_ids: string[];
-
-        leave_approval_team_ids: string[];
-        leave_approval_group_ids: string[];
-
-        holiday_group_ids: string[];
-        holiday_global: boolean;
-    };
+    scope?: UserScope;
 }
 
 

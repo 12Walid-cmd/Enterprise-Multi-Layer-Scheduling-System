@@ -5,21 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 export class UserScopeService {
   constructor(private readonly prisma: PrismaService) { }
 
-  async findByUser(userId: string) {
-    const rows = await this.prisma.user_resource_scope.findMany({
-      where: { user_id: userId },
-    });
-
+  buildScope(rows: any[]) {
     return {
       group_ids: rows.filter(r => r.resource_type === 'GROUP').map(r => r.resource_id),
       team_ids: rows.filter(r => r.resource_type === 'TEAM').map(r => r.resource_id),
       subteam_ids: rows.filter(r => r.resource_type === 'SUBTEAM').map(r => r.resource_id),
       domain_ids: rows.filter(r => r.resource_type === 'DOMAIN').map(r => r.resource_id),
       rotation_ids: rows.filter(r => r.resource_type === 'ROTATION').map(r => r.resource_id),
-
-      leave_approval_team_ids: rows
-        .filter(r => r.resource_type === 'LEAVE_TEAM')
-        .map(r => r.resource_id),
+      leave_approval_team_ids: rows.filter(r => r.resource_type === 'LEAVE_TEAM').map(r => r.resource_id),
 
       leave_approval_group_ids: rows
         .filter(r => r.resource_type === 'LEAVE_GROUP')
@@ -33,12 +26,22 @@ export class UserScopeService {
     };
   }
 
+  async findByUser(userId: string) {
+    const rows = await this.prisma.user_resource_scope.findMany({
+      where: { user_id: userId },
+    });
+
+    return this.buildScope(rows);
+  }
+
+
+
   addScope(userId: string, resourceType: string, resourceId: string | null = null) {
     return this.prisma.user_resource_scope.create({
       data: {
         user_id: userId,
         resource_type: resourceType,
-        resource_id: resourceId ?? '*', // holiday_global use '*'
+        resource_id: resourceId, // boolean scope = null
       },
     });
   }
@@ -48,7 +51,7 @@ export class UserScopeService {
       where: {
         user_id: userId,
         resource_type: resourceType,
-        resource_id: resourceId ?? '*',
+        resource_id: resourceId, // boolean scope = null
       },
     });
   }
