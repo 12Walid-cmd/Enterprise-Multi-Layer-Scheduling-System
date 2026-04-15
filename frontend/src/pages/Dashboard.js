@@ -7,7 +7,8 @@ function Dashboard() {
     totalTeams: 0,
     activeRotations: 0,
     pendingApprovals: 0,
-    activeConflicts: 0
+    activeConflicts: 0,
+    conflicts: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -43,22 +44,19 @@ function Dashboard() {
     { icon: "⚙️", label: "Generate Reports", action: () => console.log("Generate Reports") }
   ];
 
-  const conflicts = [
-    {
-      id: 1,
-      title: "Overlapping Rotation Assignment",
-      description: "John Doe assigned to two rotations at the same time.",
-      severity: "High",
-      severityClass: "danger"
-    },
-    {
-      id: 2,
-      title: "Minimum Staffing Not Met",
-      description: '"Platform Engineering" has only 1 assigned member.',
-      severity: "Medium",
-      severityClass: "warning"
-    }
-  ];
+  const severityClass = (s) => {
+    if ((s || "").toUpperCase() === "HIGH")   return "danger";
+    if ((s || "").toUpperCase() === "MEDIUM") return "warning";
+    return "info";
+  };
+
+  const conflictTitle = (type) => {
+    const map = {
+      OVERLAPPING_ROTATION: "Overlapping Rotation Assignment",
+      UNDERSTAFFED:         "Minimum Staffing Not Met",
+    };
+    return map[type] || type;
+  };
 
   const recentActivities = [
     { icon: "👥", text: 'New team created: "Platform Engineering"', time: "2 hours ago" },
@@ -150,28 +148,37 @@ function Dashboard() {
       <div className="dashboard-card mt-4 mb-4">
         <div className="d-flex justify-content-between align-items-center mb-3">
           <h5 className="mb-0">⚠️ Conflict Alerts</h5>
-          <span className="badge bg-danger">{conflicts.length} Active</span>
+          <span className="badge bg-danger">{stats.activeConflicts} Active</span>
         </div>
 
         <div className="list-group list-group-flush">
-          {conflicts.map((conflict) => (
-            <div 
-              key={conflict.id}
-              className="list-group-item d-flex justify-content-between align-items-start"
-            >
-              <div>
-                <strong className={`text-${conflict.severityClass}`}>
-                  {conflict.title}
-                </strong>
-                <div className="small text-muted">
-                  {conflict.description}
+          {loading ? (
+            <div className="small text-muted">Loading...</div>
+          ) : stats.conflicts.length === 0 ? (
+            <div className="small text-muted">No open conflicts</div>
+          ) : (
+            stats.conflicts.map((c) => {
+              const cls = severityClass(c.severity);
+              return (
+                <div
+                  key={c.id}
+                  className="list-group-item d-flex justify-content-between align-items-start"
+                >
+                  <div>
+                    <strong className={`text-${cls}`}>
+                      {conflictTitle(c.conflict_type)}
+                    </strong>
+                    <div className="small text-muted">
+                      {c.details?.description || `${c.first_name} ${c.last_name} — ${c.rotation_name}`}
+                    </div>
+                  </div>
+                  <span className={`badge bg-${cls}${cls === "warning" ? " text-dark" : ""}`}>
+                    {c.severity}
+                  </span>
                 </div>
-              </div>
-              <span className={`badge bg-${conflict.severityClass} ${conflict.severityClass === 'warning' ? 'text-dark' : ''}`}>
-                {conflict.severity}
-              </span>
-            </div>
-          ))}
+              );
+            })
+          )}
         </div>
       </div>
 

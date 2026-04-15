@@ -1,375 +1,629 @@
-/* ===============================
-   PAGE
-=============================== */
-
+/* ============================================================
+   CGI Enterprise Scheduling System — Teams Page
+   Theme: CGI Brand  #5236ab → #e41937  (matches all other pages)
+   ============================================================ */
+ 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+ 
+/* ── CSS Variables ───────────────────────────────────── */
+:root {
+  --cgi-purple:      #5236ab;
+  --cgi-purple-dark: #3d2780;
+  --cgi-red:         #e41937;
+  --cgi-red-dark:    #b5122b;
+  --cgi-gradient:    linear-gradient(270deg, #5236ab 0%, #e41937 100%);
+  --cgi-gradient-r:  linear-gradient(90deg,  #5236ab 0%, #e41937 100%);
+  --gray-50:         #f9fafb;
+  --gray-100:        #f3f4f6;
+  --gray-200:        #e5e7eb;
+  --gray-400:        #9ca3af;
+  --gray-600:        #6b7280;
+  --gray-900:        #111827;
+}
+ 
+/* ── Page Wrapper ────────────────────────────────────── */
 .teams-page {
-  padding: 18px;
-  background: #f3f4f6;
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
   min-height: 100vh;
+  padding: 32px;
+  font-family: 'DM Sans', -apple-system, sans-serif;
   box-sizing: border-box;
-  overflow: hidden;
 }
-
-/* Main red shell like Rotation page */
-.teams-shell {
-  min-height: calc(100vh - 36px);
-  padding: 28px;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, #ff2e63 0%, #b31273 40%, #6a11cb 100%);
-  border-radius: 0;
-  overflow: hidden;
-}
-
-/* ===============================
-   HEADER
-=============================== */
-
+ 
+/* ── Page Header ─────────────────────────────────────── */
 .teams-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  margin-bottom: 28px;
   gap: 16px;
-  margin-bottom: 26px;
 }
-
+ 
+.teams-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+ 
 .teams-header h1 {
   margin: 0;
-  font-size: 36px;
-  font-weight: 800;
+  font-size: 32px;
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.5px;
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
 .teams-subtitle {
-  margin: 8px 0 0 0;
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'DM Sans', sans-serif;
 }
-
-/* ===============================
-   HEADER BUTTON
-=============================== */
-
+ 
+/* ── Create Team Button ──────────────────────────────── */
 .create-team-btn {
   background: #ffffff;
-  color: #c81e3a;
+  color: var(--cgi-purple);
   border: none;
-  padding: 13px 22px;
-  border-radius: 12px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
-
+ 
 .create-team-btn:hover {
+  background: #f0ecff;
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
 }
-
-/* ===============================
-   MAIN LAYOUT
-=============================== */
-
+ 
+/* ── Stats Row ───────────────────────────────────────── */
+.teams-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+ 
+.teams-stat-card {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 20px 22px;
+  transition: all 0.2s;
+  animation: teamsfadeInUp 0.4s ease both;
+}
+ 
+.teams-stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.18);
+}
+ 
+.teams-stat-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+ 
+.teams-stat-value {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 42px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+}
+ 
+/* ── Main Layout ─────────────────────────────────────── */
 .teams-container {
   display: flex;
-  gap: 22px;
-  align-items: stretch;
-  height: calc(100vh - 165px);
-  min-height: 600px;
+  gap: 20px;
+  align-items: flex-start;
+  animation: teamsfadeInUp 0.5s ease 0.1s both;
 }
-
-/* ===============================
-   SIDEBAR
-=============================== */
-
+ 
+/* ── Sidebar ─────────────────────────────────────────── */
 .teams-sidebar {
-  width: 330px;
-  min-width: 330px;
-  background: #ffffff;
-  border-radius: 18px;
   padding: 20px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  width: 300px;
+  min-width: 300px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 4px 20px rgba(82, 54, 171, 0.18);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
 }
-
+ 
+.teams-sidebar-header {
+  padding: 16px 18px 0;
+  border-bottom: 1px solid var(--gray-100);
+  padding-bottom: 14px;
+}
+ 
 .teams-sidebar h3 {
-  margin: 0 0 14px 0;
-  font-size: 18px;
-  font-weight: 800;
-  color: #111827;
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--cgi-purple);
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
 .team-search {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #dfe4ea;
-  border-radius: 12px;
-  font-size: 14px;
-  margin-bottom: 16px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
   outline: none;
   box-sizing: border-box;
   background: #ffffff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color: #222;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-
+ 
 .team-search:focus {
-  border-color: #c81e3a;
-  box-shadow: 0 0 0 3px rgba(200, 30, 58, 0.12);
+  border-color: var(--cgi-purple);
+  box-shadow: 0 0 0 3px rgba(82, 54, 171, 0.12);
 }
-
+ 
+.team-search::placeholder {
+  color: var(--gray-400);
+}
+ 
 .team-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 12px;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(82, 54, 171, 0.2) transparent;
 }
-
-/* ===============================
-   TEAM LIST ITEMS
-=============================== */
-
+ 
+.team-list::-webkit-scrollbar { width: 4px; }
+.team-list::-webkit-scrollbar-thumb { background: rgba(82, 54, 171, 0.2); border-radius: 4px; }
+ 
+/* ── Team List Items ─────────────────────────────────── */
 .team-item {
-  padding: 13px 14px;
-  border-radius: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   background: #ffffff;
-  transition: all 0.18s ease;
+  transition: all 0.18s;
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
 .team-item:hover {
-  background: #fff5f5;
-  border-color: #fecaca;
+  background: #f5f3ff;
+  border-color: #c4b5fd;
 }
-
+ 
 .team-item.active {
-  background: linear-gradient(135deg, #fff1f2, #ffe4e6);
-  border-color: #fda4af;
+  background: #f0ecff;
+  border-color: var(--cgi-purple);
 }
-
+ 
 .team-item-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
 }
-
+ 
 .team-item-text {
   display: flex;
   flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
-
+ 
 .team-name {
-  font-size: 15px;
-  line-height: 1.35;
-  word-break: break-word;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.main-team-name {
-  font-weight: 800;
-  color: #111827;
+ 
+.team-item.active .team-name {
+  color: var(--cgi-purple);
 }
-
+ 
 .subteam-item {
-  margin-left: 16px;
-  border-left: 3px solid #fca5a5;
-  background: #fffafa;
+  margin-left: 14px;
+  border-left: 2.5px solid #c4b5fd;
+  border-radius: 0 8px 8px 0;
+  padding-left: 10px;
+  background: var(--gray-50);
 }
-
-.subteam-name {
-  font-weight: 800;
-  color: #b91c1c;
+ 
+.subteam-item:hover {
+  background: #f5f3ff;
+  border-color: var(--cgi-purple);
 }
-
+ 
+.subteam-item.active {
+  background: #f0ecff;
+}
+ 
 .team-parent-label {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
+  color: var(--gray-400);
+  font-weight: 500;
 }
-
+ 
 .team-type-badge {
   flex-shrink: 0;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  padding: 6px 9px;
-  border-radius: 999px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
 .main-badge {
-  background: #eef2ff;
-  color: #4338ca;
+  background: #f0ecff;
+  color: var(--cgi-purple);
 }
-
+ 
 .subteam-badge {
-  background: #fee2e2;
-  color: #c81e3a;
+  background: #f5f3ff;
+  color: var(--cgi-purple-dark);
 }
-
+ 
 .empty-sidebar-text {
-  color: #6b7280;
-  font-size: 14px;
-  padding: 8px 2px;
+  color: var(--gray-400);
+  font-size: 13px;
+  padding: 8px 4px;
+  font-family: 'DM Sans', sans-serif;
 }
-
-/* ===============================
-   DETAILS PANEL
-=============================== */
-
+ 
+/* ── Details Panel ───────────────────────────────────── */
 .team-details {
+  padding: 20px;
   flex: 1;
   background: #ffffff;
-  border-radius: 18px;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 4px 20px rgba(82, 54, 171, 0.18);
+  overflow: hidden;
+  min-width: 0;
+}
+ 
+.team-details-inner {
   padding: 24px 26px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
   overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
 }
-
-.team-details h2 {
-  margin: 0 0 8px 0;
-  font-size: 30px;
-  font-weight: 800;
-  color: #111827;
+ 
+/* Details header strip */
+.team-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
 }
-
+ 
+.team-details-header h2 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: -0.3px;
+}
+ 
+.team-details-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+}
+ 
+.team-details-body {
+  padding: 22px 24px;
+}
+ 
 .team-description {
-  color: #6b7280;
-  font-size: 15px;
-  margin-bottom: 18px;
+  color: var(--gray-600);
+  font-size: 14px;
+  margin-bottom: 20px;
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.6;
 }
-
-/* ===============================
-   TEAM INFO CARDS
-=============================== */
-
+ 
+/* ── Info Cards ──────────────────────────────────────── */
 .team-info {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
-
+ 
 .info-card {
-  background: #f8fafc;
-  border: 1px solid #edf2f7;
-  border-radius: 14px;
-  padding: 16px 18px;
-  min-width: 150px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 14px 18px;
+  min-width: 130px;
+  transition: all 0.2s;
 }
-
+ 
+.info-card:hover {
+  border-color: #c4b5fd;
+  background: #f5f3ff;
+}
+ 
 .info-card span {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: #6b7280;
+  letter-spacing: 0.6px;
+  color: var(--gray-600);
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
 .info-card strong {
-  font-size: 16px;
-  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+  font-family: 'DM Sans', sans-serif;
 }
-
-/* ===============================
-   ACTIONS
-=============================== */
-
+ 
+/* ── Actions Row ─────────────────────────────────────── */
 .team-actions {
-  margin-bottom: 18px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-bottom: 22px;
 }
-
+ 
 .team-actions .create-team-btn {
-  background: linear-gradient(135deg,  #ff2e63, #6a11cb);
+  background: var(--cgi-gradient-r);
   color: #ffffff;
-  box-shadow: 0 8px 18px rgba(200, 30, 58, 0.22);
+  box-shadow: 0 2px 10px rgba(82, 54, 171, 0.3);
 }
-
+ 
 .team-actions .create-team-btn:hover {
-  box-shadow: 0 12px 22px rgba(200, 30, 58, 0.28);
+  background: var(--cgi-gradient-r);
+  box-shadow: 0 4px 18px rgba(82, 54, 171, 0.45);
 }
-
-/* ===============================
-   MEMBERS SECTION
-=============================== */
-
+ 
+.btn-secondary {
+  padding: 10px 20px;
+  border: 1.5px solid var(--gray-200);
+  background: #ffffff;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+ 
+.btn-secondary:hover {
+  border-color: var(--cgi-purple);
+  color: var(--cgi-purple);
+}
+ 
+/* ── Members Section ─────────────────────────────────── */
 .members-section {
-  margin-top: 8px;
+  margin-top: 4px;
 }
-
+ 
 .members-section h3 {
   margin: 0 0 14px 0;
-  font-size: 24px;
-  font-weight: 800;
-  color: #111827;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--cgi-purple);
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
 .members-table {
   width: 100%;
   border-collapse: collapse;
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--gray-200);
 }
-
+ 
 .members-table thead {
-  background: linear-gradient(135deg, #b10f2e, #c81e3a);
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
 }
-
+ 
 .members-table th {
-  padding: 14px 12px;
+  padding: 13px 16px;
   text-align: left;
-  font-size: 13px;
-  font-weight: 800;
-  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.7px;
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
 .members-table td {
-  padding: 14px 12px;
-  border-bottom: 1px solid #f1f5f9;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gray-100);
   font-size: 14px;
   color: #374151;
+  font-family: 'DM Sans', sans-serif;
   background: #ffffff;
-  vertical-align: top;
+  vertical-align: middle;
 }
-
+ 
+.members-table tbody tr:last-child td {
+  border-bottom: none;
+}
+ 
 .members-table tbody tr:hover td {
-  background: #fffafa;
+  background: #f5f3ff;
 }
-
-/* ===============================
-   TEXT STATES
-=============================== */
-
-.error-text {
-  color: #dc2626;
-  margin-top: 10px;
+ 
+/* Member avatar */
+.member-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+ 
+.member-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(82, 54, 171, 0.4);
+}
+ 
+.member-name {
+  font-weight: 600;
+  color: var(--gray-900);
   font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
 }
-
-/* ===============================
-   MODAL OVERLAY
-=============================== */
-
+ 
+.member-email {
+  font-size: 12px;
+  color: var(--gray-400);
+  margin-top: 1px;
+  font-family: 'DM Sans', sans-serif;
+}
+ 
+/* Status badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+ 
+.badge-active   { background: #dcfce7; color: #15803d; }
+.badge-inactive { background: var(--gray-100); color: var(--gray-600); }
+ 
+/* Role badge */
+.badge-role {
+  background: #f5f3ff;
+  color: var(--cgi-purple);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+ 
+/* ── Status Toggle ───────────────────────────────────── */
+.status-toggle {
+  border: none;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+ 
+.status-toggle.active   { background: #dcfce7; color: #15803d; }
+.status-toggle.inactive { background: var(--gray-100); color: var(--gray-600); }
+.status-toggle:hover    { opacity: 0.8; transform: scale(0.97); }
+ 
+.status-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  background: #ffffff;
+  color: var(--gray-900);
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  cursor: pointer;
+}
+ 
+.status-select:focus {
+  border-color: var(--cgi-purple);
+  box-shadow: 0 0 0 3px rgba(82, 54, 171, 0.12);
+}
+ 
+/* ── Error text ──────────────────────────────────────── */
+.error-text {
+  color: var(--cgi-red);
+  margin-top: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+}
+ 
+/* ── Empty/Placeholder state ─────────────────────────── */
+.teams-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--gray-400);
+}
+ 
+.teams-empty-icon  { font-size: 44px; margin-bottom: 14px; opacity: 0.5; }
+.teams-empty-title { font-size: 16px; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; font-family: 'DM Sans', sans-serif; }
+.teams-empty-sub   { font-size: 13px; color: var(--gray-400); max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
+ 
+/* ── Modal Overlay ───────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(88, 28, 41, 0.24);
-  backdrop-filter: blur(5px);
+  background: rgba(20, 10, 50, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -377,215 +631,213 @@
   padding: 20px;
   box-sizing: border-box;
 }
-
-/* ===============================
-   MODAL CARD
-=============================== */
-
+ 
+/* ── Modal Card ──────────────────────────────────────── */
 .modal-card {
   width: 100%;
   max-width: 540px;
   background: #ffffff;
-  border-radius: 22px;
-  padding: 28px 28px 24px;
-  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.28);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(82, 54, 171, 0.35);
+  animation: teamsModalIn 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
 }
-
+ 
+@keyframes teamsModalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
+}
+ 
+.modal-card-header {
+  padding: 22px 28px;
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+ 
+.modal-card-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+}
+ 
+.modal-card-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  line-height: 1;
+}
+ 
+.modal-card-close:hover { background: rgba(255, 255, 255, 0.3); }
+ 
+/* Keep old h3 style for modals that don't use header strip */
 .modal-card h3 {
   margin: 0 0 18px 0;
-  font-size: 28px;
-  font-weight: 800;
-  color: #111827;
-}
-
-.subteam-parent-box {
-  background: #fff1f2;
-  border: 1px solid #fecdd3;
-  color: #9f1239;
-  padding: 12px 14px;
-  border-radius: 12px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-
-/* ===============================
-   MODAL FIELDS
-=============================== */
-
-.modal-field {
-  margin-bottom: 16px;
-}
-
-.modal-field label {
-  display: block;
-  margin-bottom: 7px;
-  font-size: 14px;
+  font-size: 20px;
   font-weight: 700;
-  color: #374151;
+  color: var(--gray-900);
+  font-family: 'DM Sans', sans-serif;
 }
-
+ 
+.modal-card-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+ 
+.subteam-parent-box {
+  background: #f5f3ff;
+  border: 1px solid #c4b5fd;
+  color: var(--cgi-purple);
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+}
+ 
+/* ── Modal Fields ────────────────────────────────────── */
+.modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+ 
+.modal-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  font-family: 'DM Sans', sans-serif;
+}
+ 
 .modal-field input,
 .modal-field select,
 .modal-field textarea {
   width: 100%;
-  padding: 13px 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
   font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
   box-sizing: border-box;
-  background: #fafafa;
-  color: #111827;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  background: #ffffff;
+  color: #222;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-
+ 
 .modal-field input:focus,
 .modal-field select:focus,
 .modal-field textarea:focus {
   outline: none;
-  border-color: #c81e3a;
-  box-shadow: 0 0 0 4px rgba(200, 30, 58, 0.12);
-  background: #ffffff;
+  border-color: var(--cgi-purple);
+  box-shadow: 0 0 0 3px rgba(82, 54, 171, 0.12);
 }
-
+ 
 .modal-field input:disabled {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  cursor: not-allowed;
 }
-
-/* ===============================
-   MODAL ACTIONS
-=============================== */
-
+ 
+.modal-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+ 
+/* ── Modal Actions ───────────────────────────────────── */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 22px;
+  gap: 10px;
+  padding: 16px 28px;
+  border-top: 1px solid var(--gray-100);
+  background: var(--gray-50);
+  flex-shrink: 0;
 }
-
-.cancel-btn,
-.submit-btn {
-  border: none;
-  border-radius: 12px;
-  padding: 12px 18px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
+ 
 .cancel-btn {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.status-select {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  font-size: 14px;
+  padding: 10px 20px;
+  border: 1.5px solid var(--gray-200);
   background: #ffffff;
-  color: #111827;
-  font-weight: 600;
-  outline: none;
-}
-
-.status-select:focus {
-  border-color: #c81e3a;
-  box-shadow: 0 0 0 3px rgba(200, 30, 58, 0.12);
-}
-
-.cancel-btn:hover {
-  background: #e5e7eb;
-}
-
-.status-toggle {
-  border: none;
-  padding: 6px 14px;
-  border-radius: 20px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
+  font-weight: 500;
+  color: #374151;
   cursor: pointer;
-  font-weight: 600;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
 }
-
-.status-toggle.active {
-  background-color: #16a34a;
-  color: white;
+ 
+.cancel-btn:hover {
+  border-color: var(--cgi-purple);
+  color: var(--cgi-purple);
 }
-
-.status-toggle.inactive {
-  background-color: #dc2626;
-  color: white;
-}
-
-.status-toggle:hover {
-  opacity: 0.85;
-}
-
+ 
 .submit-btn {
-  background: linear-gradient(135deg,  #ff2e63, #6a11cb);
+  padding: 10px 22px;
+  background: var(--cgi-gradient-r);
   color: #ffffff;
-  box-shadow: 0 8px 18px rgba(200, 30, 58, 0.2);
+  border: none;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(82, 54, 171, 0.3);
+  transition: all 0.2s;
 }
-
+ 
 .submit-btn:hover {
+  box-shadow: 0 4px 18px rgba(82, 54, 171, 0.45);
   transform: translateY(-1px);
-  box-shadow: 0 12px 22px rgba(200, 30, 58, 0.26);
 }
-
-/* ===============================
-   RESPONSIVE
-=============================== */
-
+ 
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+ 
+/* ── Animation ───────────────────────────────────────── */
+@keyframes teamsfadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+ 
+/* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .teams-container {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .teams-sidebar {
-    width: 100%;
-    min-width: unset;
-  }
-
-  .team-details {
-    min-height: 500px;
-  }
+  .teams-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .teams-container { flex-direction: column; }
+  .teams-sidebar   { width: 100%; min-width: unset; max-height: 320px; }
+  .team-details    { min-height: 400px; }
 }
-
-@media (max-width: 640px) {
-  .teams-shell {
-    padding: 18px;
-  }
-
-  .teams-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .teams-header h1 {
-    font-size: 28px;
-  }
-
-  .modal-card {
-    padding: 22px 18px;
-    border-radius: 18px;
-  }
-
-  .modal-card h3 {
-    font-size: 22px;
-  }
-
-  .team-info {
-    flex-direction: column;
-  }
-
-  .info-card {
-    min-width: unset;
-  }
-  .card {
-  backdrop-filter: blur(10px);
-}
+ 
+@media (max-width: 768px) {
+  .teams-page      { padding: 16px; }
+  .teams-header    { flex-direction: column; align-items: flex-start; }
+  .teams-header h1 { font-size: 26px; }
+  .teams-stats-row { grid-template-columns: repeat(2, 1fr); }
+  .teams-stat-value { font-size: 32px; }
+  .team-info       { flex-direction: column; }
+  .info-card       { min-width: unset; }
+  .modal-card      { border-radius: 12px; }
 }

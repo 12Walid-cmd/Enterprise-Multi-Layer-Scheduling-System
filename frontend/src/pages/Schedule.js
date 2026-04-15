@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import api from "../api/api";
 import "../styles/schedules.css";
+import { useToastContext } from "../context/ToastContext";
 
 const MONTHS = ["January","February","March","April","May","June",
   "July","August","September","October","November","December"];
@@ -23,7 +24,7 @@ const LEGEND_CHIPS = [
   { cls: "ccd",  label: "CD", text: "CDO" },
   { cls: "ces",  label: "ES", text: "Escalation" },
   { cls: "cmt",  label: "MT", text: "Mountain" },
-  { cls: "cmt2", label: "mt", text: "AM leave" },
+  { cls: "cmt2", label: "mv", text: "AM leave" },
   { cls: "csd",  label: "SD", text: "Service Desk" },
 ];
 
@@ -720,15 +721,25 @@ function CellPopup({ info, leaveByUser, paintedCells, onClose }) {
 }
 
 // ── Generate Modal ────────────────────────────────────────────────
-function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
+function GenerateModal({ onClose, onGenerated, windowStart }) {
+  const { showToast } = useToastContext();
   const [rotations,   setRotations]   = useState([]);
   const [selectedRot, setSelectedRot] = useState("");
-  const windowStart = monthStart(currentYear, currentMonth);
-  const windowEnd   = monthEnd(currentYear, currentMonth);
   const [loading,     setLoading]     = useState(false);
   const [result,      setResult]      = useState(null);
   const [error,       setError]       = useState(null);
   const [loadingRots, setLoadingRots] = useState(true);
+
+  // Default to a 12-month window starting from the current view start
+  const defaultEnd = (() => {
+    const { y, m } = parseYMD(windowStart);
+    let endM = m + 11;
+    let endY  = y;
+    while (endM > 12) { endM -= 12; endY++; }
+    return monthEnd(endY, endM);
+  })();
+  const [genStart, setGenStart] = useState(windowStart);
+  const [genEnd,   setGenEnd]   = useState(defaultEnd);
 
   useEffect(() => {
     api.get("/schedules/rotations")
@@ -740,13 +751,18 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
 
   const handleGenerate = async () => {
     if (!selectedRot) { setError("Please select a rotation"); return; }
+    if (!genStart || !genEnd) { setError("Please set a start and end date"); return; }
+    if (genStart > genEnd)    { setError("Start date must be before end date"); return; }
     setLoading(true); setError(null); setResult(null);
     try {
       const res = await api.post("/schedules/generate",
-        { rotationId: selectedRot, windowStart, windowEnd });
+        { rotationId: selectedRot, windowStart: genStart, windowEnd: genEnd });
       setResult(res.data); onGenerated();
+      showToast("Schedule generated!", "success");
     } catch (err) {
-      setError(err.response?.data?.message || "Generation failed");
+      const msg = err.response?.data?.message || "Generation failed";
+      setError(msg);
+      showToast(msg, "error");
     } finally { setLoading(false); }
   };
 
@@ -756,7 +772,7 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
         <div className="sch-modal-header">
           <div>
             <h2>⚡ Generate Schedule</h2>
-            <p>Generating for {MONTHS[currentMonth - 1]} {currentYear}</p>
+            <p>Generating for {genStart} → {genEnd}</p>
           </div>
           <button className="sch-modal-close" onClick={onClose}>×</button>
         </div>
@@ -785,6 +801,32 @@ function GenerateModal({ onClose, onGenerated, currentYear, currentMonth }) {
             </div>
           ) : (
             <>
+              <div className="sch-form-group">
+                <label>Generation Window</label>
+                <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4, flex:1 }}>
+                    <span style={{ fontSize:11, color:"#6b7280", fontWeight:600 }}>Start</span>
+                    <input
+                      type="date"
+                      value={genStart}
+                      onChange={e => setGenStart(e.target.value)}
+                      style={{ padding:"7px 10px", borderRadius:8, border:"1.5px solid #e5e7eb",
+                        fontSize:13, fontFamily:"'DM Sans', sans-serif", color:"#374151" }}
+                    />
+                  </div>
+                  <span style={{ marginTop:18, color:"#9ca3af" }}>→</span>
+                  <div style={{ display:"flex", flexDirection:"column", gap:4, flex:1 }}>
+                    <span style={{ fontSize:11, color:"#6b7280", fontWeight:600 }}>End</span>
+                    <input
+                      type="date"
+                      value={genEnd}
+                      onChange={e => setGenEnd(e.target.value)}
+                      style={{ padding:"7px 10px", borderRadius:8, border:"1.5px solid #e5e7eb",
+                        fontSize:13, fontFamily:"'DM Sans', sans-serif", color:"#374151" }}
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="sch-form-group">
                 <label>Select Rotation <span className="req">*</span></label>
                 {loadingRots ? <div className="sch-gen-loading">Loading rotations...</div> : (
@@ -1298,6 +1340,9 @@ export default function Schedule() {
                     </div>
                     <span style={{fontSize:11,color:"#9ca3af"}}>{c.conflict_type}</span><br/>
                     <span style={{fontSize:12}}>{c.rotation_name}</span>
+                    {c.details?.description && (
+                      <div style={{fontSize:11,color:"#e41937",marginTop:2}}>{c.details.description}</div>
+                    )}
                   </div>
                 ))
               )}
@@ -1313,14 +1358,13 @@ export default function Schedule() {
         onClose={()=>setPopup(null)}
       />
 
-      {showGenModal && (
-        <GenerateModal
-          onClose={()=>setShowGenModal(false)}
-          onGenerated={()=>fetchSchedules(search)}
-          currentYear={year}
-          currentMonth={month}
-        />
-      )}
+{showGenModal && (
+  <GenerateModal
+    onClose={() => setShowGenModal(false)}
+    onGenerated={() => fetchSchedules(search)}
+    windowStart={winStart}
+  />
+)}
     </div>
   );
 }
