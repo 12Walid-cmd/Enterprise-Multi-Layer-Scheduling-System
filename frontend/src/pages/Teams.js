@@ -3,6 +3,10 @@ import api from "../api/api";
 import "../styles/teams.css";
 
 function Teams() {
+  const role = localStorage.getItem("role") || "";
+  const currentUserId = localStorage.getItem("userId") || "";
+  const isAdmin = role === "Administrator" || role === "Rotation Owner";
+
   // ===============================
   // Main page state
   // ===============================
@@ -62,7 +66,12 @@ function Teams() {
   const fetchTeams = async () => {
     try {
       setLoading(true);
-      const response = await api.get("/teams");
+      const params = {};
+      if (role === "Team Leader" && currentUserId) {
+        params.userId = currentUserId;
+        params.role = role;
+      }
+      const response = await api.get("/teams", { params });
       const teamsData = response.data;
 
       setTeams(teamsData);
@@ -414,9 +423,11 @@ function Teams() {
             </p>
           </div>
 
-          <button className="create-team-btn" onClick={openCreateTeamModal}>
-            + Create Team
-          </button>
+          {isAdmin && (
+            <button className="create-team-btn" onClick={openCreateTeamModal}>
+              + Create Team
+            </button>
+          )}
         </div>
 
         <div className="teams-container">
@@ -511,25 +522,31 @@ function Teams() {
 
               <div className="info-card">
                 <span>Status</span>
-                <button
-                  className={`status-toggle ${
-                    selectedTeam?.is_active ? "active" : "inactive"
-                  }`}
-                  onClick={handleToggleStatus}
-                >
-                  {selectedTeam?.is_active ? "Active" : "Inactive"}
-                </button>
+                {isAdmin ? (
+                  <button
+                    className={`status-toggle ${
+                      selectedTeam?.is_active ? "active" : "inactive"
+                    }`}
+                    onClick={handleToggleStatus}
+                  >
+                    {selectedTeam?.is_active ? "Active" : "Inactive"}
+                  </button>
+                ) : (
+                  <strong>{selectedTeam?.is_active ? "Active" : "Inactive"}</strong>
+                )}
               </div>
             </div>
 
             {selectedTeam && (
               <div className="team-actions">
-                <button
-                  className="create-team-btn"
-                  onClick={openCreateSubteamModal}
-                >
-                  + Create Subteam
-                </button>
+                {isAdmin && (
+                  <button
+                    className="create-team-btn"
+                    onClick={openCreateSubteamModal}
+                  >
+                    + Create Subteam
+                  </button>
+                )}
 
                 <button
                   className="create-team-btn"
@@ -538,7 +555,7 @@ function Teams() {
                   + Add Member
                 </button>
 
-                {selectedTeam?.parent_team_id && (
+                {isAdmin && selectedTeam?.parent_team_id && (
                   <button
                     className="create-team-btn"
                     onClick={openReassignModal}
