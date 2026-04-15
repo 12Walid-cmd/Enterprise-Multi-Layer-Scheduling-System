@@ -5,9 +5,34 @@ const pool = require("../../config/db");
 // ================================================================
 exports.getSchedules = async (req, res) => {
   try {
-    const { startDate, endDate, teamId, rotationType, search } = req.query;
+    const { startDate, endDate, teamId, rotationType, search, userId, role } = req.query;
     const start = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
     const end   = endDate   || new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split("T")[0];
+
+    // ── Determine visible user IDs based on role ──────────────────
+    let scopedUserIds = null; // null = no filter (admin/rotation owner see all)
+    let scopedTeamIds = null;
+
+    if (userId && role === "Individual") {
+      scopedUserIds = [userId];
+    } else if (userId && role === "Team Leader") {
+      // Find teams this user belongs to
+      const myTeamsResult = await pool.query(
+        `SELECT DISTINCT tm.team_id FROM ems.team_members tm WHERE tm.user_id = $1::uuid`,
+        [userId]
+      );
+      scopedTeamIds = myTeamsResult.rows.map(r => r.team_id);
+      if (scopedTeamIds.length > 0) {
+        // Find all user_ids in those teams
+        const teamUsersResult = await pool.query(
+          `SELECT DISTINCT tm.user_id FROM ems.team_members tm WHERE tm.team_id = ANY($1::uuid[])`,
+          [scopedTeamIds]
+        );
+        scopedUserIds = teamUsersResult.rows.map(r => r.user_id);
+      } else {
+        scopedUserIds = [userId]; // fallback: at least show own schedule
+      }
+    }
 
     let filters = [`a.assigned_start::date <= $2`, `a.assigned_end::date >= $1`];
     let values  = [start, end];
@@ -36,6 +61,7 @@ exports.getSchedules = async (req, res) => {
     }
     
     if (search) { filters.push(`(u.first_name ILIKE $${idx} OR u.last_name ILIKE $${idx})`); values.push(`%${search}%`); idx++; }
+    if (scopedUserIds) { filters.push(`a.user_id = ANY($${idx}::uuid[])`); values.push(scopedUserIds); idx++; }
 
     const assignmentsResult = await pool.query(`
       SELECT
@@ -57,6 +83,11 @@ exports.getSchedules = async (req, res) => {
       ORDER BY g.name, t.name, rot.name, u.first_name
     `, values);
 
+    let leaveFilters = [`lr.start_date <= $2`, `lr.end_date >= $1`, `lr.status IN ('APPROVED','PENDING')`];
+    let leaveValues  = [start, end];
+    let leaveIdx     = 3;
+    if (scopedUserIds) { leaveFilters.push(`lr.user_id = ANY($${leaveIdx}::uuid[])`); leaveValues.push(scopedUserIds); leaveIdx++; }
+
     const leaveResult = await pool.query(`
       SELECT
         lr.id, lr.user_id,
@@ -66,9 +97,20 @@ exports.getSchedules = async (req, res) => {
         u.first_name, u.last_name
       FROM ems.leave_requests lr
       JOIN ems.users u ON lr.user_id = u.id
-      WHERE lr.start_date <= $2 AND lr.end_date >= $1
-        AND lr.status IN ('APPROVED','PENDING')
-    `, [start, end]);
+      WHERE ${leaveFilters.join(" AND ")}
+    `, leaveValues);
+
+    let gapFilters = [`cg.gap_start <= $2`, `cg.gap_end >= $1`, `cg.is_filled = false`];
+    let gapValues  = [start, end];
+    let gapIdx     = 3;
+    if (scopedTeamIds && scopedTeamIds.length > 0) {
+      gapFilters.push(`rot.team_id = ANY($${gapIdx}::uuid[])`);
+      gapValues.push(scopedTeamIds); gapIdx++;
+    } else if (scopedUserIds && !scopedTeamIds) {
+      // Individual: only show gaps for rotations they belong to
+      gapFilters.push(`cg.rotation_id IN (SELECT rotation_id FROM ems.rotation_members WHERE user_id = ANY($${gapIdx}::uuid[]))`);
+      gapValues.push(scopedUserIds); gapIdx++;
+    }
 
     const gapsResult = await pool.query(`
       SELECT
@@ -80,8 +122,8 @@ exports.getSchedules = async (req, res) => {
       FROM ems.coverage_gaps cg
       JOIN ems.rotations rot ON cg.rotation_id = rot.id
       LEFT JOIN ems.teams t  ON rot.team_id    = t.id
-      WHERE cg.gap_start <= $2 AND cg.gap_end >= $1 AND cg.is_filled = false
-    `, [start, end]);
+      WHERE ${gapFilters.join(" AND ")}
+    `, gapValues);
 
     const holidaysResult = await pool.query(`
       SELECT h.id, h.holiday_date::date AS holiday_date, h.name, h.holiday_type,
@@ -91,6 +133,14 @@ exports.getSchedules = async (req, res) => {
       ORDER BY h.holiday_date
     `, [start, end]);
 
+    let conflictFilters = [`c.status = 'OPEN'`];
+    let conflictValues  = [];
+    let conflictIdx     = 1;
+    if (scopedUserIds) {
+      conflictFilters.push(`c.user_id = ANY($${conflictIdx}::uuid[])`);
+      conflictValues.push(scopedUserIds); conflictIdx++;
+    }
+
     const conflictsResult = await pool.query(`
       SELECT c.id, c.conflict_type, c.severity, c.status, c.details, c.created_at,
              u.first_name, u.last_name, rot.name AS rotation_name, t.name AS team_name
@@ -98,9 +148,9 @@ exports.getSchedules = async (req, res) => {
       JOIN ems.users u       ON c.user_id     = u.id
       JOIN ems.rotations rot ON c.rotation_id = rot.id
       LEFT JOIN ems.teams t  ON rot.team_id   = t.id
-      WHERE c.status = 'OPEN'
+      WHERE ${conflictFilters.join(" AND ")}
       ORDER BY CASE c.severity WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END
-    `);
+    `, conflictValues);
 
     const statsResult = await pool.query(`
       SELECT
@@ -115,7 +165,22 @@ exports.getSchedules = async (req, res) => {
         (SELECT COUNT(*) FROM ems.rotations WHERE is_active=true)                 AS active_rotations
     `, [start, end]);
 
-    const teamsResult    = await pool.query(`SELECT id, name FROM ems.teams WHERE is_active=true ORDER BY name`);
+    let teamsQuery, teamsValues;
+    if (scopedTeamIds && scopedTeamIds.length > 0) {
+      teamsQuery = `SELECT id, name FROM ems.teams WHERE is_active=true AND id = ANY($1::uuid[]) ORDER BY name`;
+      teamsValues = [scopedTeamIds];
+    } else if (scopedUserIds && !scopedTeamIds) {
+      // Individual: show teams from their rotations
+      teamsQuery = `SELECT DISTINCT t.id, t.name FROM ems.teams t
+        JOIN ems.rotations rot ON rot.team_id = t.id
+        JOIN ems.rotation_members rm ON rm.rotation_id = rot.id
+        WHERE t.is_active=true AND rm.user_id = ANY($1::uuid[]) ORDER BY t.name`;
+      teamsValues = [scopedUserIds];
+    } else {
+      teamsQuery = `SELECT id, name FROM ems.teams WHERE is_active=true ORDER BY name`;
+      teamsValues = [];
+    }
+    const teamsResult = await pool.query(teamsQuery, teamsValues);
     const rotTypesResult = await pool.query(`
       SELECT DISTINCT rotation_type FROM ems.rotations
       WHERE rotation_type IS NOT NULL ORDER BY rotation_type
@@ -123,6 +188,14 @@ exports.getSchedules = async (req, res) => {
 
     // All active rotation members so every member appears in the grid
     // even if they have no assignments in this window
+    let rmFilters = [`rm.is_active = true`, `rot.is_active = true`];
+    let rmValues  = [];
+    let rmIdx     = 1;
+    if (scopedUserIds) {
+      rmFilters.push(`rm.user_id = ANY($${rmIdx}::uuid[])`);
+      rmValues.push(scopedUserIds); rmIdx++;
+    }
+
     const rotationMembersResult = await pool.query(`
       SELECT DISTINCT
         rm.rotation_id,
@@ -139,10 +212,9 @@ exports.getSchedules = async (req, res) => {
       JOIN ems.rotations rot ON rm.rotation_id = rot.id
       LEFT JOIN ems.teams  t ON rot.team_id    = t.id
       LEFT JOIN ems.groups g ON rot.group_id   = g.id
-      WHERE rm.is_active  = true
-        AND rot.is_active = true
+      WHERE ${rmFilters.join(" AND ")}
       ORDER BY g.name, rot.name, rm.rotation_order
-    `);
+    `, rmValues);
 
     res.json({
       assignments:     assignmentsResult.rows,

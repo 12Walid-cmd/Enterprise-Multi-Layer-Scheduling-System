@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 
 /* ── Inline styles (no extra CSS file needed) ─────────────────────────── */
@@ -104,6 +104,17 @@ const S = {
 
 /* ── Nav items config ──────────────────────────────────────────────────── */
 const NAV_ITEMS = [
+    {
+      to: "/admin-roles",
+      label: "Admin Roles",
+      icon: (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="4" fill="#a21caf" opacity="0.13"/>
+          <path d="M8 12h8M12 8v8" stroke="#a21caf" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+      ),
+      color: "#a21caf",
+    },
   {
     to: "/",
     label: "Dashboard",
@@ -270,10 +281,22 @@ function NavItem({ item, open, end = false }) {
 /* ── Main Sidebar ──────────────────────────────────────────────────────── */
 function Sidebar() {
   const [open, setOpen] = useState(true);
+  const [role, setRole] = useState(getRole());
+
+  useEffect(() => {
+    const syncRole = () => setRole(getRole());
+    window.addEventListener("storage", syncRole);
+    window.addEventListener("rolechange", syncRole);
+    return () => {
+      window.removeEventListener("storage", syncRole);
+      window.removeEventListener("rolechange", syncRole);
+    };
+  }, []);
+
+  const navItems = FILTERED_NAV(role);
 
   return (
-    <div style={S.sidebar(open)}>
-
+    <aside style={S.sidebar(open)}>
       {/* Top row: brand + toggle */}
       <div style={S.topRow(open)}>
         {open && (
@@ -309,8 +332,18 @@ function Sidebar() {
 
       {/* Main nav */}
       <nav style={S.nav}>
-        {NAV_ITEMS.map(item => (
-          <NavItem key={item.to} item={item} open={open} end={item.to === "/"} />
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) =>
+              "sidebar-link" + (isActive ? " active" : "")
+            }
+            style={{ color: item.color, display: "flex", alignItems: "center", gap: 12, padding: "12px 10px", borderRadius: 8, fontWeight: 600, fontSize: 15, textDecoration: "none", marginBottom: 2 }}
+          >
+            {item.icon}
+            {open && <span>{item.label}</span>}
+          </NavLink>
         ))}
       </nav>
 
@@ -322,8 +355,23 @@ function Sidebar() {
         ))}
       </div>
 
-    </div>
+    </aside>
   );
 }
 
 export default Sidebar;
+
+function getRole() {
+  return localStorage.getItem("role") || "Individual";
+}
+
+const FILTERED_NAV = (role) => {
+  // Admin can see everything
+  if (role === "Administrator") return NAV_ITEMS;
+  // Rotation Owner
+  if (role === "Rotation Owner") return NAV_ITEMS.filter(item => ["Dashboard", "Rotations", "Schedules", "Teams", "Holidays"].includes(item.label));
+  // Team Leader
+  if (role === "Team Leader") return NAV_ITEMS.filter(item => ["Dashboard", "Teams", "Schedules", "Holidays", "Rotations"].includes(item.label));
+  // Individual
+  return NAV_ITEMS.filter(item => ["Dashboard", "Schedules", "Holidays"].includes(item.label));
+};

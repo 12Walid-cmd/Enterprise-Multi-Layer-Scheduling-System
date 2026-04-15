@@ -17,7 +17,7 @@ exports.getMembers = async (req, res) => {
     let index = 1;
 
     if (search) {
-      filters.push(`(u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index})`);
+      filters.push(`(u.first_name ILIKE $${index} OR u.last_name ILIKE $${index} OR u.email ILIKE $${index} OR u.username ILIKE $${index})`);
       values.push(`%${search}%`);
       index++;
     }
@@ -81,11 +81,13 @@ exports.getMembers = async (req, res) => {
     // MEMBERS DATA
     // ===============================
     const employeesQuery = `
+
       SELECT 
         u.id,
         u.first_name,
         u.last_name,
         u.email,
+        u.username,
         u.working_mode,
         u.is_active,
 
@@ -161,7 +163,6 @@ exports.createMember = async (req, res) => {
 
   const client = await pool.connect();
   try {
-
     await client.query("BEGIN");
     const {
       first_name,
@@ -173,18 +174,22 @@ exports.createMember = async (req, res) => {
       is_active
     } = req.body;
 
-    // Insert user
+    // Auto-generate username from email
+    const username = email.split("@")[0];
+
+    // Insert user with username
     const insertQuery = `
       INSERT INTO ems.users
       (
         first_name,
         last_name,
         email,
+        username,
         working_mode,
         city_id,
         is_active
       )
-      VALUES ($1,$2,$3,$4,$5,$6)
+      VALUES ($1,$2,$3,$4,$5,$6,$7)
       RETURNING *
     `;
 
@@ -192,14 +197,13 @@ exports.createMember = async (req, res) => {
       first_name,
       last_name,
       email,
+      username,
       working_mode,
       city,
       is_active
     ]);
 
-
     const userId = result.rows[0].id;
-  
 
     if (role_type_id) {
       await client.query(`
@@ -216,15 +220,12 @@ exports.createMember = async (req, res) => {
     });
 
   } catch (error) {
-
     console.error(error);
-
     if (error.code === "23505") {
       return res.status(400).json({
-        message: "Email already exists"
+        message: "Email or username already exists"
       });
     }
-
     res.status(500).json({
       message: "Server Error"
     });
@@ -242,6 +243,7 @@ exports.updateMember = async (req, res) => {
 
     const { id } = req.params;
 
+
     const {
       first_name,
       last_name,
@@ -252,21 +254,26 @@ exports.updateMember = async (req, res) => {
       role_type_id
     } = req.body;
 
+    // Auto-generate username from email
+    const username = email.split("@")[0];
+
     const result = await client.query(`
       UPDATE ems.users
       SET
         first_name = $1,
         last_name = $2,
         email = $3,
-        working_mode = $4,
-        city_id = $5,
-        is_active = $6
-      WHERE id = $7
+        username = $4,
+        working_mode = $5,
+        city_id = $6,
+        is_active = $7
+      WHERE id = $8
       RETURNING *
     `, [
       first_name,
       last_name,
       email,
+      username,
       working_mode,
       city,
       is_active,

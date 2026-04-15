@@ -1,3 +1,4 @@
+import api from "../../api/api";
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import cgiLogo from "../../images/cgiLogo.png";
@@ -39,18 +40,54 @@ function LogoutIcon() {
   );
 }
 
-/* ─── Topbar ───────────────────────────────────────────────────────── */
+function KeyIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+      <path d="M14.5 9.5a5 5 0 1 1 0-7.07 5 5 0 0 1 0 7.07ZM13 6l8 8-2 2-2-2-2 2-2-2 2-2-1.5-1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
 
+/* ─── Topbar ───────────────────────────────────────────────────────── */
 export default function Topbar() {
   const [dropOpen, setDropOpen] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+  const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [userInfo, setUserInfo] = useState({
     token: localStorage.getItem("token"),
     firstName: localStorage.getItem("firstName"),
-    lastName: localStorage.getItem("lastName")
+    lastName: localStorage.getItem("lastName"),
+    role: localStorage.getItem("role") || "User"
   });
   const dropRef = useRef(null);
   const navigate = useNavigate();
   useClickOutside(dropRef, () => setDropOpen(false));
+
+  // Helper to fetch user role
+  const fetchUserRole = async () => {
+    try {
+      // Try to get userId from localStorage (set after login)
+      const userId = localStorage.getItem("userId");
+      if (!userId) return;
+      const res = await api.get(`/users/${userId}/app-roles`);
+      const roles = res.data.roles;
+      // roles is expected to be an array, pick the first role name
+      const roleName = Array.isArray(roles) && roles.length > 0
+        ? roles[0].name || roles[0].role_name || roles[0].code
+        : "User";
+      localStorage.setItem("role", roleName);
+      setUserInfo((prev) => ({ ...prev, role: roleName }));
+    } catch (e) {
+      // fallback
+      localStorage.setItem("role", "User");
+      setUserInfo((prev) => ({ ...prev, role: "User" }));
+    }
+  };
 
   // Listen for storage changes (e.g., login/logout in other tabs)
   useEffect(() => {
@@ -58,7 +95,8 @@ export default function Topbar() {
       setUserInfo({
         token: localStorage.getItem("token"),
         firstName: localStorage.getItem("firstName"),
-        lastName: localStorage.getItem("lastName")
+        lastName: localStorage.getItem("lastName"),
+        role: localStorage.getItem("role") || "User"
       });
     };
     window.addEventListener("storage", syncUserInfo);
@@ -70,11 +108,91 @@ export default function Topbar() {
     setUserInfo({
       token: localStorage.getItem("token"),
       firstName: localStorage.getItem("firstName"),
-      lastName: localStorage.getItem("lastName")
+      lastName: localStorage.getItem("lastName"),
+      role: localStorage.getItem("role") || "User"
     });
   }, [window.location.pathname]);
 
+  // Fetch user role on mount if logged in and role not set
+  useEffect(() => {
+    if (userInfo.token && (!userInfo.role || userInfo.role === "User")) {
+      fetchUserRole();
+    }
+    // eslint-disable-next-line
+  }, [userInfo.token]);
+
   const notifCount = 3;
+
+  const resetChangePasswordState = () => {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordError("");
+    setPasswordSuccess("");
+  };
+
+  const openChangePasswordModal = () => {
+    resetChangePasswordState();
+    setDropOpen(false);
+    setShowChangePassword(true);
+  };
+
+  const closeChangePasswordModal = () => {
+    setShowChangePassword(false);
+    resetChangePasswordState();
+  };
+
+  const handleChangePassword = async () => {
+    const identifier = localStorage.getItem("identifier");
+    setPasswordError("");
+    setPasswordSuccess("");
+
+    if (!identifier) {
+      setPasswordError("Unable to determine the current user.");
+      return;
+    }
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError("All password fields are required.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      setPasswordError("Password must contain at least one uppercase letter.");
+      return;
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      setPasswordError("Password must contain at least one lowercase letter.");
+      return;
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      setPasswordError("Password must contain at least one number.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+
+    try {
+      setPasswordSubmitting(true);
+      const res = await api.post("/login/change-password", {
+        identifier,
+        currentPassword,
+        newPassword,
+      });
+      setPasswordSuccess(res.data?.message || "Password updated successfully.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      setPasswordError(error?.response?.data?.message || "Failed to update password.");
+    } finally {
+      setPasswordSubmitting(false);
+    }
+  };
 
   const handleSignOut = () => {
     localStorage.removeItem("token");
@@ -82,8 +200,10 @@ export default function Topbar() {
     localStorage.removeItem("email");
     localStorage.removeItem("firstName");
     localStorage.removeItem("lastName");
+    localStorage.removeItem("role");
+    localStorage.removeItem("userId");
     setDropOpen(false);
-    setUserInfo({ token: null, firstName: null, lastName: null });
+    setUserInfo({ token: null, firstName: null, lastName: null, role: "User" });
     navigate("/login");
   };
 
@@ -312,6 +432,109 @@ export default function Topbar() {
           background: #f3f4f6;
           margin: 4px 6px;
         }
+
+        .tb-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(17, 24, 39, 0.45);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1100;
+        }
+
+        .tb-modal {
+          width: min(440px, 92vw);
+          background: #fff;
+          border-radius: 14px;
+          box-shadow: 0 24px 64px rgba(82,54,171,0.22);
+          overflow: hidden;
+        }
+
+        .tb-modal-head {
+          padding: 18px 20px;
+          border-bottom: 1px solid #f3f4f6;
+        }
+
+        .tb-modal-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #111827;
+          margin: 0;
+        }
+
+        .tb-modal-subtitle {
+          margin: 6px 0 0;
+          font-size: 13px;
+          color: #6b7280;
+        }
+
+        .tb-modal-body {
+          padding: 18px 20px 20px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .tb-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .tb-field label {
+          font-size: 13px;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .tb-field input {
+          padding: 10px 12px;
+          border-radius: 9px;
+          border: 1.5px solid #d1d5db;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 14px;
+          outline: none;
+        }
+
+        .tb-field input:focus {
+          border-color: #5236ab;
+          box-shadow: 0 0 0 3px rgba(82,54,171,0.12);
+        }
+
+        .tb-error { color: #dc2626; font-size: 13px; margin: -2px 0 0; }
+        .tb-success { color: #15803d; font-size: 13px; margin: -2px 0 0; }
+
+        .tb-modal-actions {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          margin-top: 4px;
+        }
+
+        .tb-btn-secondary,
+        .tb-btn-primary {
+          border-radius: 9px;
+          padding: 9px 14px;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+
+        .tb-btn-secondary {
+          border: 1px solid #d1d5db;
+          background: #fff;
+          color: #374151;
+        }
+
+        .tb-btn-primary {
+          border: none;
+          background: linear-gradient(90deg, #5236ab 0%, #e41937 100%);
+          color: #fff;
+        }
+        .tb-btn-primary:disabled,
+        .tb-btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
       `}</style>
 
       <header className="tb-root">
@@ -338,7 +561,7 @@ export default function Topbar() {
                 <div className="tb-avatar">{userInfo.firstName ? userInfo.firstName[0].toUpperCase() : "U"}</div>
                 <div className="tb-user-info">
                   <span className="tb-user-name">{userInfo.firstName || "User"} {userInfo.lastName || ""}</span>
-                  <span className="tb-user-role">User</span>
+                  <span className="tb-user-role">{userInfo.role}</span>
                 </div>
                 <span className={`tb-chevron${dropOpen ? " open" : ""}`}>
                   <ChevronDown />
@@ -349,6 +572,12 @@ export default function Topbar() {
                   <div className="tb-drop-header">
                     <div className="tb-drop-name">{userInfo.firstName || "User"} {userInfo.lastName || ""}</div>
                   </div>
+                  <button
+                    className="tb-drop-item"
+                    onClick={openChangePasswordModal}
+                  >
+                    <KeyIcon /> Change Password
+                  </button>
                   <div className="tb-drop-divider" />
                   <button
                     className="tb-drop-item danger"
@@ -362,6 +591,77 @@ export default function Topbar() {
           ) : null}
         </div>
       </header>
+
+      {showChangePassword && (
+        <div className="tb-modal-overlay" onClick={closeChangePasswordModal}>
+          <div className="tb-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="tb-modal-head">
+              <h3 className="tb-modal-title">Change Password</h3>
+              <p className="tb-modal-subtitle">Update your password to replace the temporary password with your own.</p>
+            </div>
+            <div className="tb-modal-body">
+              <div className="tb-field">
+                <label htmlFor="tb-current-password">Current Password</label>
+                <input id="tb-current-password" type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+              </div>
+              <div className="tb-field">
+                <label htmlFor="tb-new-password">New Password</label>
+                <input id="tb-new-password" type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+              </div>
+              <div className="tb-field">
+                <label htmlFor="tb-confirm-password">Confirm New Password</label>
+                <input id="tb-confirm-password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+              </div>
+              <div style={{
+                background: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                borderRadius: 8,
+                padding: "12px 14px",
+                fontSize: 13,
+                color: "#6b7280",
+              }}>
+                <div style={{ fontWeight: 600, color: "#374151", marginBottom: 6, fontSize: 13 }}>Password requirements:</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: newPassword.length >= 8 ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {newPassword.length >= 8 ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: newPassword.length >= 8 ? "#16a34a" : undefined }}>Minimum 8 characters</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: /[A-Z]/.test(newPassword) ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {/[A-Z]/.test(newPassword) ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: /[A-Z]/.test(newPassword) ? "#16a34a" : undefined }}>At least one uppercase letter</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: /[a-z]/.test(newPassword) ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {/[a-z]/.test(newPassword) ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: /[a-z]/.test(newPassword) ? "#16a34a" : undefined }}>At least one lowercase letter</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ color: /[0-9]/.test(newPassword) ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {/[0-9]/.test(newPassword) ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: /[0-9]/.test(newPassword) ? "#16a34a" : undefined }}>At least one number</span>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ color: newPassword && confirmPassword && newPassword === confirmPassword ? "#16a34a" : "#d1d5db", fontSize: 15 }}>
+                    {newPassword && confirmPassword && newPassword === confirmPassword ? "\u2713" : "\u25CB"}
+                  </span>
+                  <span style={{ color: newPassword && confirmPassword && newPassword === confirmPassword ? "#16a34a" : undefined }}>Passwords match</span>
+                </div>
+              </div>
+              {passwordError && <div className="tb-error">{passwordError}</div>}
+              {passwordSuccess && <div className="tb-success">{passwordSuccess}</div>}
+              <div className="tb-modal-actions">
+                <button className="tb-btn-secondary" disabled={passwordSubmitting} onClick={closeChangePasswordModal}>Cancel</button>
+                <button className="tb-btn-primary" disabled={passwordSubmitting} onClick={handleChangePassword}>{passwordSubmitting ? "Saving..." : "Save Password"}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

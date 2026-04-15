@@ -3,6 +3,9 @@ import api from "../api/api";
 import "../styles/holidays.css";
 
 function Holidays() {
+  const role = localStorage.getItem("role") || "Individual";
+  const canManageHolidays = role === "Administrator";
+
   // ===============================
   // Main page state
   // ===============================
@@ -143,12 +146,14 @@ function Holidays() {
   // Modal helpers
   // ===============================
   const openCreateModal = () => {
+    if (!canManageHolidays) return;
     resetForm();
     setError("");
     setShowModal(true);
   };
 
   const openEditModal = () => {
+    if (!canManageHolidays || !selectedHoliday) return;
     if (!selectedHoliday) return;
 
     setEditMode(true);
@@ -177,6 +182,7 @@ function Holidays() {
   // Submit create / edit
   // ===============================
   const handleSubmit = async () => {
+    if (!canManageHolidays) return;
     try {
       setSaveLoading(true);
       setFormError("");
@@ -239,6 +245,7 @@ function Holidays() {
   // Delete holiday
   // ===============================
   const openDeleteModal = () => {
+    if (!canManageHolidays || !selectedHoliday) return;
     if (!selectedHoliday) return;
     setError("");
     setShowDeleteModal(true);
@@ -250,6 +257,7 @@ function Holidays() {
   };
 
   const handleDelete = async () => {
+    if (!canManageHolidays || !selectedHoliday) return;
     if (!selectedHoliday) return;
 
     try {
@@ -292,13 +300,17 @@ function Holidays() {
           <div>
             <h1>Holidays</h1>
             <p className="holidays-subtitle">
-              Manage global and general holidays in the system
+              {canManageHolidays
+                ? "Manage global and general holidays in the system"
+                : "View global and general holidays used in the scheduling system"}
             </p>
           </div>
 
-          <button className="create-holiday-btn" onClick={openCreateModal}>
-            + Add Holiday
-          </button>
+          {canManageHolidays && (
+            <button className="create-holiday-btn" onClick={openCreateModal}>
+              + Add Holiday
+            </button>
+          )}
         </div>
 
         <div className="holidays-container">
@@ -376,15 +388,17 @@ function Holidays() {
                   </div>
                 </div>
 
-                <div className="holiday-actions">
-                  <button className="primary-btn" onClick={openEditModal}>
-                    Edit Holiday
-                  </button>
+                {canManageHolidays && (
+                  <div className="holiday-actions">
+                    <button className="primary-btn" onClick={openEditModal}>
+                      Edit Holiday
+                    </button>
 
-                  <button className="danger-btn" onClick={openDeleteModal}>
-                    Delete Holiday
-                  </button>
-                </div>
+                    <button className="danger-btn" onClick={openDeleteModal}>
+                      Delete Holiday
+                    </button>
+                  </div>
+                )}
               </>
             )}
 

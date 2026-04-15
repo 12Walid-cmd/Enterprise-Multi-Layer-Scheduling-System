@@ -884,6 +884,9 @@ function GenerateModal({ onClose, onGenerated, windowStart }) {
 // ══════════════════════════════════════════════════════════════════
 export default function Schedule() {
   const now = new Date();
+  const role = localStorage.getItem("role") || "Individual";
+  const isAdmin = role === "Administrator";
+  const currentUserId = localStorage.getItem("userId");
 
   const [year,  setYear]  = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
@@ -988,20 +991,24 @@ export default function Schedule() {
   const fetchSchedules = useCallback(async (searchVal) => {
     setLoading(true); setError(null);
     try {
-      const res = await api.get("/schedules", {
-        params: {
-          startDate:    winStart,
-          endDate:      winEnd,
-          search:       searchVal || undefined,
-          teamId:       teamFilter.length > 0 ? teamFilter.join(",") : undefined,
-          rotationType: typeFilter.length > 0 ? typeFilter.join(",") : undefined,
-        }
-      });
+      const params = {
+        startDate:    winStart,
+        endDate:      winEnd,
+        search:       searchVal || undefined,
+        teamId:       teamFilter.length > 0 ? teamFilter.join(",") : undefined,
+        rotationType: typeFilter.length > 0 ? typeFilter.join(",") : undefined,
+      };
+      // Scope schedule data by role
+      if (currentUserId && (role === "Individual" || role === "Team Leader")) {
+        params.userId = currentUserId;
+        params.role   = role;
+      }
+      const res = await api.get("/schedules", { params });
       setData(res.data);
     } catch (err) {
       console.error(err); setError("Failed to load schedule data.");
     } finally { setLoading(false); }
-  }, [winStart, winEnd, teamFilter, typeFilter]);
+  }, [winStart, winEnd, teamFilter, typeFilter, currentUserId, role]);
 
   // Single debounced fetch effect — no duplicate
   useEffect(() => {
@@ -1221,8 +1228,9 @@ export default function Schedule() {
           <button className="sch-btn-ghost" onClick={() => fetchSchedules(search)} title="Refresh">↻</button>
           <button className={`sch-btn-ghost${panelOpen ? " active" : ""}`}
             onClick={() => setPanelOpen(o => !o)}>≡</button>
-          <button className="sch-btn-generate" onClick={() => setShowGenModal(true)}>⚡ Generate</button>
-
+          {isAdmin && (
+            <button className="sch-btn-generate" onClick={() => setShowGenModal(true)}>⚡ Generate</button>
+          )}
         </div>
       </div>
 
@@ -1248,10 +1256,14 @@ export default function Schedule() {
             <div className="sch-empty">
               <div className="sch-empty-inner">
                 <div className="sch-empty-icon">📅</div>
-                <div className="sch-empty-title">No schedule data for {MONTHS[month-1]} {year}</div>
-                <div className="sch-empty-sub">Click <strong>⚡ Generate</strong> to create assignments</div>
-                <button className="sch-btn-generate" style={{marginTop:12}}
-                  onClick={()=>setShowGenModal(true)}>⚡ Generate Schedule</button>
+                <div className="sch-empty-title">No schedule data for {MONTHS[month - 1]} {year}</div>
+                <div className="sch-empty-sub">
+                  {isAdmin ? "Click Generate to create assignments" : "No generated assignments available for this period"}
+                </div>
+                {isAdmin && (
+                  <button className="sch-btn-generate" style={{ marginTop: 12 }}
+                    onClick={() => setShowGenModal(true)}>⚡ Generate Schedule</button>
+                )}
               </div>
             </div>
           ) : (
@@ -1358,13 +1370,13 @@ export default function Schedule() {
         onClose={()=>setPopup(null)}
       />
 
-{showGenModal && (
-  <GenerateModal
-    onClose={() => setShowGenModal(false)}
-    onGenerated={() => fetchSchedules(search)}
-    windowStart={winStart}
-  />
-)}
+      {isAdmin && showGenModal && (
+        <GenerateModal
+          onClose={() => setShowGenModal(false)}
+          onGenerated={() => fetchSchedules(search)}
+          windowStart={winStart}
+        />
+      )}
     </div>
   );
 }

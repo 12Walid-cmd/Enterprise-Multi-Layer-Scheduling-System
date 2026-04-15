@@ -10,18 +10,27 @@ import Schedule from "../pages/Schedule";
 import Members from "../pages/Members";
 import Login from "../pages/Login";
 import ProtectedRoute from "./ProtectedRoute";
+import AdminRoles from "../pages/AdminRoles";
 
 function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/members" element={<ProtectedRoute><Members /></ProtectedRoute>} />
+      <Route
+        path="/members"
+        element={
+          <ProtectedRoute blockedRoles={["Rotation Owner"]}>
+            <Members />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
       <Route path="/teams" element={<ProtectedRoute><Teams /></ProtectedRoute>} />
       <Route path="/rotations" element={<ProtectedRoute><Rotations /></ProtectedRoute>} />
       <Route path="/holidays" element={<ProtectedRoute><Holidays /></ProtectedRoute>} />
       <Route path="/schedule" element={<ProtectedRoute><Schedule /></ProtectedRoute>} />
+      <Route path="/admin-roles" element={<ProtectedRoute><AdminRoles /></ProtectedRoute>} />
     </Routes>
   );
 }
