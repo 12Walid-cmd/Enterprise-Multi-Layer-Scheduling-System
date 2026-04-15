@@ -566,9 +566,20 @@ function Rotations() {
       const reorderedMembers = arrayMove(rotationMembers, oldIndex, newIndex);
       setRotationMembers(reorderedMembers);
       try {
-        await api.patch(`/rotations/${selectedRotation.id}/members/reorder`, {
+        const { data } = await api.patch(`/rotations/${selectedRotation.id}/members/reorder`, {
           memberIds: reorderedMembers.map(m => m.id)
         });
+
+        if (data.existingWindow) {
+          await api.post('/schedules/generate', {
+            rotationId:  selectedRotation.id,
+            windowStart: data.existingWindow.windowStart,
+            windowEnd:   data.existingWindow.windowEnd,
+          });
+          showToast('Rotation order updated — schedule regenerated', 'success');
+        } else {
+          showToast('Rotation order saved', 'success');
+        }
       } catch (error) {
         console.error("Error updating member order:", error);
         showToast("Failed to update member order", "error");
@@ -608,9 +619,19 @@ function Rotations() {
     const ok = await showConfirm("Are you sure you want to remove this member?");
     if (!ok) return;
     try {
-      await api.delete(`/rotations/${selectedRotation.id}/members/${memberId}`);
+      const { data } = await api.delete(`/rotations/${selectedRotation.id}/members/${memberId}`);
       setRotationMembers(rotationMembers.filter(m => m.id !== memberId));
-      showToast("Member removed successfully!");
+
+      if (data.existingWindow) {
+        await api.post('/schedules/generate', {
+          rotationId:  selectedRotation.id,
+          windowStart: data.existingWindow.windowStart,
+          windowEnd:   data.existingWindow.windowEnd,
+        });
+        showToast("Member removed — schedule regenerated", "success");
+      } else {
+        showToast("Member removed successfully!");
+      }
     } catch (error) {
       console.error("Error removing member:", error);
       showToast("Failed to remove member", "error");
