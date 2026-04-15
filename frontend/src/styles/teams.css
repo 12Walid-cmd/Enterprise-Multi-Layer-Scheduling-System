@@ -20,7 +20,6 @@
   --gray-600:        #6b7280;
   --gray-900:        #111827;
 }
- 
 /* ── Page Wrapper ────────────────────────────────────── */
 .teams-page {
   background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
@@ -37,6 +36,12 @@
   align-items: center;
   margin-bottom: 28px;
   gap: 16px;
+}
+
+.teams-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
  
 .teams-header-left {
@@ -60,7 +65,6 @@
   color: rgba(255, 255, 255, 0.72);
   font-family: 'DM Sans', sans-serif;
 }
- 
 /* ── Create Team Button ──────────────────────────────── */
 .create-team-btn {
   background: #ffffff;

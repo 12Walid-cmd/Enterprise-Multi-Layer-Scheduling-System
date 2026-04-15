@@ -1,327 +1,578 @@
-/* ===============================
-   PAGE
-=============================== */
+/* ============================================================
+   CGI Enterprise Scheduling System — Holidays Page
+   Theme: CGI Brand  #5236ab → #e41937  (matches all other pages)
+   ============================================================ */
 
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+
+/* ── CSS Variables ───────────────────────────────────── */
+:root {
+  --cgi-purple:      #5236ab;
+  --cgi-purple-dark: #3d2780;
+  --cgi-red:         #e41937;
+  --cgi-red-dark:    #b5122b;
+  --cgi-gradient:    linear-gradient(270deg, #5236ab 0%, #e41937 100%);
+  --cgi-gradient-r:  linear-gradient(90deg,  #5236ab 0%, #e41937 100%);
+  --gray-50:         #f9fafb;
+  --gray-100:        #f3f4f6;
+  --gray-200:        #e5e7eb;
+  --gray-400:        #9ca3af;
+  --gray-600:        #6b7280;
+  --gray-900:        #111827;
+}
+
+/* ── Page Wrapper ────────────────────────────────────── */
 .holidays-page {
-  padding: 18px;
-  background: #f3f4f6;
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
   min-height: 100vh;
+  padding: 32px;
+  font-family: 'DM Sans', -apple-system, sans-serif;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
-.holidays-shell {
-  min-height: calc(100vh - 36px);
-  padding: 28px;
-  box-sizing: border-box;
-  background: linear-gradient(135deg, #ff2e63 0%, #b31273 42%, #6a11cb 100%);
-  border-radius: 0;
-  overflow: hidden;
-}
-
-/* ===============================
-   HEADER
-=============================== */
-
+/* ── Page Header ─────────────────────────────────────── */
 .holidays-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
+  margin-bottom: 28px;
   gap: 16px;
-  margin-bottom: 26px;
+}
+
+.holidays-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .holidays-header h1 {
   margin: 0;
-  font-size: 36px;
-  font-weight: 800;
+  font-size: 32px;
+  font-weight: 700;
   color: #ffffff;
-  letter-spacing: -0.4px;
+  letter-spacing: -0.5px;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .holidays-subtitle {
-  margin: 8px 0 0 0;
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.92);
+  margin: 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'DM Sans', sans-serif;
 }
 
-/* ===============================
-   HEADER BUTTON
-=============================== */
-
+/* ── Create Holiday Button ───────────────────────────── */
 .create-holiday-btn {
   background: #ffffff;
-  color: #b31273;
+  color: var(--cgi-purple);
   border: none;
-  padding: 13px 22px;
-  border-radius: 12px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  font-family: 'DM Sans', sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .create-holiday-btn:hover {
+  background: #f0ecff;
   transform: translateY(-1px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.22);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.25);
 }
 
-/* ===============================
-   MAIN LAYOUT
-=============================== */
+/* ── Stats Row ───────────────────────────────────────── */
+.holidays-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
 
+.holidays-stat-card {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 20px 22px;
+  transition: all 0.2s;
+  animation: holFadeInUp 0.4s ease both;
+}
+
+.holidays-stat-card:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.holidays-stat-label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+}
+
+.holidays-stat-value {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 42px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1;
+}
+
+/* ── Main Layout ─────────────────────────────────────── */
 .holidays-container {
   display: flex;
-  gap: 22px;
-  align-items: stretch;
-  height: calc(100vh - 165px);
-  min-height: 600px;
+  gap: 20px;
+  align-items: flex-start;
+  animation: holFadeInUp 0.5s ease 0.1s both;
 }
 
-/* ===============================
-   SIDEBAR
-=============================== */
-
+/* ── Sidebar ─────────────────────────────────────────── */
 .holidays-sidebar {
-  width: 330px;
-  min-width: 330px;
-  background: #ffffff;
-  border-radius: 18px;
+  width: 300px;
   padding: 20px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  min-width: 300px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 4px 20px rgba(82, 54, 171, 0.18);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex-shrink: 0;
+}
+
+.holidays-sidebar-header {
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid var(--gray-100);
 }
 
 .holidays-sidebar h3 {
-  margin: 0 0 14px 0;
-  font-size: 18px;
-  font-weight: 800;
-  color: #111827;
+  margin: 0 0 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--cgi-purple);
+  font-family: 'DM Sans', sans-serif;
 }
 
 .holiday-search {
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid #dfe4ea;
-  border-radius: 12px;
-  font-size: 14px;
-  margin-bottom: 16px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
   outline: none;
   box-sizing: border-box;
   background: #ffffff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color: #222;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .holiday-search:focus {
-  border-color: #b31273;
-  box-shadow: 0 0 0 3px rgba(179, 18, 115, 0.12);
+  border-color: var(--cgi-purple);
+  box-shadow: 0 0 0 3px rgba(82, 54, 171, 0.12);
 }
+
+.holiday-search::placeholder { color: var(--gray-400); }
 
 .holiday-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 12px;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(82, 54, 171, 0.2) transparent;
 }
 
-/* ===============================
-   HOLIDAY LIST ITEMS
-=============================== */
+.holiday-list::-webkit-scrollbar       { width: 4px; }
+.holiday-list::-webkit-scrollbar-thumb { background: rgba(82, 54, 171, 0.2); border-radius: 4px; }
 
+/* ── Holiday List Items ──────────────────────────────── */
 .holiday-item {
-  padding: 13px 14px;
-  border-radius: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
   cursor: pointer;
-  border: 1px solid transparent;
+  border: 1.5px solid transparent;
   background: #ffffff;
-  transition: all 0.18s ease;
+  transition: all 0.18s;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .holiday-item:hover {
-  background: #fff5fb;
-  border-color: #f5c2df;
+  background: #f5f3ff;
+  border-color: #c4b5fd;
 }
 
 .holiday-item.active {
-  background: linear-gradient(135deg, #fff1f8, #f4e8ff);
-  border-color: #d8b4fe;
+  background: #f0ecff;
+  border-color: var(--cgi-purple);
 }
 
 .holiday-item-content {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 10px;
+  gap: 8px;
 }
 
 .holiday-item-text {
   display: flex;
   flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
 .holiday-name {
-  font-size: 15px;
-  line-height: 1.35;
-  font-weight: 800;
-  color: #111827;
-  word-break: break-word;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.holiday-item.active .holiday-name { color: var(--cgi-purple); }
+
 .holiday-date {
-  margin-top: 4px;
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 11px;
+  color: var(--gray-400);
+  font-weight: 500;
 }
 
 .holiday-type-badge {
   flex-shrink: 0;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  padding: 6px 9px;
-  border-radius: 999px;
-  background: #f3e8ff;
-  color: #7e22ce;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  font-family: 'DM Sans', sans-serif;
+  background: #f5f3ff;
+  color: var(--cgi-purple);
 }
+
+.holiday-type-badge.canadian { background: #fef3c7; color: #b45309; }
+.holiday-type-badge.us       { background: #dbeafe; color: #1d4ed8; }
+.holiday-type-badge.federal  { background: #dcfce7; color: #15803d; }
 
 .empty-sidebar-text {
-  color: #6b7280;
-  font-size: 14px;
-  padding: 8px 2px;
+  color: var(--gray-400);
+  font-size: 13px;
+  padding: 8px 4px;
+  font-family: 'DM Sans', sans-serif;
 }
 
-/* ===============================
-   DETAILS PANEL
-=============================== */
-
+/* ── Details Panel ───────────────────────────────────── */
 .holiday-details {
+  padding : 20px;
   flex: 1;
   background: #ffffff;
-  border-radius: 18px;
-  padding: 24px 26px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 4px 20px rgba(82, 54, 171, 0.18);
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Details header strip — gradient like members modal header */
+.holiday-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px;
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
+}
+
+.holiday-details-header h2 {
+  margin: 0 0 4px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  letter-spacing: -0.3px;
+}
+
+.holiday-details-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: 'DM Sans', sans-serif;
+  margin: 0;
+}
+
+.holiday-details-body {
+  padding: 22px 24px;
   overflow-y: auto;
 }
 
-.holiday-details h2 {
-  margin: 0 0 8px 0;
-  font-size: 30px;
-  font-weight: 800;
-  color: #111827;
-}
-
 .holiday-description {
-  color: #6b7280;
-  font-size: 15px;
-  margin-bottom: 18px;
+  color: var(--gray-600);
+  font-size: 14px;
+  margin-bottom: 20px;
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.6;
 }
 
-/* ===============================
-   HOLIDAY INFO CARDS
-=============================== */
-
+/* ── Info Cards ──────────────────────────────────────── */
 .holiday-info {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .info-card {
-  background: #f8fafc;
-  border: 1px solid #edf2f7;
-  border-radius: 14px;
-  padding: 16px 18px;
-  min-width: 150px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  padding: 14px 18px;
+  min-width: 130px;
+  transition: all 0.2s;
+}
+
+.info-card:hover {
+  border-color: #c4b5fd;
+  background: #f5f3ff;
 }
 
 .info-card span {
   display: block;
   margin-bottom: 6px;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: #6b7280;
+  letter-spacing: 0.6px;
+  color: var(--gray-600);
+  font-family: 'DM Sans', sans-serif;
 }
 
 .info-card strong {
-  font-size: 16px;
-  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-900);
+  font-family: 'DM Sans', sans-serif;
 }
 
-/* ===============================
-   ACTIONS
-=============================== */
-
+/* ── Actions Row ─────────────────────────────────────── */
 .holiday-actions {
-  margin-bottom: 18px;
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
+  margin-bottom: 22px;
 }
 
-.primary-btn,
-.submit-btn {
-  background: linear-gradient(135deg, #ff2e63, #6a11cb);
+/* Primary action button */
+.primary-btn {
+  padding: 10px 22px;
+  background: var(--cgi-gradient-r);
   color: #ffffff;
   border: none;
-  box-shadow: 0 8px 18px rgba(106, 17, 203, 0.22);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(82, 54, 171, 0.3);
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.primary-btn:hover,
-.submit-btn:hover {
+.primary-btn:hover {
+  box-shadow: 0 4px 18px rgba(82, 54, 171, 0.45);
   transform: translateY(-1px);
-  box-shadow: 0 12px 22px rgba(106, 17, 203, 0.28);
 }
 
+/* Danger button */
 .danger-btn {
-  background: #fee2e2;
-  color: #b91c1c;
-  border: none;
+  padding: 10px 20px;
+  background: #fff0f3;
+  color: var(--cgi-red);
+  border: 1.5px solid #fca5b8;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .danger-btn:hover {
-  background: #fecaca;
+  background: var(--cgi-red);
+  color: #ffffff;
+  border-color: var(--cgi-red);
+  box-shadow: 0 4px 12px rgba(228, 25, 55, 0.3);
 }
 
-.primary-btn,
-.danger-btn,
-.cancel-btn,
-.submit-btn {
-  border-radius: 12px;
-  padding: 12px 18px;
+/* ── Holiday Calendar Grid ───────────────────────────── */
+.holidays-calendar {
+  margin-top: 4px;
+}
+
+.holidays-calendar h3 {
+  margin: 0 0 14px 0;
   font-size: 14px;
   font-weight: 700;
-  cursor: pointer;
-  transition: all 0.18s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--cgi-purple);
+  font-family: 'DM Sans', sans-serif;
 }
 
-/* ===============================
-   TEXT STATES
-=============================== */
+/* Holiday table / list */
+.holidays-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--gray-200);
+}
 
-.error-text {
-  color: #dc2626;
-  margin-top: 10px;
+.holidays-table thead {
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
+}
+
+.holidays-table th {
+  padding: 13px 16px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.holidays-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--gray-100);
   font-size: 14px;
+  color: #374151;
+  font-family: 'DM Sans', sans-serif;
+  background: #ffffff;
+  vertical-align: middle;
 }
 
-/* ===============================
-   MODAL OVERLAY
-=============================== */
+.holidays-table tbody tr:last-child td { border-bottom: none; }
+.holidays-table tbody tr:hover td      { background: #f5f3ff; }
 
+/* ── Type badges in table ────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-canadian { background: #fef3c7; color: #b45309; }
+.badge-us       { background: #dbeafe; color: #1d4ed8; }
+.badge-federal  { background: #dcfce7; color: #15803d; }
+.badge-default  { background: #f5f3ff; color: var(--cgi-purple); }
+
+/* ── Three-dots action menu ──────────────────────────── */
+.btn-three-dots {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--gray-600);
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-three-dots:hover { background: #f5f3ff; color: var(--cgi-purple); }
+
+.dots-dropdown {
+  position: absolute;
+  right: 0;
+  top: 36px;
+  background: #ffffff;
+  border: 1px solid var(--gray-200);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(82, 54, 171, 0.15);
+  z-index: 100;
+  min-width: 160px;
+  padding: 6px;
+  animation: holDropIn 0.15s ease;
+}
+
+@keyframes holDropIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.dots-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  color: #374151;
+}
+
+.dots-option-edit:hover   { background: #f5f3ff; color: var(--cgi-purple); }
+.dots-option-delete:hover { background: #fff0f3; color: var(--cgi-red); }
+
+/* ── Error text ──────────────────────────────────────── */
+.error-text {
+  color: var(--cgi-red);
+  margin-top: 8px;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* ── Empty / placeholder state ───────────────────────── */
+.holidays-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 24px;
+  text-align: center;
+}
+
+.holidays-empty-icon  { font-size: 44px; margin-bottom: 14px; opacity: 0.5; }
+.holidays-empty-title { font-size: 16px; font-weight: 600; color: var(--gray-600); margin-bottom: 6px; font-family: 'DM Sans', sans-serif; }
+.holidays-empty-sub   { font-size: 13px; color: var(--gray-400); max-width: 300px; line-height: 1.5; font-family: 'DM Sans', sans-serif; }
+
+/* ── Modal Overlay ───────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(88, 28, 135, 0.24);
-  backdrop-filter: blur(5px);
+  background: rgba(20, 10, 50, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -330,132 +581,196 @@
   box-sizing: border-box;
 }
 
-/* ===============================
-   MODAL CARD
-=============================== */
-
+/* ── Modal Card ──────────────────────────────────────── */
 .modal-card {
   width: 100%;
-  max-width: 540px;
+  max-width: 520px;
   background: #ffffff;
-  border-radius: 22px;
-  padding: 28px 28px 24px;
-  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.28);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 24px 64px rgba(82, 54, 171, 0.35);
+  animation: holModalIn 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
 }
 
+@keyframes holModalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Modal header strip */
+.modal-card-header {
+  padding: 22px 28px;
+  background: linear-gradient(270deg, #5236ab 0%, #e41937 100%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.modal-card-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.modal-card-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  line-height: 1;
+}
+
+.modal-card-close:hover { background: rgba(255, 255, 255, 0.3); }
+
+/* Fallback for modals without header strip */
 .modal-card h3 {
   margin: 0 0 18px 0;
-  font-size: 28px;
-  font-weight: 800;
-  color: #111827;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--gray-900);
+  font-family: 'DM Sans', sans-serif;
 }
 
-/* ===============================
-   MODAL FIELDS
-=============================== */
+.modal-card-body {
+  padding: 24px 28px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
+/* ── Modal Fields ────────────────────────────────────── */
 .modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 16px;
 }
 
 .modal-field label {
-  display: block;
-  margin-bottom: 7px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  color: #444;
+  font-family: 'DM Sans', sans-serif;
 }
 
 .modal-field input,
 .modal-field select {
   width: 100%;
-  padding: 13px 14px;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 8px;
   font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
   box-sizing: border-box;
-  background: #fafafa;
-  color: #111827;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  background: #ffffff;
+  color: #222;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .modal-field input:focus,
 .modal-field select:focus {
   outline: none;
-  border-color: #b31273;
-  box-shadow: 0 0 0 4px rgba(179, 18, 115, 0.12);
-  background: #ffffff;
+  border-color: var(--cgi-purple);
+  box-shadow: 0 0 0 3px rgba(82, 54, 171, 0.12);
 }
 
-/* ===============================
-   MODAL ACTIONS
-=============================== */
+.modal-field input:disabled {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  cursor: not-allowed;
+}
 
+/* ── Modal Actions Footer ────────────────────────────── */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
-  margin-top: 22px;
+  gap: 10px;
+  padding: 16px 28px;
+  border-top: 1px solid var(--gray-100);
+  background: var(--gray-50);
+  flex-shrink: 0;
 }
 
 .cancel-btn {
-  background: #f3f4f6;
+  padding: 10px 20px;
+  border: 1.5px solid var(--gray-200);
+  background: #ffffff;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
   color: #374151;
-  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .cancel-btn:hover {
-  background: #e5e7eb;
+  border-color: var(--cgi-purple);
+  color: var(--cgi-purple);
 }
 
-/* ===============================
-   RESPONSIVE
-=============================== */
+.submit-btn {
+  padding: 10px 22px;
+  background: var(--cgi-gradient-r);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(82, 54, 171, 0.3);
+  transition: all 0.2s;
+}
 
+.submit-btn:hover {
+  box-shadow: 0 4px 18px rgba(82, 54, 171, 0.45);
+  transform: translateY(-1px);
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Animation ───────────────────────────────────────── */
+@keyframes holFadeInUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsive ──────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .holidays-container {
-    flex-direction: column;
-    height: auto;
-  }
-
-  .holidays-sidebar {
-    width: 100%;
-    min-width: unset;
-  }
-
-  .holiday-details {
-    min-height: 500px;
-  }
+  .holidays-stats-row  { grid-template-columns: repeat(2, 1fr); }
+  .holidays-container  { flex-direction: column; }
+  .holidays-sidebar    { width: 100%; min-width: unset; max-height: 320px; }
+  .holiday-details     { min-height: 400px; }
 }
 
-@media (max-width: 640px) {
-  .holidays-shell {
-    padding: 18px;
-  }
-
-  .holidays-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .holidays-header h1 {
-    font-size: 28px;
-  }
-
-  .modal-card {
-    padding: 22px 18px;
-    border-radius: 18px;
-  }
-
-  .modal-card h3 {
-    font-size: 22px;
-  }
-
-  .holiday-info {
-    flex-direction: column;
-  }
-
-  .info-card {
-    min-width: unset;
-  }
+@media (max-width: 768px) {
+  .holidays-page        { padding: 16px; }
+  .holidays-header      { flex-direction: column; align-items: flex-start; }
+  .holidays-header h1   { font-size: 26px; }
+  .holidays-stats-row   { grid-template-columns: repeat(2, 1fr); }
+  .holidays-stat-value  { font-size: 32px; }
+  .holiday-info         { flex-direction: column; }
+  .info-card            { min-width: unset; }
+  .modal-card           { border-radius: 12px; }
 }
