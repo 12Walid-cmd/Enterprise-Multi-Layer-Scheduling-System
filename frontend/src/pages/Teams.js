@@ -522,18 +522,22 @@ function Teams() {
 
               <div className="info-card">
                 <span>Status</span>
-                {isAdmin ? (
-                  <button
-                    className={`status-toggle ${
-                      selectedTeam?.is_active ? "active" : "inactive"
-                    }`}
-                    onClick={handleToggleStatus}
-                  >
-                    {selectedTeam?.is_active ? "Active" : "Inactive"}
-                  </button>
-                ) : (
-                  <strong>{selectedTeam?.is_active ? "Active" : "Inactive"}</strong>
-                )}
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div className="status-indicator">
+                    <div className={`status-dot ${selectedTeam?.is_active ? "active" : "inactive"}`} />
+                    <strong>{selectedTeam?.is_active ? "Active" : "Inactive"}</strong>
+                  </div>
+                  {isAdmin && (
+                    <label className="toggle-switch" title={selectedTeam?.is_active ? "Deactivate team" : "Activate team"}>
+                      <input
+                        type="checkbox"
+                        checked={selectedTeam?.is_active || false}
+                        onChange={handleToggleStatus}
+                      />
+                      <span className="toggle-slider" />
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
 

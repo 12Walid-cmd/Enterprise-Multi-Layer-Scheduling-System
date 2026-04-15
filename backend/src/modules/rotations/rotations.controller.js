@@ -243,7 +243,19 @@ exports.removeRotationMember = async (req, res) => {
       return res.status(404).json({ error: 'Member not found' });
     }
 
-    res.json({ message: 'Member removed successfully' });
+    const scheduleResult = await pool.query(
+      `SELECT window_start::text, window_end::text FROM ems.schedules WHERE rotation_id = $1 LIMIT 1`,
+      [rotationId]
+    );
+    const existing = scheduleResult.rows[0];
+
+    res.json({
+      message: 'Member removed successfully',
+      existingWindow: existing ? {
+        windowStart: existing.window_start.substring(0, 10),
+        windowEnd:   existing.window_end.substring(0, 10),
+      } : null,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -267,7 +279,20 @@ exports.reorderRotationMembers = async (req, res) => {
 
     await Promise.all(updatePromises);
 
-    res.json({ message: 'Member order updated successfully' });
+    // Return the existing schedule window so the frontend can auto-regenerate
+    const scheduleResult = await pool.query(
+      `SELECT window_start::text, window_end::text FROM ems.schedules WHERE rotation_id = $1 LIMIT 1`,
+      [rotationId]
+    );
+    const existing = scheduleResult.rows[0];
+
+    res.json({
+      message: 'Member order updated successfully',
+      existingWindow: existing ? {
+        windowStart: existing.window_start.substring(0, 10),
+        windowEnd:   existing.window_end.substring(0, 10),
+      } : null,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

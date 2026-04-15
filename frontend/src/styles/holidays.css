@@ -354,7 +354,6 @@
 
 .info-card span {
   display: block;
-  margin-bottom: 6px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -585,6 +584,7 @@
 .modal-card {
   width: 100%;
   max-width: 520px;
+  padding: 20px;
   background: #ffffff;
   border-radius: 14px;
   overflow: hidden;

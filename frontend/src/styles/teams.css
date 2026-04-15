@@ -390,7 +390,6 @@
  
 .info-card span {
   display: block;
-  margin-bottom: 6px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -563,21 +562,62 @@
   font-weight: 600;
 }
  
-/* ── Status Toggle ───────────────────────────────────── */
-.status-toggle {
-  border: none;
-  padding: 5px 14px;
-  border-radius: 20px;
-  font-size: 12px;
-  cursor: pointer;
-  font-weight: 600;
-  font-family: 'DM Sans', sans-serif;
-  transition: all 0.2s;
+/* ── Status Indicator + Toggle Switch ───────────────────── */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
- 
-.status-toggle.active   { background: #dcfce7; color: #15803d; }
-.status-toggle.inactive { background: var(--gray-100); color: var(--gray-600); }
-.status-toggle:hover    { opacity: 0.8; transform: scale(0.97); }
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.status-dot.active   { background: #16a34a; box-shadow: 0 0 0 2px #dcfce7; }
+.status-dot.inactive { background: #9ca3af; box-shadow: 0 0 0 2px #f3f4f6; }
+
+.status-indicator strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 22px;
+  transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: #16a34a; }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
  
 .status-select {
   width: 100%;
