@@ -1,7 +1,0 @@
-[2026-03-30T13:26:34.427Z] [INFO] GET /api/rotations/types - 304 - 245ms
-[2026-03-30T13:26:34.435Z] [INFO] GET /api/rotations/templates - 304 - 255ms
-[2026-03-30T13:26:34.441Z] [INFO] GET /api/groups - 304 - 263ms
-[2026-03-30T13:26:34.448Z] [INFO] GET /api/teams - 304 - 287ms
-[2026-03-30T13:26:34.452Z] [INFO] GET /api/rotations - 304 - 268ms
-[2026-03-30T13:26:34.481Z] [INFO] GET /api/members?limit=1000 - 304 - 306ms
-[2026-03-30T13:26:36.026Z] [INFO] GET /api/rotations/f0a0b985-5209-420d-b15e-b27a2e93cd9b/members - 304 - 42ms

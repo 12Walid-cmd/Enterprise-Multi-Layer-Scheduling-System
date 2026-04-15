@@ -225,15 +225,15 @@ exports.generateSchedule = async (req, res) => {
     const rotation = rotResult.rows[0];
 
     // ── Remove existing schedule for same window ───────────────
-    const existing = await client.query(
-      `SELECT id FROM ems.schedules
-       WHERE rotation_id=$1 AND window_start=$2 AND window_end=$3`,
-      [rotationId, windowStart, windowEnd]
-    );
-    if (existing.rows.length > 0) {
-      await client.query(`DELETE FROM ems.assignments WHERE schedule_id=$1`, [existing.rows[0].id]);
-      await client.query(`DELETE FROM ems.schedules   WHERE id=$1`,          [existing.rows[0].id]);
-    }
+
+const existing = await client.query(
+  `SELECT id FROM ems.schedules WHERE rotation_id=$1`,
+  [rotationId]
+);
+for (const row of existing.rows) {
+  await client.query(`DELETE FROM ems.assignments WHERE schedule_id=$1`, [row.id]);
+  await client.query(`DELETE FROM ems.schedules   WHERE id=$1`,          [row.id]);
+}
 
     // ── Create schedule record ─────────────────────────────────
     const schedResult = await client.query(
@@ -417,28 +417,46 @@ exports.generateSchedule = async (req, res) => {
     }
 
     // ── Detect overlapping-assignment conflicts ────────────────
-    await client.query(`DELETE FROM ems.conflicts WHERE schedule_id=$1`, [scheduleId]);
+    // Check the newly generated assignments (a1) against ALL assignments
+    // across every rotation (a2) — catches cross-rotation overlaps too.
+    // Clear ALL overlap conflicts for the users in this schedule — not just
+    // this schedule's own conflicts — so cross-rotation duplicates don't accumulate
+    // each time any of the involved rotations is regenerated.
+    await client.query(`
+      DELETE FROM ems.conflicts
+      WHERE conflict_type = 'OVERLAPPING_ROTATION'
+        AND user_id IN (
+          SELECT DISTINCT user_id FROM ems.assignments WHERE schedule_id = $1
+        )
+    `, [scheduleId]);
 
     const overlaps = await client.query(`
-      SELECT DISTINCT a1.user_id, u.first_name || ' ' || u.last_name AS uname
+      SELECT DISTINCT
+        a1.user_id,
+        u.first_name || ' ' || u.last_name AS uname,
+        rot2.name AS other_rotation
       FROM ems.assignments a1
       JOIN ems.assignments a2
-        ON  a1.user_id  = a2.user_id
-        AND a1.id      <> a2.id
-        AND a1.assigned_start < a2.assigned_end
-        AND a1.assigned_end   > a2.assigned_start
-      JOIN ems.users u ON a1.user_id = u.id
+        ON  a1.user_id              = a2.user_id
+        AND a1.id                  <> a2.id
+        AND a1.assigned_start::date <= a2.assigned_end::date
+        AND a1.assigned_end::date   >= a2.assigned_start::date
+      JOIN ems.users u        ON a1.user_id      = u.id
+      LEFT JOIN ems.rotations rot2 ON a2.rotation_id = rot2.id
       WHERE a1.schedule_id = $1
     `, [scheduleId]);
 
     for (const ov of overlaps.rows) {
+      const desc = ov.other_rotation
+        ? `${ov.uname} overlaps with "${ov.other_rotation}"`
+        : `${ov.uname} has overlapping assignments`;
       await client.query(`
         INSERT INTO ems.conflicts
           (schedule_id, rotation_id, user_id, conflict_type, severity, details, status)
         VALUES ($1, $2, $3, 'OVERLAPPING_ROTATION', 'HIGH', $4::jsonb, 'OPEN')
       `, [
         scheduleId, rotationId, ov.user_id,
-        JSON.stringify({ description: `${ov.uname} has overlapping assignments` }),
+        JSON.stringify({ description: desc }),
       ]);
     }
 
