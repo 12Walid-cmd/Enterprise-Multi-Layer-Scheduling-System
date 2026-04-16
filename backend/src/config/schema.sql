@@ -2,7 +2,6 @@
 -- PostgreSQL database dump
 --
 
-\restrict ETVwwWWOxeTGkiJkZS8rdVN4ODuVO8pXc4HJlsCgMauacbJIFggbK5dyaqZMuKR
 
 -- Dumped from database version 18.2
 -- Dumped by pg_dump version 18.2
@@ -2134,5 +2133,4 @@ ALTER TABLE ONLY ems.users
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ETVwwWWOxeTGkiJkZS8rdVN4ODuVO8pXc4HJlsCgMauacbJIFggbK5dyaqZMuKR
 
