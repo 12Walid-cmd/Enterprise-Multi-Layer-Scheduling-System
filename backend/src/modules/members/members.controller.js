@@ -120,6 +120,13 @@ exports.getMembers = async (req, res) => {
       ${whereClause}
       GROUP BY
         u.id,
+        u.first_name,
+        u.last_name,
+        u.email,
+        u.username,
+        u.working_mode,
+        u.is_active,
+        u.created_at,
         u.city_id,
         c.name,
         p.id,
