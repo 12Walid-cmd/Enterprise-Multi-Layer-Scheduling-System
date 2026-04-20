@@ -31,6 +31,7 @@ import {
     DomainAPI,
     RotationAPI,
     SubTeamsAPI,
+    PermissionsAPI,
 } from "../../api";
 
 import type { UserScope } from "../../types/user";
@@ -115,74 +116,62 @@ export default function UserScopeDialog({
         loadAll();
     }, [open, userId]);
 
-    /* ================= CONFIG ================= */
 
-    const configs = [
-        {
-            key: "group",
-            label: "Groups",
-            ids: scope.group_ids,
-            all: groups,
-            add: (id: string) => UserScopeAPI.addGroup(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeGroup(userId!, id),
-        },
-        {
-            key: "domain",
-            label: "Domains",
-            ids: scope.domain_ids,
-            all: domains,
-            add: (id: string) => UserScopeAPI.addDomain(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeDomain(userId!, id),
-        },
-        {
-            key: "team",
-            label: "Teams",
-            ids: scope.team_ids,
-            all: teams,
-            add: (id: string) => UserScopeAPI.addTeam(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeTeam(userId!, id),
-        },
-        {
-            key: "subteam",
-            label: "SubTeams",
-            ids: scope.subteam_ids,
-            all: subteams,
-            add: (id: string) => UserScopeAPI.addSubteam(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeSubteam(userId!, id),
-        },
-        {
-            key: "rotation",
-            label: "Rotations",
-            ids: scope.rotation_ids,
-            all: rotations,
-            add: (id: string) => UserScopeAPI.addRotation(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeRotation(userId!, id),
-        },
-        {
-            key: "leaveTeam",
-            label: "Leave Team",
-            ids: scope.leave_approval_team_ids,
-            all: teams,
-            add: (id: string) => UserScopeAPI.addLeaveTeam(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeLeaveTeam(userId!, id),
-        },
-        {
-            key: "leaveGroup",
-            label: "Leave Group",
-            ids: scope.leave_approval_group_ids,
-            all: groups,
-            add: (id: string) => UserScopeAPI.addLeaveGroup(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeLeaveGroup(userId!, id),
-        },
-        {
-            key: "holidayGroup",
-            label: "Holiday Group",
-            ids: scope.holiday_group_ids,
-            all: groups,
-            add: (id: string) => UserScopeAPI.addHolidayGroup(userId!, id),
-            remove: (id: string) => UserScopeAPI.removeHolidayGroup(userId!, id),
-        },
-    ];
+
+    const [scopeRegistry, setScopeRegistry] = useState({});
+
+    useEffect(() => {
+        PermissionsAPI.getScopeRegistry().then(setScopeRegistry);
+    }, []);
+
+    /* ================= HELPERS ================= */
+
+    function getResourceList(type: string) {
+        switch (type) {
+            case "group": return groups;
+            case "domain": return domains;
+            case "team": return teams;
+            case "subteam": return subteams;
+            case "rotation": return rotations;
+            default: return [];
+        }
+    }
+
+    function getAddFn(type: string) {
+        switch (type) {
+            case "group": return (id: string) => UserScopeAPI.addGroup(userId!, id);
+            case "domain": return (id: string) => UserScopeAPI.addDomain(userId!, id);
+            case "team": return (id: string) => UserScopeAPI.addTeam(userId!, id);
+            case "subteam": return (id: string) => UserScopeAPI.addSubteam(userId!, id);
+            case "rotation": return (id: string) => UserScopeAPI.addRotation(userId!, id);
+            default: return () => { };
+        }
+    }
+
+    function getRemoveFn(type: string) {
+        switch (type) {
+            case "group": return (id: string) => UserScopeAPI.removeGroup(userId!, id);
+            case "domain": return (id: string) => UserScopeAPI.removeDomain(userId!, id);
+            case "team": return (id: string) => UserScopeAPI.removeTeam(userId!, id);
+            case "subteam": return (id: string) => UserScopeAPI.removeSubteam(userId!, id);
+            case "rotation": return (id: string) => UserScopeAPI.removeRotation(userId!, id);
+            default: return () => { };
+        }
+    }
+
+    /* ================= CONFIGS (AUTO-GENERATED) ================= */
+
+    const configs = useMemo(() => {
+        return Object.keys(scopeRegistry).map(type => ({
+            key: type,
+            label: type.charAt(0).toUpperCase() + type.slice(1),
+            ids: scope[`${type}_ids` as keyof UserScope] as string[],   //  string[]
+            all: getResourceList(type),
+            add: getAddFn(type),
+            remove: getRemoveFn(type),
+        }));
+    }, [scopeRegistry, scope, userId]);
+
 
     const current = configs[tab];
 
@@ -192,7 +181,8 @@ export default function UserScopeDialog({
 
     const availableItems = useMemo(() => {
         if (!current) return [];
-        const setIds = new Set(current.ids);
+        const ids = current.ids as string[];
+        const setIds = new Set(ids);
         return current.all.filter((i) => !setIds.has(i.id));
     }, [current]);
 
@@ -203,13 +193,11 @@ export default function UserScopeDialog({
 
         await current.add(value);
 
-        setScope((prev) => ({
+        setScope(prev => ({
             ...prev,
-            [`${current.label.toLowerCase()}_ids`]: [
-                ...current.ids,
-                value,
-            ],
+            [`${current.key}_ids` as keyof UserScope]: [...current.ids, value],
         }));
+
 
         setValue("");
         await loadAll();
@@ -292,7 +280,7 @@ export default function UserScopeDialog({
 
                         </Box>
                     )}
-
+                    {/* GLOBAL HOLIDAY */}
                     {tab === configs.length && (
                         <Box mt={1}>
                             <Typography variant="subtitle1" fontWeight="bold" mb={1}>

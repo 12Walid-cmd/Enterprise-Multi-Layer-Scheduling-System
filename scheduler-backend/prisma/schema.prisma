@@ -66,7 +66,6 @@ model users {
   ///  Role-level membership
   /// -----------------------------
   user_roles      user_roles[] // global roles
-  roleAssignments role_assignments[] // team roles (via team_members)
 
   /// -----------------------------
   ///  Ownership / Leadership
@@ -121,7 +120,6 @@ model global_role_types {
   user_roles user_roles[]
 
   holidays              holidays[]
-  globalRolePermissions global_role_permissions[]
 
   @@schema("ems")
 }
@@ -689,53 +687,7 @@ model user_resource_scope {
   @@schema("ems")
 }
 
-model rbac_roles {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
-  description String?
-  created_at  DateTime @default(now())
 
-  role_assignments role_assignments[]
-  role_permissions role_permissions[]
-
-  @@schema("ems")
-}
-
-model global_role_permissions {
-  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role_id     String            @db.Uuid
-  permission  String            @db.VarChar(128)
-  description String?
-  global_role global_role_types @relation(fields: [role_id], references: [id])
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@unique([role_id, permission])
-  @@schema("ems")
-}
-
-model role_assignments {
-  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  user_id String @db.Uuid
-  role_id String @db.Uuid
-
-  users users      @relation(fields: [user_id], references: [id])
-  role  rbac_roles @relation(fields: [role_id], references: [id])
-
-  @@unique([user_id, role_id])
-  @@schema("ems")
-}
-
-model role_permissions {
-  id         String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role_id    String @db.Uuid
-  permission String
-
-  role rbac_roles @relation(fields: [role_id], references: [id])
-
-  @@schema("ems")
-}
 
 model user_permissions {
   user_id    String @db.Uuid

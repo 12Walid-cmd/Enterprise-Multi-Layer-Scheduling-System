@@ -190,7 +190,9 @@ export default function DomainsPage() {
                   </TableCell>
 
                   <TableCell>
-                    <Tooltip title={d.description || ""}>
+                    <Tooltip title={d.description || ""}
+                      arrow
+                      placement="top">
                       <span>{truncate(d.description) || "-"}</span>
                     </Tooltip>
                   </TableCell>
@@ -210,17 +212,17 @@ export default function DomainsPage() {
                   <TableCell>{d._count?.domainUsers ?? 0}</TableCell>
 
                   <TableCell align="right">
-                    <Tooltip title="Manage Members">
+                    <Tooltip title="Manage Members" arrow>
                       <IconButton color="primary" onClick={() => openMembers(d)}>
                         <GroupIcon />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Edit">
+                    <Tooltip title="Edit" arrow>
                       <IconButton color="secondary" onClick={() => openEdit(d)}>
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Delete">
+                    <Tooltip title="Delete" arrow>
                       <IconButton color="error" onClick={() => handleDelete(d.id)}>
                         <DeleteIcon />
                       </IconButton>

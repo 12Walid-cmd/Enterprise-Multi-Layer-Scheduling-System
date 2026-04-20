@@ -22,6 +22,9 @@ import AddIcon from "@mui/icons-material/Add";
 import GroupIcon from "@mui/icons-material/Group";
 import KeyIcon from "@mui/icons-material/Key";
 import AccountTreeIcon from "@mui/icons-material/AccountTree";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+
+import { useNavigate } from "react-router-dom";
 
 import { UsersAPI } from "../../api";
 
@@ -133,6 +136,8 @@ export default function UsersList() {
         }
     };
 
+    const navigate = useNavigate();
+
     /* ================= HELPER ================= */
 
     const truncate = (text?: string, max = 20) =>
@@ -235,12 +240,24 @@ export default function UsersList() {
 
                                     {/* Permissions */}
                                     <TableCell>
-                                        <Tooltip title={(u.permissionMeta || []).map(p => p.name).join(", ")}>
+                                        <Tooltip
+                                            title={
+                                                <Box whiteSpace="pre-line">
+                                                    {(u.permissionMeta || [])
+                                                        .map(p => p.name)
+                                                        .join("\n") || "No permissions"}
+                                                </Box>
+                                            }
+                                            arrow
+                                            placement="top"
+                                        >
                                             <span>
                                                 {truncate((u.permissionMeta || []).map(p => p.name).join(", ")) || "-"}
                                             </span>
                                         </Tooltip>
                                     </TableCell>
+
+
 
                                     {/* Scope */}
                                     <TableCell>
@@ -257,7 +274,7 @@ export default function UsersList() {
                                                 holiday_global: false
                                             };
 
-                                            // ⭐ Summary（顯示數字 + 逗號分隔）
+                                            //  Summary
                                             const summary = [
                                                 scope.group_ids.length > 0 && `Group(${scope.group_ids.length})`,
                                                 scope.team_ids.length > 0 && `Team(${scope.team_ids.length})`,
@@ -275,7 +292,7 @@ export default function UsersList() {
                                                 .filter(Boolean)
                                                 .join(", ") || "—";
 
-                                            // ⭐ Tooltip（每行一個 + 顯示數字）
+                                            // Tooltip
                                             const details = [
                                                 scope.group_ids.length > 0 && `Group: ${scope.group_ids.length}`,
                                                 scope.team_ids.length > 0 && `Team: ${scope.team_ids.length}`,
@@ -299,16 +316,7 @@ export default function UsersList() {
                                                     arrow
                                                     placement="top"
                                                 >
-                                                    <span
-                                                        style={{
-                                                            cursor: "pointer",
-                                                            whiteSpace: "nowrap",
-                                                            overflow: "hidden",
-                                                            textOverflow: "ellipsis",
-                                                            display: "inline-block",
-                                                            maxWidth: "100%" // ⭐ 跟 Permissions 一樣，自然省略
-                                                        }}
-                                                    >
+                                                    <span>
                                                         {summary}
                                                     </span>
                                                 </Tooltip>
@@ -321,32 +329,40 @@ export default function UsersList() {
 
                                     {/* ACTIONS */}
                                     <TableCell align="right">
-                                        <Tooltip title="Assign Global Role">
+                                        <Tooltip title="View Detail" arrow>
+                                            <IconButton
+                                                color="info"
+                                                onClick={() => navigate(`/users/${u.id}`)}>
+                                                <VisibilityIcon />
+                                            </IconButton>
+                                        </Tooltip>
+
+                                        <Tooltip title="Assign Global Role" arrow>
                                             <IconButton color="primary" onClick={() => openGlobalRoles(u)}>
                                                 <GroupIcon />
                                             </IconButton>
                                         </Tooltip>
 
 
-                                        <Tooltip title="Assign Permissions">
+                                        <Tooltip title="Assign Permissions" arrow>
                                             <IconButton color="primary" onClick={() => openPermissions(u)}>
                                                 <KeyIcon />
                                             </IconButton>
                                         </Tooltip>
 
-                                        <Tooltip title="Assign Resource Scope">
+                                        <Tooltip title="Assign Resource Scope" arrow>
                                             <IconButton color="primary" onClick={() => openScope(u)}>
                                                 <AccountTreeIcon />
                                             </IconButton>
                                         </Tooltip>
 
-                                        <Tooltip title="Edit">
+                                        <Tooltip title="Edit" arrow>
                                             <IconButton color="secondary" onClick={() => openEdit(u)}>
                                                 <EditIcon />
                                             </IconButton>
                                         </Tooltip>
 
-                                        <Tooltip title="Delete">
+                                        <Tooltip title="Delete" arrow>
                                             <IconButton color="error" onClick={() => handleDelete(u.id)}>
                                                 <DeleteIcon />
                                             </IconButton>

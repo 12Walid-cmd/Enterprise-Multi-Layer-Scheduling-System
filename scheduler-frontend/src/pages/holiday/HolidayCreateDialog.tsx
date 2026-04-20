@@ -16,10 +16,12 @@ export default function HolidayCreateDialog({
   open,
   onClose,
   onCreated,
+  groupId,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
+  groupId: string;
 }) {
   const [form, setForm] = useState<CreateHolidayInput>({
     name: "",
@@ -30,7 +32,7 @@ export default function HolidayCreateDialog({
     setForm({ ...form, [k]: v });
 
   const submit = async () => {
-    await HolidayAPI.create(form);
+    await HolidayAPI.create(groupId, form); 
     onCreated();
     onClose();
   };

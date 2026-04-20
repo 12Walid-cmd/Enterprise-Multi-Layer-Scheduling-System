@@ -20,7 +20,21 @@ export const UsersAPI = {
   },
 
   getOne(id: string | number) {
-    return http.get(`/users/${id}`).then(res => res.data);
+    return http.get(`/users/${id}`).then(res => {
+      const u = res.data;
+
+      return {
+        ...u,
+        permissions: u.userPermissions?.map((p: any) => p.permission) || [],
+        permissionMeta: u.userPermissions?.map((p: any) => ({
+          code: p.permission,
+          name: p.permission_types?.name || p.permission,
+          description: p.permission_types?.description || "",
+        })) || [],
+        scope: u.scope || {},
+        scopeEntities: u.scopeEntities || {},
+      };
+    });
   },
 
   create(data: any) {

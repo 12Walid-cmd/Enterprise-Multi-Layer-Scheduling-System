@@ -20,6 +20,10 @@ import {
   Tooltip,
   Stack,
   Alert,
+  FormControl,
+  Select,
+  MenuItem,
+  InputLabel,
 } from "@mui/material";
 
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -31,6 +35,8 @@ import type { PermissionType } from "../../../types/permission";
 import EditIcon from "@mui/icons-material/Edit";
 
 export default function PermissionManagementPage() {
+  const [registry, setRegistry] = useState<string[]>([]);
+
   const [items, setItems] = useState<PermissionType[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -63,27 +69,17 @@ export default function PermissionManagementPage() {
     load();
   }, []);
 
+  useEffect(() => {
+    PermissionsAPI.getRegistry().then(setRegistry);
+  }, []);
+
+
   /* ================= SEARCH ================= */
   useEffect(() => {
     const timer = setTimeout(load, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  /* ================= NAME → CODE================= */
-  useEffect(() => {
-    if (edit) return;
-
-    const timer = setTimeout(() => {
-      const code = form.name
-        .trim()
-        .toUpperCase()
-        .replace(/\s+/g, "_").replace(/[^\w.]/g, "");
-
-      setForm((prev) => ({ ...prev, code }));
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [form.name]);
 
   /* ================= CODE CHECK ================= */
   useEffect(() => {
@@ -223,13 +219,15 @@ export default function PermissionManagementPage() {
                   <TableCell>{p.code}</TableCell>
 
                   <TableCell>
-                    <Tooltip title={p.description || ""}>
+                    <Tooltip title={p.description || ""}
+                      arrow
+                      placement="top">
                       <span>{truncate(p.description)}</span>
                     </Tooltip>
                   </TableCell>
 
                   <TableCell align="right">
-                    <Tooltip title="Edit">
+                    <Tooltip title="Edit" arrow>
                       <IconButton
                         color="secondary"
                         onClick={() => openEdit(p)}
@@ -238,7 +236,7 @@ export default function PermissionManagementPage() {
                       </IconButton>
                     </Tooltip>
 
-                    <Tooltip title="Delete">
+                    <Tooltip title="Delete" arrow>
                       <IconButton
                         color="error"
                         onClick={() => handleDelete(p.code)}
@@ -273,22 +271,27 @@ export default function PermissionManagementPage() {
             />
 
             {/* CODE */}
-            <TextField
-              label="Code"
-              value={form.code}
-              onChange={(e) =>
-                setForm({ ...form, code: e.target.value })
-              }
-              fullWidth
-              error={codeExists}
-              helperText={
-                checking
-                  ? "Checking..."
-                  : codeExists
-                    ? "Code already exists"
-                    : ""
-              }
-            />
+            <FormControl fullWidth>
+              <InputLabel>Code</InputLabel>
+              <Select
+                label="Code"
+                value={form.code}
+                onChange={(e) =>
+                  setForm({ ...form, code: e.target.value as string })
+                }
+                disabled={!!edit} // edit mode don't allow changing code
+              >
+                {registry.map((p) => (
+                  <MenuItem key={p} value={p}>
+                    {p}
+                  </MenuItem>
+                ))}
+              </Select>
+
+              {checking && <Typography variant="caption">Checking...</Typography>}
+              {codeExists && <Alert severity="error">Code already exists</Alert>}
+            </FormControl>
+
 
             {codeExists && (
               <Alert severity="error">

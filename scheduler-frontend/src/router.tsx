@@ -8,10 +8,10 @@ import GroupsList from "./pages/org/groups/GroupsList";
 import TeamsList from "./pages/org/teams/TeamsList";
 
 // Team Role Types
-import TeamRoleTypesList from "./pages/org/roles/team-types/TeamRoleTypesList";
+import TeamRoleTypesList from "./pages/org/roles/TeamRoleTypesList";
 
 // Global Role Types
-import GlobalRoleTypesList from "./pages/org/roles/global-types/GlobalRoleTypesList";
+import GlobalRoleTypesList from "./pages/org/roles/GlobalRoleTypesList";
 
 
 
@@ -19,7 +19,6 @@ import GlobalRoleTypesList from "./pages/org/roles/global-types/GlobalRoleTypesL
 import UsersList from "./pages/user/UsersList";
 import UserDetail from "./pages/user/UserDetail";
 
-import UserScopePage from "./pages/user/UserScopePage";
 
 
 // Sub-teams
@@ -64,9 +63,8 @@ import HolidayPage from "./pages/holiday/HolidayPage";
 import AuditLogPage from "./pages/audit/AuditLogPage";
 
 // Permissions and Roles
-import RoleManagementPage from "./pages/org/roles/RoleManagementPage";
 import PermissionManagementPage from "./pages/org/permissions/PermissionManagementPage";
-import GlobalRolePermissionPage from "./pages/org/roles/GlobalRolePermissionPage";
+
 
 
 
@@ -101,14 +99,12 @@ export const router = createBrowserRouter([
 
 
       // Permissions and Roles
-      { path: "roles/global-permissions/:roleId", element: <GlobalRolePermissionPage /> },
-      { path: "roles", element: <RoleManagementPage /> },
       { path: "permissions", element: <PermissionManagementPage /> },
 
       // Users
       { path: "users", element: <UsersList /> },
       { path: "users/:id", element: <UserDetail /> },
-      { path: "users/:id/scope", element: <UserScopePage /> },
+  
 
       // Rotations
       { path: "rotations", element: <RotationsList /> },
@@ -132,7 +128,7 @@ export const router = createBrowserRouter([
       { path: "leave/approvals", element: <ApprovalsPage /> },
 
       // Holidays
-      { path: "holidays", element: <HolidayPage /> },
+      { path: "groups/:groupId/holidays", element: <HolidayPage /> },
 
       // Audit Logs
       { path: "audit-logs", element: <AuditLogPage /> },

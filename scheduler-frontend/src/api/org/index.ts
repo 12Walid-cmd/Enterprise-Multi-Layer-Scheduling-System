@@ -12,6 +12,5 @@ export * from "./domainUsers.api";
 export * from "./UserScope.api";
 export * from "./Permissions.api";
 export * from "./UserPermissions.api";
-export * from "./Roles.api";
 export * from "./globalRolePermissions.api";
 

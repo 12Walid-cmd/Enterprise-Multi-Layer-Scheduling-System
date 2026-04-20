@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
     Box,
     Button,
@@ -8,40 +8,43 @@ import {
     Typography,
     Divider,
 } from "@mui/material";
-import { useParams } from "react-router-dom";
 
-// ===== API =====
-const fetchUser = async (id: string) => {
-    const res = await fetch(`/api/users/${id}`);
-    if (!res.ok) throw new Error("Failed to load user");
-    return res.json();
-};
+import { UsersAPI } from "../../api";
+import ChangePasswordDialog from "./ChangePasswordDialog";
 
-// ===== Component =====
+/* ================= TYPES ================= */
+import type { User } from "../../types/user";
+import { useAuth } from "../../context/AuthContext";
+
+
+/* ================= COMPONENT ================= */
 export default function UserDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const [user, setUser] = useState<any>(null);
+    const { user: currentUser } = useAuth();
+
+    const [user, setUser] = useState<User | null>(null);
+    const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
+
+    /* ================= LOAD ================= */
+    const load = async () => {
+        if (!id) return;
+        setLoading(true);
+        try {
+            const data = await UsersAPI.getOne(id);
+            setUser(data);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const load = async () => {
-            try {
-                setLoading(true);
-                setError("");
-                const data = await fetchUser(id!);
-                setUser(data);
-            } catch (err: any) {
-                setError(err.message || "Error loading user");
-            } finally {
-                setLoading(false);
-            }
-        };
         load();
     }, [id]);
 
-    if (loading) {
+    /* ================= UI STATES ================= */
+    if (loading || !user) {
         return (
             <Box display="flex" justifyContent="center" mt={5}>
                 <CircularProgress />
@@ -49,21 +52,8 @@ export default function UserDetail() {
         );
     }
 
-    if (error) {
-        return (
-            <Box p={3}>
-                <Typography color="error">{error}</Typography>
-            </Box>
-        );
-    }
+    const permissions = user.permissionMeta || [];
 
-    if (!user) {
-        return (
-            <Box p={3}>
-                <Typography>No user found.</Typography>
-            </Box>
-        );
-    }
 
     return (
         <Box p={3}>
@@ -72,8 +62,9 @@ export default function UserDetail() {
             </Typography>
 
             <Paper sx={{ p: 3, maxWidth: 700 }}>
-                {/* Basic Info */}
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
+
+                {/* ===== BASIC ===== */}
+                <Typography variant="h6" fontWeight="bold">
                     Basic Information
                 </Typography>
 
@@ -82,82 +73,165 @@ export default function UserDetail() {
                 <DetailRow label="Email" value={user.email} />
                 <DetailRow label="Phone" value={user.phone} />
                 <DetailRow label="Timezone" value={user.timezone} />
-                <DetailRow label="Working Mode" value={user.working_mode} />
-                <DetailRow label="City" value={user.city ?? "-"} />
-                <DetailRow label="Province" value={user.province ?? "-"} />
-                <DetailRow label="Country" value={user.country ?? "-"} />
+                <DetailRow label="Working Mode" value={(user as any).working_mode} />
+                <DetailRow label="City" value={(user as any).city ?? "-"} />
+                <DetailRow label="Province" value={(user as any).province ?? "-"} />
+                <DetailRow label="Country" value={(user as any).country ?? "-"} />
 
-                <DetailRow label="Created At" value={formatDate(user.created_at)} />
-                <DetailRow label="Updated At" value={formatDate(user.updated_at)} />
+                <DetailRow label="Created At" value={formatDate((user as any).created_at)} />
+                <DetailRow label="Updated At" value={formatDate((user as any).updated_at)} />
+
+                <DetailRow
+                    label="Active"
+                    value={user.is_active ? "Yes" : "No"}
+                />
+
                 <Divider sx={{ my: 3 }} />
 
-                {/* Team Info */}
-                <Typography variant="h6" fontWeight="bold" gutterBottom> Team </Typography>
-                <DetailRow label="Team" value={user.team_members?.[0]?.teams?.name ?? "-"} />
+                {/* ===== TEAM ===== */}
+                <Typography variant="h6" fontWeight="bold">Team</Typography>
+                <DetailRow
+                    label="Team"
+                    value={user.team_members?.[0]?.teams?.name ?? "-"}
+                />
+
                 <Divider sx={{ my: 3 }} />
-                {/* Team Role */}
-                <Typography variant="h6" fontWeight="bold" gutterBottom> Team Role </Typography>
-                <DetailRow label="Team Role" value={user.team_members?.[0]?.team_roles?.name ?? "-"} />
-                {/* Global Role */}
-                <Typography variant="h6" fontWeight="bold" gutterBottom> Global Role </Typography>
-                <DetailRow label="Global Role" value={user.user_roles?.[0]?.global_roles?.name ?? "-"} />
 
-                <Box mt={4} display="flex" gap={2} flexWrap="wrap">
+                {/* ===== TEAM ROLE ===== */}
+                <Typography variant="h6" fontWeight="bold">Team Role</Typography>
+                <DetailRow
+                    label="Team Role"
+                    value={user.team_members?.[0]?.team_roles?.name ?? "-"}
+                />
 
-                    {/* Global Roles */}
-                    <Button
-                        variant="outlined"
-                        color="secondary"
-                        onClick={() => navigate(`/users/${id}/global-roles`)}
-                    >
-                        Manage Global Roles
-                    </Button>
+                <Divider sx={{ my: 3 }} />
 
-                    {/* User Permissions */}
-                    <Button
-                        variant="outlined"
-                        color="secondary"
-                        onClick={() => navigate(`/users/${id}/permissions`)}
-                    >
-                        Manage Permissions
-                    </Button>
+                {/* ===== GLOBAL ROLE ===== */}
+                <Typography variant="h6" fontWeight="bold">Global Role</Typography>
+                <DetailRow
+                    label="Global Role"
+                    value={user.user_roles?.[0]?.global_roles?.name ?? "-"}
+                />
 
-                    {/* User Scope */}
-                    <Button
-                        variant="outlined"
-                        color="secondary"
-                        onClick={() => navigate(`/users/${id}/scope`)}
-                    >
-                        Manage Scope
-                    </Button>
+                <Divider sx={{ my: 3 }} />
 
-                    {/* Edit User */}
+                {/* ===== PERMISSIONS ===== */}
+                <Typography variant="h6" fontWeight="bold">Permissions</Typography>
+                <DetailRow
+                    label="Permissions"
+                    value={
+                        permissions.length ? (
+                            <Box textAlign="right">
+                                {permissions.map((p: any, idx: number) => (
+                                    <Typography key={idx}>
+                                        {p.name || p.permission}
+                                    </Typography>
+                                ))}
+                            </Box>
+                        ) : "-"
+                    }
+                />
+
+                <Divider sx={{ my: 3 }} />
+
+                {/* ===== SCOPE ===== */}
+                <Typography variant="h6" fontWeight="bold">Resource Scope</Typography>
+                <DetailRow
+                    label="Resource Scope"
+                    value={getScopeSummary(user)}
+                />
+
+                {/* ===== CHANGE PASSWORD BUTTON ===== */}
+                {currentUser?.id === user.id && (
+                    <Box mt={3}>
+                        <Button
+                            variant="outlined"
+                            color="primary"
+                            onClick={() => setOpenPasswordDialog(true)}
+                        >
+                            Change Password
+                        </Button>
+                    </Box>
+                )}
+
+
+
+                {/* ===== BACK BUTTON ONLY ===== */}
+                <Box mt={4}>
                     <Button
                         variant="contained"
-                        color="primary"
-                        onClick={() => navigate(`/users/${id}/edit`)}
+                        onClick={() => navigate(`/users`)}
                     >
-                        Edit User
+                        Back to Users List
                     </Button>
-
                 </Box>
             </Paper>
+
+
+            {/* ================= CHANGE PASSWORD DIALOG ================= */}
+            <ChangePasswordDialog
+                open={openPasswordDialog}
+                onClose={() => setOpenPasswordDialog(false)}
+            />
         </Box>
+
     );
 }
 
-// ===== Helper Components =====
+/* ================= HELPERS ================= */
+
 function DetailRow({ label, value }: { label: string; value: any }) {
     return (
         <Box display="flex" justifyContent="space-between" py={1}>
             <Typography fontWeight="bold">{label}</Typography>
-            <Typography>{value}</Typography>
+            <Typography whiteSpace="pre-line">{value || "-"}</Typography>
         </Box>
     );
 }
 
-function formatDate(dateString: string) {
+function formatDate(dateString?: string) {
     if (!dateString) return "-";
-    const d = new Date(dateString);
-    return d.toLocaleString();
+    return new Date(dateString).toLocaleString();
+}
+
+function getScopeSummary(user: any) {
+    const s = user.scopeEntities;
+    const lines: string[] = [];
+
+    if (s.groups?.length) {
+        lines.push("Groups:");
+        s.groups.forEach((g: any) => lines.push(`  - ${g.name}`));
+        lines.push("");
+    }
+
+    if (s.teams?.length) {
+        lines.push("Teams:");
+        s.teams.forEach((t: any) => lines.push(`  - ${t.name}`));
+        lines.push("");
+    }
+
+    if (s.subTeams?.length) {
+        lines.push("Subteams:");
+        s.subTeams.forEach((st: any) => lines.push(`  - ${st.name}`));
+        lines.push("");
+    }
+
+    if (s.domains?.length) {
+        lines.push("Domains:");
+        s.domains.forEach((d: any) => lines.push(`  - ${d.name}`));
+        lines.push("");
+    }
+
+    if (s.rotations?.length) {
+        lines.push("Rotations:");
+        s.rotations.forEach((r: any) => lines.push(`  - ${r.name}`));
+        lines.push("");
+    }
+
+    if (user.scope?.holiday_global) {
+        lines.push("Holiday:");
+        lines.push("  - Global");
+    }
+
+    return lines.join("\n");
 }

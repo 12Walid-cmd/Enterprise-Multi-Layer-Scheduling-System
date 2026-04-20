@@ -15,12 +15,16 @@ import {
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { useNavigate } from "react-router-dom";
+
 
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 export default function Topbar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  if (!user) return null;
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -37,7 +41,7 @@ export default function Topbar() {
     ? `${user.first_name} ${user.last_name}`
     : "Guest";
 
-  const role = user?.roles?.[0] ?? "User";
+  const role = user?.roles?.[0]?.name ?? "User";
 
   const avatarLetter =
     user?.first_name?.[0]?.toUpperCase() ?? "U";
@@ -123,9 +127,16 @@ export default function Topbar() {
             <MenuItem disabled>{fullName}</MenuItem>
             <Divider />
 
-            <MenuItem onClick={handleClose}>
+        
+            <MenuItem
+              onClick={() => {
+                handleClose();
+                navigate(`/users/${user.id}`);
+              }}
+            >
               Profile
             </MenuItem>
+
 
             <MenuItem onClick={handleClose}>
               Settings

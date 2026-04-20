@@ -69,15 +69,70 @@ export class UsersService {
             global_roles: true,
           },
         },
+        userPermissions: {
+          include: {
+            permission_types: true,
+          },
+        },
+        userResourceScopes: true,
       },
     });
 
-    if (!user) {
-      throw new NotFoundException('User not found.');
-    }
+    if (!user) throw new NotFoundException('User not found.');
 
-    return user;
+    // Build scope IDs
+    const scope = this.userScopeService.buildScope(user.userResourceScopes);
+
+
+    const groups = scope.group_ids.length
+      ? await this.prisma.groups.findMany({
+        where: { id: { in: scope.group_ids } },
+      })
+      : [];
+
+    const teams = scope.team_ids.length
+      ? await this.prisma.teams.findMany({
+        where: { id: { in: scope.team_ids } },
+      })
+      : [];
+
+    const subTeams = scope.subteam_ids.length
+      ? await this.prisma.teams.findMany({
+        where: {
+          id: { in: scope.subteam_ids },
+          parent_team_id: { not: null },
+        },
+      })
+      : [];
+
+
+    const domains = scope.domain_ids.length
+      ? await this.prisma.domains.findMany({
+        where: { id: { in: scope.domain_ids } },
+      })
+      : [];
+
+    const rotations = scope.rotation_ids.length
+      ? await this.prisma.rotation_definitions.findMany({
+        where: { id: { in: scope.rotation_ids } },
+      })
+      : [];
+
+    return {
+      ...user,
+      scope,
+      scopeEntities: {
+        groups,
+        teams,
+        subTeams,
+        domains,
+        rotations,
+      },
+    };
   }
+
+
+
 
   async update(id: string, dto: UpdateUserDto) {
     const user = await this.prisma.users.findUnique({ where: { id } });
@@ -110,6 +165,30 @@ export class UsersService {
     const user = await this.prisma.users.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('User not found.');
 
-    return this.prisma.users.delete({ where: { id } });
+    // Count checks (optional — you can keep or remove)
+    const scopeCount = await this.prisma.user_resource_scope.count({ where: { user_id: id } });
+    if (scopeCount > 0) {
+      throw new BadRequestException(`Cannot delete user: user still has ${scopeCount} assigned resource scopes.`);
+    }
+
+    const permCount = await this.prisma.user_permissions.count({ where: { user_id: id } });
+    if (permCount > 0) {
+      throw new BadRequestException(`Cannot delete user: user still has ${permCount} assigned permissions.`);
+    }
+
+    const roleCount = await this.prisma.user_roles.count({ where: { user_id: id } });
+    if (roleCount > 0) {
+      throw new BadRequestException(`Cannot delete user: user still has ${roleCount} assigned roles.`);
+    }
+
+    await this.prisma.user_sessions.deleteMany({
+      where: { user_id: id },
+    });
+
+    return this.prisma.users.delete({
+      where: { id },
+    });
   }
+
+
 }

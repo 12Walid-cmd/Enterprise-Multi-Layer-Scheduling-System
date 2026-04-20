@@ -238,7 +238,9 @@ export default function TeamsList() {
                   <TableCell>{t.name}</TableCell>
 
                   <TableCell>
-                    <Tooltip title={t.description || ""}>
+                    <Tooltip title={t.description || ""}
+                      arrow
+                      placement="top">
                       <span>{truncate(t.description || "-")}</span>
                     </Tooltip>
                   </TableCell>
@@ -258,17 +260,17 @@ export default function TeamsList() {
                   <TableCell>{t._count?.team_members ?? 0}</TableCell>
 
                   <TableCell align="right">
-                    <Tooltip title="Manage Members">
+                    <Tooltip title="Manage Members" arrow>
                       <IconButton color="primary" onClick={() => openMembers(t)}>
                         <GroupIcon />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Edit">
+                    <Tooltip title="Edit" arrow>
                       <IconButton color="secondary" onClick={() => openEdit(t)}>
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Delete">
+                    <Tooltip title="Delete" arrow>
                       <IconButton color="error" onClick={() => handleDelete(t.id)}>
                         <DeleteIcon />
                       </IconButton>

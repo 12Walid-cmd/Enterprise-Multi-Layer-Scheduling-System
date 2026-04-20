@@ -22,4 +22,8 @@ export const AuthAPI = {
   logout: async () => {
     await http.post("/auth/logout");
   },
+
+  changePassword(data: { old_password: string; new_password: string }) {
+    return http.post("/auth/change-password", data);
+  },
 };

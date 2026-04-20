@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -13,6 +14,10 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 
+
+import { useParams } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+
 import { HolidayAPI } from "../../api";
 import type { Holiday } from "../../types/holiday";
 
@@ -20,22 +25,43 @@ import HolidayCreateDialog from "./HolidayCreateDialog";
 import HolidayEditDialog from "./HolidayEditDialog";
 
 export default function HolidayPage() {
+  const { user } = useAuth();
+  const { groupId: urlGroupId } = useParams();
+
+
+  const groupId = urlGroupId ?? user?.scope?.group_ids?.[0];
+
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editHoliday, setEditHoliday] = useState<Holiday | null>(null);
 
+  /* ================== PROTECTION ================== */
+  if (!groupId) {
+    return (
+      <Box p={3}>
+        <Alert severity="warning" sx={{ fontSize: 16 }}>
+          This user is not assigned to any team.  
+          Please assign the user to a team before viewing holidays.
+        </Alert>
+      </Box>
+    );
+  }
+
+  /* ================== LOAD HOLIDAYS ================== */
+
   const load = async () => {
     setLoading(true);
-    const data = await HolidayAPI.getAll();
+    const data = await HolidayAPI.getByGroup(groupId); 
     setHolidays(data);
     setLoading(false);
   };
 
   useEffect(() => {
     load();
-  }, []);
+  }, [groupId]);
+
 
   const formatDate = (iso: string) => iso.split("T")[0];
 
@@ -77,7 +103,7 @@ export default function HolidayPage() {
 
                     <IconButton
                       onClick={async () => {
-                        await HolidayAPI.remove(h.id);
+                        await HolidayAPI.remove(h.id, groupId!); 
                         load();
                       }}
                     >
@@ -96,6 +122,7 @@ export default function HolidayPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onCreated={load}
+        groupId={groupId!} 
       />
 
       {/* Edit Dialog */}
@@ -104,6 +131,7 @@ export default function HolidayPage() {
           holiday={editHoliday}
           onClose={() => setEditHoliday(null)}
           onUpdated={load}
+          groupId={groupId!} 
         />
       )}
     </Box>

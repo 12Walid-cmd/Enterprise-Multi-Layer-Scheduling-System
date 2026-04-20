@@ -3,7 +3,7 @@ export interface AuthTokens {
 }
 
 export interface AuthUser {
-  userId: string;
+  id: string; 
   email: string;
 
   first_name?: string;
@@ -11,7 +11,7 @@ export interface AuthUser {
   phone?: string;
   timezone?: string;
 
-  working_mode?: "LOCAL" | "REMOTE" | "HYBRID"; // enum
+  working_mode?: "LOCAL" | "REMOTE" | "HYBRID";
 
   city?: string;
   province?: string;
@@ -22,14 +22,19 @@ export interface AuthUser {
   created_at?: string;
   updated_at?: string;
 
-  roles: string[];         
+  roles: {
+    code: string;
+    name: string;
+  }[]; 
   permissions: string[];
 
   scope: {
     group_ids: string[];
-    domain_ids: string[];
     team_ids: string[];
+    sub_team_ids: string[]; 
+    domain_ids: string[];
     rotation_ids: string[];
   };
-
+  
 }
+

@@ -9,6 +9,7 @@ import * as bcrypt from 'bcryptjs';
 import { RegisterDto, LoginDto } from './dto/register.dto';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -71,10 +72,12 @@ export class AuthService {
   }
 
   // ---------------------------------------------------------
-  // Me
+  // Me (recommended: read scope from JWT payload)
   // ---------------------------------------------------------
-  async me(userId: string) {
-    return this.prisma.users.findUnique({
+  async me(req: any) {
+    const userId = req.user.sub; // JWT payload
+
+    const user = await this.prisma.users.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -92,7 +95,15 @@ export class AuthService {
         updated_at: true,
       },
     });
+
+    return {
+      ...user,
+      scope: req.user.scope,
+      roles: req.user.roles,
+      permissions: req.user.permissions,
+    };
   }
+
 
   // ---------------------------------------------------------
   // Build Tokens 
@@ -114,23 +125,60 @@ export class AuthService {
       },
     });
 
-    // PBAC: Resource Scope
+    // 1. PBAC scope from user_resource_scope
     const resourceScope = await this.prisma.user_resource_scope.findMany({
       where: { user_id: userId },
     });
 
-    // Build PBAC scope structure
+    // 2. Team membership → derive group_ids
+    const teamMemberships = await this.prisma.team_members.findMany({
+      where: { user_id: userId },
+      include: {
+        teams: true, // includes teams.group_id
+      },
+    });
+
+    // Extract group_ids from teams
+    const groupIdsFromTeams = teamMemberships.map(tm => tm.teams.group_id);
+
+    // Extract team_ids from team_members
+    const teamIdsFromTeams = teamMemberships.map(tm => tm.team_id);
+
+    // 3. Sub-team membership → also derive group_ids
+    const subTeamMemberships = await this.prisma.sub_team_members.findMany({
+      where: { user_id: userId },
+      include: {
+        teams: true, // sub_team_members.teams is actually a team row
+      },
+    });
+
+    // Extract group_ids from sub-teams
+    const groupIdsFromSubTeams = subTeamMemberships.map(st => st.teams.group_id);
+
+    // Extract sub_team_ids
+    const subTeamIds = subTeamMemberships.map(st => st.sub_team_id);
+
+    // 4. Merge PBAC + derived scopes
     const scope = {
-      group_ids: resourceScope
-        .filter(r => r.resource_type === 'GROUP')
-        .map(r => r.resource_id),
+      group_ids: [
+        ...resourceScope
+          .filter(r => r.resource_type === 'GROUP')
+          .map(r => r.resource_id),
+        ...groupIdsFromTeams,
+        ...groupIdsFromSubTeams,
+      ],
+
+      team_ids: [
+        ...resourceScope
+          .filter(r => r.resource_type === 'TEAM')
+          .map(r => r.resource_id),
+        ...teamIdsFromTeams,
+      ],
+
+      sub_team_ids: subTeamIds,
 
       domain_ids: resourceScope
         .filter(r => r.resource_type === 'DOMAIN')
-        .map(r => r.resource_id),
-
-      team_ids: resourceScope
-        .filter(r => r.resource_type === 'TEAM')
         .map(r => r.resource_id),
 
       rotation_ids: resourceScope
@@ -142,6 +190,7 @@ export class AuthService {
 
     // Access Token payload
     const payload = {
+      id: fullUser.id,
       sub: fullUser.id,
       email: fullUser.email,
       first_name: fullUser.first_name,
@@ -153,49 +202,27 @@ export class AuthService {
       sub_team_ids: fullUser.subTeamMembers.map(s => s.sub_team_id),
       domain_ids: fullUser.domainUsers.map(d => d.domain_id),
       domain_team_ids: fullUser.domainTeams.map(dt => dt.domain_team_id),
-      roles: fullUser.user_roles.map(r => r.global_roles.code),
+      roles: fullUser.user_roles.map(r => ({
+        code: r.global_roles.code,
+        name: r.global_roles.name,
+      })),
       permissions: [] as string[],
       scope,
     };
 
     // ---------------------------------------------------------
-    // Build Final Permissions (GlobalRole + RBAC + Override)
+    // Build Final Permissions (Only user_permissions)
     // ---------------------------------------------------------
     const finalPermissions = new Set<string>();
 
-    // 1. Global Roles → permissions
-    const globalRolePermissions = await this.prisma.global_role_permissions.findMany({
-      where: {
-        role_id: {
-          in: fullUser.user_roles.map(r => r.global_role_id),
-        },
-      },
-    });
-
-    globalRolePermissions.forEach(p => finalPermissions.add(p.permission));
-
-    // 2. RBAC Roles → permissions
-    const rbacAssignments = await this.prisma.role_assignments.findMany({
-      where: { user_id: userId },
-      include: {
-        role: {
-          include: { role_permissions: true },
-        },
-      },
-    });
-
-    rbacAssignments.forEach(ra => {
-      ra.role.role_permissions.forEach(rp => {
-        finalPermissions.add(rp.permission);
-      });
-    });
-
-    // 3. Override Permissions → user_permissions
-    const overridePermissions = await this.prisma.user_permissions.findMany({
+    // 1. Direct user permissions (PBAC override)
+    // These are the ONLY permissions now
+    const directPermissions = await this.prisma.user_permissions.findMany({
       where: { user_id: userId },
     });
 
-    overridePermissions.forEach(op => finalPermissions.add(op.permission));
+    directPermissions.forEach(p => finalPermissions.add(p.permission));
+
 
     // ---------------------------------------------------------
     // Add final permissions to JWT payload
@@ -362,4 +389,41 @@ export class AuthService {
 
     return { message: 'All sessions logged out' };
   }
+
+
+  async changePassword(req: any, dto: ChangePasswordDto) {
+    const userId = req.user.sub; // JWT payload should contain user ID in 'sub' claim
+
+    const user = await this.prisma.users.findUnique({
+      where: { id: userId },
+      select: { password: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (!user.password) {
+      throw new UnauthorizedException('Password not set for this account');
+    }
+
+    const isMatch = await bcrypt.compare(dto.old_password, user.password);
+    if (!isMatch) {
+      throw new UnauthorizedException('Old password is incorrect');
+    }
+
+    const hashed = await bcrypt.hash(dto.new_password, 10);
+
+    await this.prisma.users.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
+
+    await this.prisma.user_sessions.deleteMany({
+      where: { user_id: userId },
+    });
+
+    return { message: 'Password updated successfully' };
+  }
+
 }

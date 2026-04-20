@@ -1,6 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
+import { APP_GUARD } from '@nestjs/core';
+
+import { PermissionGuard } from './permissions/guards/permission.guard';
+
+
 import { OrgModule } from './org/org.module';
 import { RotationsModule } from './rotations/rotations.module';
 import { ScheduleModule } from './schedule/schedule.module';
@@ -38,4 +43,4 @@ import { PermissionTypesModule } from './permission-types/permission-types.modul
     PermissionTypesModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -17,11 +17,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function loadUser() {
     const token = sessionStorage.getItem("access_token");
+
     if (!token) {
       setLoading(false);
       return;
     }
-
     try {
       const me = await AuthAPI.me();
       setUser(me);
@@ -35,8 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function logout() {
     try {
-      await AuthAPI.logout(); 
-    } catch {}
+      await AuthAPI.logout();
+    } catch { }
 
     sessionStorage.removeItem("access_token");
     setUser(null);

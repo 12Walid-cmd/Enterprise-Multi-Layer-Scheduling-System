@@ -63,4 +63,15 @@ export const PermissionsAPI = {
       })
       .then(res => res.data);
   },
+
+  /* ================= REGISTRY (auto-scanned permissions) ================= */
+  getRegistry(): Promise<string[]> {
+    return http.get("/permissions/registry").then(res => res.data);
+  },
+
+  /* ================= SCOPE REGISTRY ================= */
+  getScopeRegistry(): Promise<Record<string, string[]>> {
+    return http.get("/permissions/scope-registry").then(res => res.data);
+  }
+
 };

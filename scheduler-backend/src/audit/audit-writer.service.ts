@@ -136,4 +136,16 @@ export class AuditWriter {
         memberRemoved: (userId: string, domainTeamId: string, details: any) =>
             this.write('domainTeam.member_removed', userId, domainTeamId, details),
     };
+
+    // ============================
+    // Permission
+    // ============================
+    permission = {
+        created: (userId: string, code: string, data?: any) =>
+            this.write('permission.created', userId, code, data),
+
+        deprecated: (userId: string, code: string, before: any, after: any) =>
+            this.write('permission.deprecated', userId, code, { before, after }),
+    };
+
 }

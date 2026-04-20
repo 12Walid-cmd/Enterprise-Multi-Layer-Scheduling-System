@@ -6,34 +6,34 @@ import { UpdatePermissionDto } from './dto/update-permission.dto';
 
 @Injectable()
 export class PermissionTypesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /* ================= LIST (with search) ================= */
   async findAll(search?: string) {
     return this.prisma.permission_types.findMany({
       where: search
         ? {
-            OR: [
-              {
-                code: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
+          OR: [
+            {
+              code: {
+                contains: search,
+                mode: 'insensitive',
               },
-              {
-                name: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
+            },
+            {
+              name: {
+                contains: search,
+                mode: 'insensitive',
               },
-              {
-                description: {
-                  contains: search,
-                  mode: 'insensitive',
-                },
+            },
+            {
+              description: {
+                contains: search,
+                mode: 'insensitive',
               },
-            ],
-          }
+            },
+          ],
+        }
         : undefined,
 
       orderBy: {
@@ -83,7 +83,7 @@ export class PermissionTypesService {
     const existing = await this.prisma.permission_types.findFirst({
       where: {
         code,
-        ...(excludeCode ? { code: { not: excludeCode } } : {}),
+        NOT: excludeCode ? { code: excludeCode } : undefined,
       },
     });
 

@@ -48,13 +48,7 @@ import { DomainUsersService } from './domains/domain-users.service';
 
 import { AuditModule } from 'src/audit/audit.module';
 
-// Roles
-import { RolesService } from './roles/roles.service';
-import { RolesController } from './roles/roles.controller';
 
-// Permissions
-import { GlobalRolePermissionsController } from './roles/global-role-permissions.controller';
-import { GlobalRolePermissionsService } from './roles/global-role-permissions.service';
 
 
 @Module({
@@ -63,7 +57,6 @@ import { GlobalRolePermissionsService } from './roles/global-role-permissions.se
     GroupsController,
     TeamsController,
     MembersController,
-    RolesController,
     TeamRoleTypesController,
     GlobalRoleTypesController,
     UserRolesController,
@@ -72,7 +65,6 @@ import { GlobalRolePermissionsService } from './roles/global-role-permissions.se
     DomainsController,
     DomainUsersController,
     DomainTeamsController,
-    GlobalRolePermissionsController,
   ],
   providers: [
     PrismaService,
@@ -80,7 +72,6 @@ import { GlobalRolePermissionsService } from './roles/global-role-permissions.se
     GroupsService,
     TeamsService,
     MembersService,
-    RolesService,
     TeamRoleTypesService,
     GlobalRoleTypesService,
     UserRolesService,
@@ -89,7 +80,6 @@ import { GlobalRolePermissionsService } from './roles/global-role-permissions.se
     DomainsService,
     DomainUsersService,
     DomainTeamsService,
-    GlobalRolePermissionsService,
   ],
   exports: [OrgService],
 })

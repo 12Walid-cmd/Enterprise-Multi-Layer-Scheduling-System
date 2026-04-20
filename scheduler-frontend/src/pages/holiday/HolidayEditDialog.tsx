@@ -16,10 +16,12 @@ export default function HolidayEditDialog({
   holiday,
   onClose,
   onUpdated,
+  groupId,
 }: {
   holiday: Holiday;
   onClose: () => void;
   onUpdated: () => void;
+  groupId: string;
 }) {
   const [form, setForm] = useState<UpdateHolidayInput>({
     name: holiday.name,
@@ -30,7 +32,7 @@ export default function HolidayEditDialog({
     setForm({ ...form, [k]: v });
 
   const submit = async () => {
-    await HolidayAPI.update(holiday.id, form);
+    await HolidayAPI.update(holiday.id, groupId, form); 
     onUpdated();
     onClose();
   };

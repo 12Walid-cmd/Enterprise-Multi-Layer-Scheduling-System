@@ -229,7 +229,9 @@ export default function GroupsList() {
                   <TableCell>{g.name}</TableCell>
 
                   <TableCell>
-                    <Tooltip title={g.description || ""}>
+                    <Tooltip title={g.description || ""}
+                      arrow
+                      placement="top">
                       <span>{truncate(g.description || "-")}</span>
                     </Tooltip>
                   </TableCell>
@@ -245,17 +247,17 @@ export default function GroupsList() {
                   <TableCell>{g._count?.teams ?? 0}</TableCell>
 
                   <TableCell align="right">
-                    {/* <Tooltip title="Manage Members">
+                    {/* <Tooltip title="Manage Members" arrow>
                       <IconButton color="primary" onClick={() => openMembers(d)}>
                         <GroupIcon />
                       </IconButton>
                     </Tooltip> */}
-                    <Tooltip title="Edit">
+                    <Tooltip title="Edit" arrow>
                       <IconButton color="secondary" onClick={() => openEdit(g)}>
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
-                    <Tooltip title="Delete">
+                    <Tooltip title="Delete" arrow>
                       <IconButton color="error" onClick={() => handleDelete(g.id)}>
                         <DeleteIcon />
                       </IconButton>
