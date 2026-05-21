@@ -1,0 +1,6 @@
+[
+  "holiday.create",
+  "holiday.view",
+  "holiday.update",
+  "holiday.delete"
+]

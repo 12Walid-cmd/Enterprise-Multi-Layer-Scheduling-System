@@ -1,0 +1,826 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["ems"]
+}
+
+model groups {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String    @unique @db.VarChar(255)
+  description String?
+  timezone    String?   @default("UTC") @db.VarChar(64)
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt
+
+  owner_user_id String? @db.Uuid
+  owner         users?  @relation("GroupOwner", fields: [owner_user_id], references: [id])
+
+  // Teams directly under this group
+  teams    teams[]
+  // Optional: domains logically associated with this group (business choice)
+  domains  domains[]
+  holidays holidays[]
+  users    users[]
+
+  @@schema("ems")
+}
+
+model users {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name   String            @db.VarChar(100)
+  last_name    String            @db.VarChar(100)
+  email        String            @unique @db.VarChar(255)
+  password     String?           @db.VarChar(255)
+  is_active    Boolean           @default(true)
+  created_at   DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?         @default(now()) @db.Timestamptz(6)
+  phone        String            @db.VarChar(50)
+  timezone     String            @db.VarChar(100)
+  working_mode working_mode_enum @default(LOCAL)
+  city         String?           @db.VarChar(100)
+  province     String?           @db.VarChar(100)
+  country      String?           @db.VarChar(100)
+
+  /// -----------------------------
+  ///  Group-level membership
+  /// -----------------------------
+  group_id String? @db.Uuid
+  group    groups? @relation(fields: [group_id], references: [id])
+
+  /// -----------------------------
+  ///  Team-level membership
+  /// -----------------------------
+  team_members   team_members[] // user belongs to teams
+  subTeamMembers sub_team_members[] // user belongs to subteams
+
+  /// -----------------------------
+  ///  Domain-level membership
+  /// -----------------------------
+  domainTeams domain_team_members[] // user belongs to domain-teams
+
+  /// -----------------------------
+  ///  Role-level membership
+  /// -----------------------------
+  user_roles      user_roles[] // global roles
+
+  /// -----------------------------
+  ///  Ownership / Leadership
+  /// -----------------------------
+  // Group Owner
+  ownedGroups groups[] @relation("GroupOwner")
+
+  // Domain Owner
+  ownedDomains domains[] @relation("DomainOwner")
+
+  //  Team Lead
+  leadTeams teams[] @relation("TeamLead")
+
+  //  Rotation Owner
+  ownedRotations rotation_definitions[] @relation("RotationOwner")
+
+  /// -----------------------------
+  ///  Scheduling-related
+  /// -----------------------------
+  rotationDefinitions rotation_definitions[]
+  user_sessions       user_sessions[]
+  fairnessMetrics     fairness_metrics[]
+  leaveRequests       leave_requests[]
+  leave_approvals     leave_approvals[]
+  domainUsers         domain_users[]
+  userResourceScopes  user_resource_scope[]
+  userPermissions     user_permissions[]
+
+  @@schema("ems")
+}
+
+model domain_team_members {
+  id             String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String @db.Uuid
+  domain_team_id String @db.Uuid
+
+  user        users        @relation(fields: [user_id], references: [id])
+  domain_team domain_teams @relation(fields: [domain_team_id], references: [id])
+
+  @@unique([user_id, domain_team_id])
+  @@schema("ems")
+}
+
+model global_role_types {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String    @unique @db.VarChar(64)
+  name        String    @db.VarChar(128)
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt
+
+  user_roles user_roles[]
+
+  holidays              holidays[]
+
+  @@schema("ems")
+}
+
+model user_roles {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id        String    @db.Uuid
+  global_role_id String    @db.Uuid
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @updatedAt
+
+  users        users             @relation(fields: [user_id], references: [id])
+  global_roles global_role_types @relation(fields: [global_role_id], references: [id])
+
+  @@unique([user_id, global_role_id])
+  @@schema("ems")
+}
+
+model team_role_types {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code        String    @unique @db.VarChar(64)
+  name        String    @db.VarChar(128)
+  description String?
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @updatedAt
+
+  // Role types used within teams (e.g., on-call engineer, analyst)
+  team_members team_members[]
+
+  holidays holidays[]
+
+  @@schema("ems")
+}
+
+model teams {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  group_id       String?   @db.Uuid
+  parent_team_id String?   @db.Uuid
+  name           String    @db.VarChar(255)
+  description    String?
+  timezone       String?   @db.VarChar(64)
+  is_active      Boolean?  @default(true)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @updatedAt
+
+  lead_user_id String? @db.Uuid
+  lead         users?  @relation("TeamLead", fields: [lead_user_id], references: [id])
+
+  // Direct members of this team
+  team_members team_members[]
+
+  // Group this team belongs to
+  groups groups? @relation(fields: [group_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  // Parent team for nested sub-teams (hierarchical teams)
+  teams       teams?  @relation("teamsToteams", fields: [parent_team_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_teams teams[] @relation("teamsToteams")
+
+  // Sub-team membership (team used as sub-team container)
+  sub_team_members sub_team_members[]
+
+  holidays holidays[]
+
+  // Domain-team mappings (this team as part of one or more business domains)
+  domain_teams domain_teams[]
+
+  @@unique([group_id, name])
+  @@index([group_id], map: "idx_teams_group_id")
+  @@index([parent_team_id], map: "idx_teams_parent_team_id")
+  @@schema("ems")
+}
+
+model team_members {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id      String    @db.Uuid
+  team_id      String    @db.Uuid
+  team_role_id String?   @db.Uuid
+  is_active    Boolean?  @default(true)
+  created_at   DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime? @default(now()) @updatedAt
+
+  users      users            @relation(fields: [user_id], references: [id])
+  teams      teams            @relation(fields: [team_id], references: [id])
+  team_roles team_role_types? @relation(fields: [team_role_id], references: [id])
+
+  @@unique([user_id, team_id])
+  @@schema("ems")
+}
+
+model sub_team_members {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sub_team_id String   @db.Uuid
+  user_id     String   @db.Uuid
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  // User assigned to a sub-team
+  users users @relation(fields: [user_id], references: [id])
+  // Sub-team is represented as a team row (teams.id)
+  teams teams @relation(fields: [sub_team_id], references: [id])
+
+  @@unique([sub_team_id, user_id], name: "sub_team_id_user_id")
+  @@schema("ems")
+}
+
+model domains {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String  @unique @db.VarChar(255)
+  description String?
+
+  type DomainType @default(CAPABILITY)
+
+  // If true, users may be restricted from participating in multiple domain rotations
+  exclusive  Boolean   @default(false)
+  is_active  Boolean   @default(true)
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+
+  updated_at DateTime? @default(now()) @updatedAt
+
+  owner_user_id String? @db.Uuid
+  owner         users?  @relation("DomainOwner", fields: [owner_user_id], references: [id])
+
+  // Mapping to teams that belong to this business domain
+  domain_teams domain_teams[]
+  holidays     holidays[]
+
+  // Optional: logical association to groups (if needed)
+  groups      groups[]
+  domainUsers domain_users[]
+
+  @@schema("ems")
+}
+
+enum DomainType {
+  CAPABILITY // Security, Data...
+  POOL // Oncall, Analyst, Mountain, Custom rotation pools
+
+  @@schema("ems")
+}
+
+model domain_teams {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  domain_id  String    @db.Uuid
+  team_id    String    @db.Uuid
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @updatedAt
+
+  domains domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  teams   teams   @relation(fields: [team_id], references: [id], onDelete: Cascade)
+
+  holidays          holidays[]
+  domainTeamMembers domain_team_members[]
+
+  @@unique([domain_id, team_id])
+  @@schema("ems")
+}
+
+model domain_users {
+  id        String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  domain_id String @db.Uuid
+  user_id   String @db.Uuid
+
+  domain domains @relation(fields: [domain_id], references: [id], onDelete: Cascade)
+  user   users   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([domain_id, user_id])
+  @@schema("ems")
+}
+
+model rotation_definitions {
+  id   String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name String
+  code String @unique
+
+  // Logical rotation type: TEAM / SUBTEAM / ROLE / DOMAIN / DOMAIN_TEAM / CROSS_TEAM
+  type RotationType
+
+  // Rotation cadence: DAILY / WEEKLY / BIWEEKLY / CUSTOM
+  cadence          RotationCadence
+  cadence_interval Int             @default(1)
+
+  priority Int @default(100)
+
+  // Whether overlapping assignments are allowed for this rotation
+  allow_overlap Boolean       @default(false)
+  // Minimum number of assignees required per slot
+  min_assignees Int           @default(1)
+  max_assignees Int           @default(1)
+  // Organizational scope of this rotation:
+  // TEAM / SUBTEAM / GROUP / ROLE / DOMAIN / DOMAIN_TEAM / NONE
+  scope_type    RotationScope
+  // Reference id for the scope:
+  // team_id / group_id / role_id / domain_id / domain_team_id / null
+  scope_ref_id  String?       @db.Uuid
+
+  // Rotation scheduling core
+  // Rotation starts from this date
+  start_date     DateTime
+  // Optional: rotation ends at this date
+  end_date       DateTime?
+  // Changes take effect from this date
+  effective_date DateTime  @default(now())
+  // Optional: schedule cannot be modified before this date
+  freeze_date    DateTime?
+
+  is_active Boolean @default(true)
+
+  // Rotation owner (e.g., rotation manager)
+  owner_user_id String? @db.Uuid
+  owner         users?  @relation("RotationOwner", fields: [owner_user_id], references: [id])
+
+  description String?
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  rotation_members       rotation_members[]
+  rotation_tiers         rotation_tiers[]
+  scheduleResults        schedule_results[]
+  fairnessMetrics        fairness_metrics[]
+  rotationExceptions     rotation_exceptions[]
+  rotationRules          rotation_rules[]
+  rotationAuditSnapshots rotation_audit_snapshots[]
+  users                  users?                     @relation(fields: [usersId], references: [id])
+  usersId                String?                    @db.Uuid
+
+  @@schema("ems")
+}
+
+model rotation_members {
+  id                     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_definition_id String @db.Uuid
+
+  // Member type: USER / TEAM / SUBTEAM / ROLE / DOMAIN / DOMAIN_TEAM / GROUP
+  member_type RotationMemberType
+
+  weight Int @default(1)
+
+  // Reference id for the member:
+  // user_id / team_id / subteam_id / role_id / domain_id / domain_team_id / group_id
+  member_ref_id String @db.Uuid
+
+  // Order index within the rotation sequence
+  order_index Int     @default(0)
+  is_active   Boolean @default(true)
+
+  rotation_definitions rotation_definitions @relation(fields: [rotation_definition_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@schema("ems")
+}
+
+model rotation_tiers {
+  id                     String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_definition_id String @db.Uuid
+  // Tier level (e.g., 1 = primary, 2 = secondary, etc.)
+  tier_level             Int
+  name                   String
+
+  rotation_definitions rotation_definitions @relation(fields: [rotation_definition_id], references: [id])
+
+  rotation_tier_members rotation_tier_members[]
+
+  @@unique([rotation_definition_id, tier_level])
+  @@schema("ems")
+}
+
+model rotation_tier_members {
+  id      String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tier_id String @db.Uuid
+
+  // Member type: USER / TEAM / SUBTEAM / ROLE / DOMAIN / DOMAIN_TEAM / GROUP
+  member_type RotationMemberType
+
+  weight        Int    @default(1)
+  // Reference id for the member:
+  // user_id / team_id / subteam_id / role_id / domain_id / domain_team_id / group_id
+  member_ref_id String @db.Uuid
+
+  // Order index within the tier sequence
+  order_index Int     @default(0)
+  is_active   Boolean @default(true)
+
+  rotation_tiers rotation_tiers @relation(fields: [tier_id], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@schema("ems")
+}
+
+enum working_mode_enum {
+  LOCAL
+  REMOTE
+  HYBRID
+
+  @@schema("ems")
+}
+
+// Logical rotation type (business meaning)
+enum RotationType {
+  // Standard team-level rotation
+  TEAM
+  // Sub-team rotation
+  SUBTEAM
+  // Role-based on-call rotation (e.g., CDO on-call, IT on-call)
+  ROLE
+  // Business-domain level rotation (e.g., mountain rotation per domain)
+  DOMAIN
+  // Rotation across domain teams (e.g., analyst rotation across domain teams)
+  DOMAIN_TEAM
+  // Cross-team or cross-functional rotation across teams/groups
+  CROSS_TEAM
+
+  @@schema("ems")
+}
+
+// Cadence of rotation
+enum RotationCadence {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  CUSTOM
+
+  @@schema("ems")
+}
+
+// Organizational scope of a rotation definition
+enum RotationScope {
+  // Rotation scoped to a specific team
+  TEAM
+  // Rotation scoped to a specific sub-team (nested team)
+  SUBTEAM
+  // Rotation scoped to a top-level group
+  GROUP
+  // Rotation scoped to a role list (on-call pool)
+  ROLE
+  // Rotation scoped to a business domain
+  DOMAIN
+  // Rotation scoped to a specific domain-team mapping
+  DOMAIN_TEAM
+  // No organizational scope (special/global cases)
+  NONE
+
+  @@schema("ems")
+}
+
+// Member type for rotation participants
+enum RotationMemberType {
+  // Individual user
+  USER
+  // Team as a member
+  TEAM
+  // Sub-team as a member
+  SUBTEAM
+  // Role list as a member
+  ROLE
+  // Entire business domain as a member
+  DOMAIN
+  // Specific domain-team mapping as a member
+  DOMAIN_TEAM
+  // Group as a member
+  GROUP
+
+  @@schema("ems")
+}
+
+model schedule_results {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date          DateTime
+  rotation_id   String   @db.Uuid
+  tier_level    Int
+  assignees     Json
+  conflicts     Json?
+  generated_at  DateTime @default(now())
+  generated_by  String?  @db.Uuid
+  override_flag Boolean  @default(false)
+
+  rotation            rotation_definitions  @relation(fields: [rotation_id], references: [id])
+  scheduleOverrides   schedule_overrides[]
+  conflictResolutions conflict_resolution[]
+
+  @@index([date])
+  @@index([rotation_id])
+  @@schema("ems")
+}
+
+model schedule_overrides {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schedule_id   String   @db.Uuid
+  overridden_by String   @db.Uuid
+  overridden_at DateTime @default(now())
+  old_assignees Json
+  new_assignees Json
+  reason        String?
+
+  schedule schedule_results @relation(fields: [schedule_id], references: [id])
+
+  @@schema("ems")
+}
+
+model conflict_resolution {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  schedule_id   String   @db.Uuid
+  conflict_type String
+  resolved_by   String   @db.Uuid
+  resolved_at   DateTime @default(now())
+  action        String // skip / reassign / override
+  notes         String?
+
+  schedule schedule_results @relation(fields: [schedule_id], references: [id])
+
+  @@schema("ems")
+}
+
+model fairness_metrics {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String   @db.Uuid
+  rotation_id String   @db.Uuid
+  date        DateTime
+  score       Float
+  details     Json?
+
+  users    users                @relation(fields: [user_id], references: [id])
+  rotation rotation_definitions @relation(fields: [rotation_id], references: [id])
+
+  @@index([user_id])
+  @@index([rotation_id])
+  @@schema("ems")
+}
+
+model holidays {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  date           DateTime
+  name           String
+  // Scope-level holiday targets
+  group_id       String?  @db.Uuid
+  team_id        String?  @db.Uuid // team + subteam 
+  domain_id      String?  @db.Uuid
+  domain_team_id String?  @db.Uuid
+
+  // Role-level holiday targets
+  global_role_id String? @db.Uuid // global_role_types
+  team_role_id   String? @db.Uuid // team_role_types
+
+  is_active Boolean @default(true)
+
+  groups groups? @relation(fields: [group_id], references: [id])
+  teams  teams?  @relation(fields: [team_id], references: [id])
+
+  domains      domains?      @relation(fields: [domain_id], references: [id])
+  domain_teams domain_teams? @relation(fields: [domain_team_id], references: [id])
+
+  global_roles global_role_types? @relation(fields: [global_role_id], references: [id])
+  team_roles   team_role_types?   @relation(fields: [team_role_id], references: [id])
+
+  @@index([date])
+  @@index([group_id])
+  @@index([team_id])
+  @@index([domain_id])
+  @@index([domain_team_id])
+  @@index([global_role_id])
+  @@index([team_role_id])
+  @@schema("ems")
+}
+
+model leave_requests {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String      @db.Uuid
+  type        LeaveType
+  start_date  DateTime
+  end_date    DateTime
+  is_full_day Boolean     @default(true)
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  affects_schedule   Boolean @default(true)
+  synced_to_schedule Boolean @default(false)
+
+  users     users             @relation(fields: [user_id], references: [id])
+  approvals leave_approvals[]
+
+  @@index([user_id])
+  @@index([status])
+  @@schema("ems")
+}
+
+enum LeaveType {
+  VACATION
+  SICK
+  PERSONAL
+  TRAINING
+  OTHER
+
+  @@schema("ems")
+}
+
+enum LeaveStatus {
+  PENDING
+  PARTIALLY_APPROVED
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@schema("ems")
+}
+
+model leave_approvals {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  leave_id    String      @db.Uuid
+  approved_by String      @db.Uuid
+  approved_at DateTime    @default(now())
+  decision    LeaveStatus
+  notes       String?
+  level       Int         @default(1) //（team lead = 1, admin = 2）
+
+  leave    leave_requests @relation(fields: [leave_id], references: [id])
+  approver users          @relation(fields: [approved_by], references: [id])
+
+  @@index([leave_id])
+  @@index([approved_by])
+  @@schema("ems")
+}
+
+model audit_logs {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String?  @db.Uuid
+  action      String
+  entity_type String
+  entity_id   String   @db.Uuid
+  timestamp   DateTime @default(now())
+  details     Json?
+
+  @@index([entity_type, entity_id])
+  @@schema("ems")
+}
+
+model rotation_exceptions {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_id   String   @db.Uuid
+  date          DateTime
+  skip          Boolean  @default(false)
+  override_user String?  @db.Uuid
+  notes         String?
+
+  rotation rotation_definitions @relation(fields: [rotation_id], references: [id])
+
+  @@unique([rotation_id, date])
+  @@schema("ems")
+}
+
+model user_resource_scope {
+  id            String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id       String @db.Uuid
+  resource_type String 
+  resource_id   String? @db.Uuid
+
+  users users @relation(fields: [user_id], references: [id])
+
+  @@index([user_id])
+  @@index([resource_type, resource_id])
+  @@schema("ems")
+}
+
+
+
+model user_permissions {
+  user_id    String @db.Uuid
+  permission String
+
+  users            users            @relation(fields: [user_id], references: [id])
+  permission_types permission_types @relation(fields: [permission], references: [code])
+
+  @@id([user_id, permission])
+  @@schema("ems")
+}
+
+model permission_types {
+  code            String             @id @db.VarChar(128)
+  name            String             @db.VarChar(128)
+  description     String?
+  created_at      DateTime           @default(now())
+  updated_at      DateTime           @updatedAt
+  userPermissions user_permissions[]
+
+  @@schema("ems")
+}
+
+model schedule_views {
+  id           String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  scope_type   RotationScope
+  scope_ref_id String?       @db.Uuid
+  date         DateTime
+  data         Json // aggregated schedule for that scope & date
+  generated_at DateTime      @default(now())
+
+  @@unique([scope_type, scope_ref_id, date])
+  @@schema("ems")
+}
+
+model rotation_rules {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_id  String           @db.Uuid
+  rule_type    RotationRuleType // e.g., MIN_STAFF, MAX_STAFF, SKIP_WEEKENDS, CUSTOM_CADENCE
+  rule_payload Json // flexible JSON payload
+  enabled      Boolean          @default(true)
+  created_at   DateTime         @default(now())
+
+  rotation rotation_definitions @relation(fields: [rotation_id], references: [id])
+
+  @@schema("ems")
+}
+
+enum RotationRuleType {
+  // Constraint rules
+  MIN_STAFF
+  MAX_STAFF
+  NO_OVERLAP
+  ALLOW_OVERLAP
+  NO_DOUBLE_BOOKING
+  SKIP_WEEKENDS
+  SKIP_HOLIDAYS
+  COVERAGE_WINDOW
+  TIME_RANGE_BLOCK
+  BLOCK_DURING_LEAVE
+  BLOCK_DURING_PENDING_LEAVE
+  REQUIRE_TIER_COVERAGE
+  REQUIRE_DOMAIN_COVERAGE
+  REQUIRE_TEAM_COVERAGE
+  CUSTOM_CONSTRAINT
+
+  // Generation rules
+  BLOCK_LENGTH
+  FIXED_BLOCK
+  SEQUENTIAL
+  WEIGHTED
+  ROUND_ROBIN
+  RANDOMIZED
+  SKIP_INACTIVE
+  SKIP_ON_LEAVE
+  PRIORITIZE_SENIORITY
+  PRIORITIZE_TEAM
+  PRIORITIZE_TIMEZONE
+  TIER_LEVEL
+  ESCALATION_CHAIN
+  CROSS_TEAM_ROTATION
+  CROSS_DOMAIN_ROTATION
+  ANALYST_POOL_ROTATION
+  TIMEZONE_AWARE
+  CUSTOM_GENERATION
+
+  @@schema("ems")
+}
+
+model rotation_audit_snapshots {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  rotation_id   String   @db.Uuid
+  snapshot_at   DateTime @default(now())
+  snapshot_data Json // full rotation_definitions + members + tiers + rules
+
+  rotation rotation_definitions @relation(fields: [rotation_id], references: [id])
+
+  @@index([rotation_id])
+  @@schema("ems")
+}
+
+model user_sessions {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+
+  user_id String @db.Uuid
+  user    users  @relation(fields: [user_id], references: [id])
+
+  // Hash of the current valid refresh token for this session
+  refresh_token_hash String @db.VarChar(255)
+
+  // When this session (refresh token) naturally expires
+  expires_at DateTime @db.Timestamptz(6)
+
+  // If set, this session is no longer valid (logout, admin revoke, rotation abuse, etc.)
+  revoked_at     DateTime? @db.Timestamptz(6)
+  revoked_reason String?   @db.VarChar(255)
+
+  //  Device / context (for audit & UX)
+  user_agent String? @db.VarChar(512)
+  ip_address String? @db.VarChar(64)
+  device_id  String? @db.VarChar(128) // optional logical device identifier (e.g., mobile UUID)
+
+  // Last time this session was used to successfully refresh / access
+  last_used_at DateTime? @db.Timestamptz(6)
+
+  // Free-form JSON for future needs (geo, platform, app version, etc.)
+  metadata Json? @db.Json
+
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at DateTime? @default(now()) @updatedAt
+
+  @@index([user_id], map: "idx_user_sessions_user_id")
+  @@index([expires_at], map: "idx_user_sessions_expires_at")
+  @@index([revoked_at], map: "idx_user_sessions_revoked_at")
+  @@schema("ems")
+}
